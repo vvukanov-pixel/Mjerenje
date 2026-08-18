@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TerenRad - Sustav Mjerenja</title>
+  
+  <!-- Firebase SDK Skripte -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
   <style>
     :root {
       --bg-dark: #090d16;
@@ -15,7 +20,6 @@
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --danger: #ef4444;
-      --danger-hover: #dc2626;
       --warning: #f59e0b;
     }
 
@@ -51,6 +55,7 @@
 
     .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
     .btn-submit:hover { background: var(--accent-hover); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
     #admin-view { flex-direction: row; width: 100%; }
     .sidebar { width: 320px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
@@ -68,7 +73,6 @@
     .btn-action-group { display: flex; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 13px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
     .btn-print { background: var(--accent); color: white; }
-    .btn-print:hover { background: var(--accent-hover); }
     .btn-delete { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .btn-delete:hover { background: var(--danger); color: white; }
 
@@ -140,7 +144,7 @@
             <textarea id="generalNotes" rows="3" placeholder="RAL 9010, pogled iznutra, pod -2cm..."></textarea>
           </div>
 
-          <button type="submit" class="btn-submit">SPREMI I POŠALJI NALOG</button>
+          <button type="submit" id="btnSubmit" class="btn-submit">SPREMI I POŠALJI NALOG</button>
         </form>
       </div>
     </div>
@@ -148,17 +152,19 @@
     <div id="admin-view" class="view-container active">
       <div class="sidebar">
         <div class="sidebar-header">
-          <span style="font-size: 13px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
-          <button onclick="switchView('monter')" style="background: var(--accent); color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">+ Novo Mjerenje</button>
+          <span style="font-size: 13px; font-weight: bold; color: var(--text-muted);">SVI NALOZI (OBLAK)</span>
+          <button onclick="switchView('monter')" style="background: var(--accent); color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">+ Novo</button>
         </div>
-        <div class="sidebar-list" id="projectList"></div>
+        <div class="sidebar-list" id="projectList">
+          <p style="padding: 20px; font-size: 13px; color: var(--text-muted); text-align: center;">Učitavanje podataka s oblaka...</p>
+        </div>
       </div>
 
-      <div class="main-panel" id="mainPanel">
+      <div class="main-panel" id="mainPanel" style="display: none;">
         <div class="full-width">
           <div>
-            <h2 id="det-client-name" style="font-size: 22px;">Josip Tomičić</h2>
-            <p id="det-client-sub" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Dubrovnik • 095 522 9380</p>
+            <h2 id="det-client-name" style="font-size: 22px;">-</h2>
+            <p id="det-client-sub" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">-</p>
           </div>
           <div class="btn-action-group">
             <button onclick="deleteCurrentProject()" class="btn-action btn-delete">🗑️ Izbriši Nalog</button>
@@ -172,7 +178,7 @@
             <span id="page-count" style="font-size: 12px; color: var(--text-muted);">1 / 1</span>
           </div>
           <div class="main-sketch">
-            <img id="det-sketch" src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80" alt="Skica">
+            <img id="det-sketch" src="" alt="Skica">
           </div>
           <div class="gallery-thumbs" id="galleryThumbs"></div>
           <p id="det-notes" style="margin-top: 6px; font-size: 12px; color: #f59e0b;"></p>
@@ -199,31 +205,42 @@
   </div>
 
   <script>
-    let projects = [
-      {
-        id: 1,
-        name: 'Josip Tomičić',
-        phone: '095 522 9380',
-        loc: 'Dubrovnik - Lapad',
-        date: '18.08.2026.',
-        notes: 'RAL 9010. Pogled iznutra. Paziti na lajsne.',
-        images: [
-          'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80',
-          'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80'
-        ],
-        items: [
-          { num: 1, name: 'Garderoba vrata', w: '90', h: '203', note: 'Zid 23cm, pod -2cm' },
-          { num: 2, name: 'Soba velika', w: '86', h: '202', note: 'Pod -2cm' },
-          { num: 3, name: 'WC', w: '69', h: '202', note: 'Zid 13cm, nema špalete' },
-          { num: 4, name: 'Pozicija 4', w: '88', h: '202', note: '-' },
-          { num: 5, name: 'Pozicija 5', w: '89', h: '202', note: 'Građevinska mjera' }
-        ]
-      }
-    ];
+    // Inicijalizacija tvoje Firebase baze
+    const firebaseConfig = {
+      apiKey: "AIzaSyABrJCjpEBj6ZsXu4Or2TCTDvi1yQkAnVc",
+      authDomain: "mjerenje-b0bc5.firebaseapp.com",
+      projectId: "mjerenje-b0bc5",
+      storageBucket: "mjerenje-b0bc5.firebasestorage.app",
+      messagingSenderId: "923942715900",
+      appId: "1:923942715900:web:86fb6c3a27694931a7fa2a"
+    };
 
-    let selectedId = 1;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let projects = [];
+    let selectedId = null;
     let currentImageIndex = 0;
     let monterUploadedImages = [];
+
+    // Osluškivanje baze podataka u stvarnom vremenu
+    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+      projects = [];
+      snapshot.forEach((doc) => {
+        projects.push({ id: doc.id, ...doc.data() });
+      });
+
+      if (projects.length > 0) {
+        if (!selectedId || !projects.find(p => p.id === selectedId)) {
+          selectedId = projects[0].id;
+        }
+      } else {
+        selectedId = null;
+      }
+
+      renderSidebar();
+      renderDetails();
+    });
 
     function renderSidebar() {
       const list = document.getElementById('projectList');
@@ -232,7 +249,7 @@
         return;
       }
       list.innerHTML = projects.map(p => `
-        <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="selectProject(${p.id})">
+        <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="selectProject('${p.id}')">
           <div style="display:flex; justify-content:space-between;">
             <h4>${p.name}</h4>
             <span class="badge badge-novo">NOVO</span>
@@ -270,7 +287,8 @@
       `).join('');
 
       const tbody = document.getElementById('det-table-body');
-      tbody.innerHTML = p.items.map(item => `
+      const items = p.items || [{ num: 1, name: 'Pozicija sa skice', w: '-', h: '-', note: 'Pogledati skicu' }];
+      tbody.innerHTML = items.map(item => `
         <tr>
           <td style="font-weight:bold; color:#38bdf8;">#${item.num}</td>
           <td style="font-weight:600;">${item.name}</td>
@@ -281,20 +299,16 @@
       `).join('');
     }
 
-    function deleteCurrentProject() {
+    async function deleteCurrentProject() {
       const p = projects.find(item => item.id === selectedId);
       if (!p) return;
       
-      if (confirm(`Sigurno želite izbrisati radni nalog za: ${p.name}?`)) {
-        projects = projects.filter(item => item.id !== selectedId);
-        if (projects.length > 0) {
-          selectedId = projects[0].id;
-        } else {
-          selectedId = null;
+      if (confirm(`Sigurno želite trajno izbrisati radni nalog za: ${p.name}?`)) {
+        try {
+          await db.collection("nalozi").doc(selectedId).delete();
+        } catch (err) {
+          alert('Greška pri brisanju: ' + err.message);
         }
-        currentImageIndex = 0;
-        renderSidebar();
-        renderDetails();
       }
     }
 
@@ -317,16 +331,42 @@
       document.getElementById('btn-admin').classList.toggle('active', view === 'admin');
     }
 
-    function handleMultipleImages(e) {
-      const files = Array.from(e.target.files);
-      files.forEach(file => {
+    // Kompresija slika prije slanja u bazu
+    function compressImage(file) {
+      return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = function(evt) {
-          monterUploadedImages.push(evt.target.result);
-          renderMonterPreviews();
-        };
         reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+        };
       });
+    }
+
+    async function handleMultipleImages(e) {
+      const files = Array.from(e.target.files);
+      for (const file of files) {
+        const compressed = await compressImage(file);
+        monterUploadedImages.push(compressed);
+      }
+      renderMonterPreviews();
       e.target.value = '';
     }
 
@@ -346,18 +386,25 @@
       
       const count = monterUploadedImages.length;
       document.getElementById('upload-status').innerText = count > 0 
-        ? `✅ Učitano stranica: ${count} (klikni za dodavanje još)` 
+        ? `✅ Učitano stranica: ${count} (klikni za još)` 
         : '📷 Dodaj stranicu bilježnice / skicu';
     }
 
-    function handleFormSubmit(e) {
+    async function handleFormSubmit(e) {
       e.preventDefault();
+      const submitBtn = document.getElementById('btnSubmit');
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Spremanje na oblak...';
+
+      const d = new Date();
+      const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}.${d.getFullYear()}.`;
+
       const newProj = {
-        id: Date.now(),
         name: document.getElementById('clientName').value,
         phone: document.getElementById('clientPhone').value || '-',
         loc: document.getElementById('clientLoc').value || '-',
-        date: '18.08.2026.',
+        date: formattedDate,
+        timestamp: Date.now(),
         notes: document.getElementById('generalNotes').value,
         images: monterUploadedImages.length > 0 ? [...monterUploadedImages] : ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80'],
         items: [
@@ -365,20 +412,19 @@
         ]
       };
 
-      projects.unshift(newProj);
-      selectedId = newProj.id;
-      currentImageIndex = 0;
-      monterUploadedImages = [];
-      renderMonterPreviews();
-      document.querySelector('form').reset();
-      
-      renderSidebar();
-      renderDetails();
-      switchView('admin');
+      try {
+        await db.collection("nalozi").add(newProj);
+        monterUploadedImages = [];
+        renderMonterPreviews();
+        document.querySelector('form').reset();
+        switchView('admin');
+      } catch (err) {
+        alert('Greška pri spremanju u bazu: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'SPREMI I POŠALJI NALOG';
+      }
     }
-
-    renderSidebar();
-    renderDetails();
   </script>
 </body>
 </html>
