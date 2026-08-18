@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TerenRad - Sustav Mjerenja</title>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --panel-dark: #131b2e;
+      --card-dark: #1b2640;
+      --border-color: #2a3b61;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Header */
+    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 18px; font-weight: bold; letter-spacing: 0.5px; }
+    .logo span { color: #38bdf8; }
+    
+    .view-toggle { display: flex; background: var(--bg-dark); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 14px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; }
+    .view-toggle button.active { background: var(--accent); color: white; }
+
+    /* Layout */
+    .container { flex: 1; display: flex; overflow: hidden; }
+    .view-container { width: 100%; display: none; }
+    .view-container.active { display: flex; }
+
+    /* Monter View */
+    #monter-view { max-width: 600px; margin: 20px auto; padding: 0 16px; flex-direction: column; }
+    .card { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
+    input, textarea, select { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
+    input:focus, textarea:focus { border-color: #38bdf8; }
+
+    .upload-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; background: rgba(0,0,0,0.2); margin-bottom: 14px; }
+    .upload-zone:hover { border-color: var(--accent); }
+    .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
+    .btn-submit:hover { background: var(--accent-hover); }
+
+    /* Admin View */
+    #admin-view { flex-direction: row; width: 100%; }
+    .sidebar { width: 300px; background: var(--panel-dark); border-right: 1px solid var(--border-color); overflow-y: auto; }
+    .project-item { padding: 14px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: 0.15s; }
+    .project-item:hover { background: var(--card-dark); }
+    .project-item.selected { background: rgba(37,99,235,0.15); border-left: 4px solid var(--accent); }
+    .project-item h4 { font-size: 14px; margin-bottom: 4px; }
+    .project-item p { font-size: 12px; color: var(--text-muted); }
+
+    .main-panel { flex: 1; padding: 24px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .full-width { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; }
+
+    .sketch-img-container { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 450px; overflow: hidden; }
+    .sketch-img-container img { max-width: 100%; max-height: 550px; object-fit: contain; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    th { text-align: left; padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); font-weight: 600; }
+    td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    .badge-novo { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    @media print {
+      header, .sidebar, .btn-print, .view-toggle { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .main-panel { display: block !important; }
+      .card { border: none !important; box-shadow: none !important; color: black !important; }
+      td, th { color: black !important; border-bottom: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">TEREN<span>RAD</span></div>
+    <div class="view-toggle">
+      <button id="btn-monter" onclick="switchView('monter')">📱 Monter (Mobitel)</button>
+      <button id="btn-admin" class="active" onclick="switchView('admin')">💻 Ured (Radni Nalozi)</button>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- POGLED MONTER -->
+    <div id="monter-view" class="view-container">
+      <div class="card">
+        <h3 style="margin-bottom: 14px;">Novo Mjerenje s Terena</h3>
+        <form onsubmit="handleFormSubmit(event)">
+          <label>Fotografija Skice / Bilježnice</label>
+          <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <span id="upload-status">📷 Klikni za slikanje bilježnice</span>
+            <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleImage(event)">
+          </div>
+
+          <div class="form-group">
+            <label>Ime i prezime klijenta</label>
+            <input type="text" id="clientName" required placeholder="npr. Josip Tomičić">
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex:1;">
+              <label>Telefon</label>
+              <input type="text" id="clientPhone" placeholder="095...">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Lokacija</label>
+              <input type="text" id="clientLoc" placeholder="npr. Lapad">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Opće napomene</label>
+            <textarea id="generalNotes" rows="3" placeholder="RAL 9010, pogled iznutra, pod -2cm..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-submit">POŠALJI U RADIONICU</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- POGLED URED (ADMIN) -->
+    <div id="admin-view" class="view-container active">
+      <div class="sidebar" id="projectList">
+        <!-- Generira se preko JavaScripta -->
+      </div>
+
+      <div class="main-panel">
+        <div class="full-width">
+          <div>
+            <h2 id="det-client-name" style="font-size: 22px;">Josip Tomičić</h2>
+            <p id="det-client-sub" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Dubrovnik • 095 522 9380</p>
+          </div>
+          <div>
+            <button onclick="window.print()" class="btn-submit btn-print" style="padding: 8px 16px; font-size: 13px;">🖨️ Ispiši Radni Nalog</button>
+          </div>
+        </div>
+
+        <!-- Lijevo: Skica -->
+        <div class="card">
+          <h4 style="margin-bottom: 10px; color: #38bdf8;">Monterova Skica</h4>
+          <div class="sketch-img-container">
+            <img id="det-sketch" src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80" alt="Skica">
+          </div>
+          <p id="det-notes" style="margin-top: 10px; font-size: 12px; color: #f59e0b;"></p>
+        </div>
+
+        <!-- Desno: Pozicije -->
+        <div class="card">
+          <h4 style="margin-bottom: 10px; color: #38bdf8;">Specifikacija za Radionicu</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Br.</th>
+                <th>Pozicija</th>
+                <th>Širina (cm)</th>
+                <th>Visina (cm)</th>
+                <th>Napomena</th>
+              </tr>
+            </thead>
+            <tbody id="det-table-body">
+              <!-- Generira se dinamički -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let projects = [
+      {
+        id: 1,
+        name: 'Josip Tomičić',
+        phone: '095 522 9380',
+        loc: 'Dubrovnik - Lapad',
+        date: '18.08.2026.',
+        notes: 'RAL 9010. Pogled iznutra. Paziti na lajsne.',
+        img: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80',
+        items: [
+          { num: 1, name: 'Garderoba vrata', w: '90', h: '203', note: 'Zid 23cm, pod -2cm' },
+          { num: 2, name: 'Soba velika', w: '86', h: '202', note: 'Pod -2cm' },
+          { num: 3, name: 'WC', w: '69', h: '202', note: 'Zid 13cm, nema špalete' },
+          { num: 4, name: 'Pozicija 4', w: '88', h: '202', note: '-' },
+          { num: 5, name: 'Pozicija 5', w: '89', h: '202', note: 'Građevinska mjera' }
+        ]
+      },
+      {
+        id: 2,
+        name: 'Maro Aničić',
+        phone: '095 522 9380',
+        loc: 'Lapad Color',
+        date: '17.08.2026.',
+        notes: 'RAL 9010 vani.',
+        img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80',
+        items: [
+          { num: 1, name: 'Komarica klizna', w: '66', h: '217', note: 'Iznutra =>' },
+          { num: 2, name: 'Klizna', w: '97', h: '115.5', note: 'Iznutra <=' },
+          { num: 3, name: 'Rolo', w: '113.5', h: '114.5', note: '-' }
+        ]
+      }
+    ];
+
+    let selectedId = 1;
+    let uploadedImgBase64 = null;
+
+    function renderSidebar() {
+      const list = document.getElementById('projectList');
+      list.innerHTML = projects.map(p => `
+        <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="selectProject(${p.id})">
+          <div style="display:flex; justify-content:space-between;">
+            <h4>${p.name}</h4>
+            <span class="badge badge-novo">NOVO</span>
+          </div>
+          <p>${p.loc} • ${p.date}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderDetails() {
+      const p = projects.find(item => item.id === selectedId) || projects[0];
+      if (!p) return;
+      document.getElementById('det-client-name').innerText = p.name;
+      document.getElementById('det-client-sub').innerText = `${p.loc} • ${p.phone} • Datum: ${p.date}`;
+      document.getElementById('det-sketch').src = p.img;
+      document.getElementById('det-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
+
+      const tbody = document.getElementById('det-table-body');
+      tbody.innerHTML = p.items.map(item => `
+        <tr>
+          <td style="font-weight:bold; color:#38bdf8;">#${item.num}</td>
+          <td style="font-weight:600;">${item.name}</td>
+          <td style="font-weight:bold; font-size:14px;">${item.w}</td>
+          <td style="font-weight:bold; font-size:14px;">${item.h}</td>
+          <td style="color:#94a3b8;">${item.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    function selectProject(id) {
+      selectedId = id;
+      renderSidebar();
+      renderDetails();
+    }
+
+    function switchView(view) {
+      document.getElementById('monter-view').classList.toggle('active', view === 'monter');
+      document.getElementById('admin-view').classList.toggle('active', view === 'admin');
+      document.getElementById('btn-monter').classList.toggle('active', view === 'monter');
+      document.getElementById('btn-admin').classList.toggle('active', view === 'admin');
+    }
+
+    function handleImage(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          uploadedImgBase64 = evt.target.result;
+          document.getElementById('upload-status').innerText = '✅ Slika skice je odabrana!';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const newProj = {
+        id: Date.now(),
+        name: document.getElementById('clientName').value,
+        phone: document.getElementById('clientPhone').value || '-',
+        loc: document.getElementById('clientLoc').value || '-',
+        date: 'Danas',
+        notes: document.getElementById('generalNotes').value,
+        img: uploadedImgBase64 || 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80',
+        items: [
+          { num: 1, name: 'Pozicija 1 (sa skice)', w: '-', h: '-', note: 'Pogledati skicu' }
+        ]
+      };
+
+      projects.unshift(newProj);
+      selectedId = newProj.id;
+      renderSidebar();
+      renderDetails();
+      switchView('admin');
+      alert('Mjerenje uspješno poslano u ured!');
+    }
+
+    // Inicijalizacija
+    renderSidebar();
+    renderDetails();
+  </script>
+</body>
+</html>
