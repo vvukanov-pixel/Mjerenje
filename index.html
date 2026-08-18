@@ -221,22 +221,34 @@
     let currentImageIndex = 0;
     let monterUploadedImages = [];
 
+    // Učitavanje naloga i njihovih slika iz baze
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
       projects = [];
+      const promises = [];
+
       snapshot.forEach((doc) => {
-        projects.push({ id: doc.id, ...doc.data() });
+        const data = { id: doc.id, ...doc.data(), images: [] };
+        projects.push(data);
+
+        // Učitavanje svih slika za ovaj nalog
+        const p = db.collection("nalozi").doc(doc.id).collection("slike").orderBy("order").get().then(imgSnap => {
+          data.images = imgSnap.docs.map(d => d.data().src);
+        });
+        promises.push(p);
       });
 
-      if (projects.length > 0) {
-        if (!selectedId || !projects.find(p => p.id === selectedId)) {
-          selectedId = projects[0].id;
+      Promise.all(promises).then(() => {
+        if (projects.length > 0) {
+          if (!selectedId || !projects.find(p => p.id === selectedId)) {
+            selectedId = projects[0].id;
+          }
+        } else {
+          selectedId = null;
         }
-      } else {
-        selectedId = null;
-      }
 
-      renderSidebar();
-      renderDetails();
+        renderSidebar();
+        renderDetails();
+      });
     });
 
     function renderSidebar() {
@@ -328,7 +340,7 @@
       document.getElementById('btn-admin').classList.toggle('active', view === 'admin');
     }
 
-    // Optimizirana kompresija kako bi sve stalo unutar limita
+    // Optimizirana kompresija
     function compressImage(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -338,7 +350,7 @@
           img.src = event.target.result;
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_DIM = 850;
+            const MAX_DIM = 900;
             let width = img.width;
             let height = img.height;
 
@@ -358,7 +370,7 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.5));
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
           };
         };
       });
@@ -367,7 +379,7 @@
     async function handleMultipleImages(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
-      status.innerText = '⏳ Obrađujem fotografije...';
+      status.innerText = '⏳ Pripremam fotografije...';
       
       for (const file of files) {
         const compressed = await compressImage(file);
@@ -401,7 +413,7 @@
       e.preventDefault();
       const submitBtn = document.getElementById('btnSubmit');
       submitBtn.disabled = true;
-      submitBtn.innerText = 'Spremanje na oblak...';
+      submitBtn.innerText = 'Spremanje u bazu...';
 
       const d = new Date();
       const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}.${d.getFullYear()}.`;
@@ -413,20 +425,29 @@
         date: formattedDate,
         timestamp: Date.now(),
         notes: document.getElementById('generalNotes').value,
-        images: monterUploadedImages.length > 0 ? [...monterUploadedImages] : ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80'],
         items: [
           { num: 1, name: 'Pozicija 1 (sa skice)', w: '-', h: '-', note: 'Pogledati skice' }
         ]
       };
 
       try {
-        await db.collection("nalozi").add(newProj);
+        // 1. Spremanje osnovnog naloga
+        const docRef = await db.collection("nalozi").add(newProj);
+        
+        // 2. Spremanje svake slike zasebno (nema ograničenja veličine)
+        const batch = db.batch();
+        monterUploadedImages.forEach((imgSrc, idx) => {
+          const imgDoc = docRef.collection("slike").doc(`img_${idx}`);
+          batch.set(imgDoc, { src: imgSrc, order: idx });
+        });
+        await batch.commit();
+
         monterUploadedImages = [];
         renderMonterPreviews();
         document.querySelector('form').reset();
         switchView('admin');
       } catch (err) {
-        alert('Greška pri spremanju u bazu: ' + err.message);
+        alert('Greška pri spremanju: ' + err.message);
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = 'SPREMI I POŠALJI NALOG';
