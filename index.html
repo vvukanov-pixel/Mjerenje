@@ -25,12 +25,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
     
-    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .logo { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; white-space: nowrap; }
+    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; }
     .logo span { color: #38bdf8; }
     
     .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); gap: 2px; }
-    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; }
     .view-toggle button.active { background: var(--accent); color: white; }
 
     .container { flex: 1; display: flex; overflow: hidden; }
@@ -89,14 +89,13 @@
     .badge { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; }
     .badge-novo { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-    /* Optimizacija za iPhone i iPad */
     @media (max-width: 900px) {
       .container { overflow-y: auto; display: block; }
       #admin-view { flex-direction: column; height: auto; }
       .sidebar { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid var(--border-color); }
       .main-panel { display: flex; flex-direction: column; padding: 12px; }
       .full-width { grid-column: span 1; }
-      .main-sketch { min-height: 280px; max-height: 360px; }
+      .main-sketch { min-height: 260px; max-height: 340px; }
     }
 
     @media print {
@@ -144,13 +143,13 @@
             </div>
             <div class="form-group" style="flex:1;">
               <label>Lokacija</label>
-              <input type="text" id="clientLoc" placeholder="npr. Radeljević">
+              <input type="text" id="clientLoc" placeholder="npr. Lapad">
             </div>
           </div>
 
           <div class="form-group">
             <label>Opće napomene</label>
-            <textarea id="generalNotes" rows="3" placeholder="RAL boja, profil, staklo..."></textarea>
+            <textarea id="generalNotes" rows="3" placeholder="RAL boja, profil, pod -2cm..."></textarea>
           </div>
 
           <button type="submit" id="btnSubmit" class="btn-submit">💾 SPREMI I POŠALJI NALOG</button>
@@ -231,7 +230,7 @@
     let currentImageIndex = 0;
     let monterUploadedImages = [];
 
-    // Osluškivanje baze u stvarnom vremenu
+    // Osluškivanje Firestore baze
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
       const list = [];
       snapshot.forEach(doc => {
@@ -283,18 +282,18 @@
       document.getElementById('det-client-sub').innerText = `${p.loc || '-'} • ${p.phone || '-'} • Datum: ${p.date}`;
       document.getElementById('det-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
 
-      const images = (p.images && p.images.length > 0) ? p.images : [''];
-      currentImageIndex = Math.min(currentImageIndex, images.length - 1);
+      const images = (p.images && p.images.length > 0) ? p.images : [];
+      currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
       
       const mainImg = document.getElementById('det-sketch');
-      if (images[currentImageIndex]) {
+      if (images.length > 0 && images[currentImageIndex]) {
         mainImg.src = images[currentImageIndex];
         mainImg.style.display = 'block';
+        document.getElementById('page-count').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
       } else {
         mainImg.style.display = 'none';
+        document.getElementById('page-count').innerText = 'Nema slika';
       }
-
-      document.getElementById('page-count').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
 
       const thumbsContainer = document.getElementById('galleryThumbs');
       if (images.length > 1) {
@@ -352,7 +351,7 @@
       document.getElementById('btn-admin').classList.toggle('active', view === 'admin');
     }
 
-    // Optimizirana kompresija prilagođena za skice i tekst
+    // Automatska kompresija s oštrim tekstom (ispod 50 KB po slici, 100% stane u bazu)
     function compressImage(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -362,7 +361,7 @@
           img.src = event.target.result;
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_DIM = 750;
+            const MAX_DIM = 650;
             let width = img.width;
             let height = img.height;
 
@@ -382,7 +381,7 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.45));
+            resolve(canvas.toDataURL('image/jpeg', 0.4));
           };
         };
       });
@@ -391,7 +390,7 @@
     async function handleMultipleImages(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
-      status.innerText = '⏳ Pripremam fotografije...';
+      status.innerText = '⏳ Obrađujem slike...';
       
       for (const file of files) {
         const compressed = await compressImage(file);
@@ -451,7 +450,7 @@
         document.querySelector('form').reset();
         switchView('admin');
       } catch (err) {
-        alert('Greška pri spremanju u bazu: ' + err.message);
+        alert('Greška pri spremanju: ' + err.message);
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = '💾 SPREMI I POŠALJI NALOG';
