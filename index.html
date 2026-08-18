@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TerenRad - Sustav Mjerenja, Ponuda & RN</title>
+  <title>TerenRad - Sustav Mjerenja, Ponuda, RN & Montaža</title>
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -78,10 +78,11 @@
     .btn-print { background: var(--accent); color: white; }
     .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
 
-    .grid-three-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    /* 4 MAPE U GRID RASPODJELU */
+    .grid-four-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 
-    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 280px; max-height: 400px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
-    .main-sketch img { width: 100%; height: 100%; max-height: 400px; object-fit: contain; }
+    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 250px; max-height: 380px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
+    .main-sketch img { width: 100%; height: 100%; max-height: 380px; object-fit: contain; }
     .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
     .gallery-thumb { width: 55px; height: 55px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; }
     .gallery-thumb.active { border-color: #38bdf8; opacity: 1; }
@@ -90,7 +91,6 @@
     .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; background: rgba(0,0,0,0.2); min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .doc-preview { width: 100%; min-height: 250px; max-height: 380px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
     .doc-preview img { width: 100%; max-height: 380px; object-fit: contain; }
-    .doc-preview iframe { width: 100%; height: 350px; border: none; }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
     .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; width: 100%; max-width: 360px; text-align: center; }
@@ -214,12 +214,12 @@
           </div>
         </div>
 
-        <div class="grid-three-col">
+        <div class="grid-four-col">
           
           <!-- 1. MAPA: SLIKE MJERENJA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE (SKICE)</h4>
+              <h4 style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE</h4>
               <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
             </div>
 
@@ -240,7 +240,7 @@
 
             <div id="offerUploadZone" class="doc-box">
               <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
-              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu (Slika / PDF)</button>
+              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu</button>
               <input type="file" id="offerFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleOfferUpload(event)">
             </div>
 
@@ -262,7 +262,7 @@
 
             <div id="rnUploadZone" class="doc-box">
               <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
-              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Radni Nalog (Slika / PDF)</button>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Radni Nalog</button>
               <input type="file" id="rnFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleRnUpload(event)">
             </div>
 
@@ -273,6 +273,28 @@
                 <button onclick="document.getElementById('rnFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
               </div>
             </div>
+          </div>
+
+          <!-- 4. MAPA: MONTAŽA (NOVO) -->
+          <div class="card" style="border-left: 4px solid #a855f7;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 style="color: #c084fc; font-size: 13px;">🛠️ 4. MONTAŽA</h4>
+              <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike Montaže</button>
+              <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
+            </div>
+
+            <div class="form-group">
+              <label>Prisutni monteri:</label>
+              <input type="text" id="mWorkers" placeholder="npr. Baldo, Nikola, Ivan..." onchange="saveMontazaData()">
+            </div>
+
+            <div class="form-group">
+              <label>Nedostaci / Zapažanja:</label>
+              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirano sve, fali lajsna..." onchange="saveMontazaData()"></textarea>
+            </div>
+
+            <label>Fotografije gotove montaže:</label>
+            <div class="gallery-thumbs" id="d-done-thumbs"></div>
           </div>
 
         </div>
@@ -360,10 +382,12 @@
             <h4>${p.name}</h4>
           </div>
           <p>${p.loc || '-'} • 👷 ${p.worker || 'Monter'} • 📅 ${p.date}</p>
-          <div style="margin-top: 4px; font-size: 10px; display:flex; gap:6px;">
+          <div style="margin-top: 4px; font-size: 10px; display:flex; gap:6px; flex-wrap: wrap;">
             <span style="color:${p.offerDoc ? '#34d399' : '#94a3b8'};">${p.offerDoc ? '✅ Ponuda' : '⏳ Bez ponude'}</span>
             <span>•</span>
             <span style="color:${p.rnDoc ? '#fbbf24' : '#94a3b8'};">${p.rnDoc ? '✅ RN' : '⏳ Bez RN'}</span>
+            <span>•</span>
+            <span style="color:${(p.doneImages && p.doneImages.length > 0) ? '#c084fc' : '#94a3b8'};">${(p.doneImages && p.doneImages.length > 0) ? '🛠️ Montirano' : '⏳ Čeka montažu'}</span>
           </div>
         </div>
       `).join('');
@@ -419,7 +443,7 @@
         thumbs.innerHTML = '';
       }
 
-      // 2. Ponuda prikaz
+      // 2. Ponuda
       const offUpload = document.getElementById('offerUploadZone');
       const offDisplay = document.getElementById('offerDisplayZone');
       const btnDelOff = document.getElementById('btnDelOffer');
@@ -429,9 +453,8 @@
         offUpload.style.display = 'none';
         offDisplay.style.display = 'block';
         btnDelOff.style.display = 'inline-block';
-        
         if (p.offerDoc.startsWith('data:application/pdf')) {
-          offBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📄</span><p style="font-size:12px; color:#38bdf8; font-weight:bold; margin-top:8px;">PDF Ponuda (Klikni za pregled)</p></div>`;
+          offBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📄</span><p style="font-size:12px; color:#38bdf8; font-weight:bold; margin-top:8px;">PDF Ponuda (Puni zaslon)</p></div>`;
         } else {
           offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:380px; object-fit:contain;">`;
         }
@@ -442,7 +465,7 @@
         offBox.innerHTML = '';
       }
 
-      // 3. Radni Nalog prikaz
+      // 3. Radni Nalog
       const rnUpload = document.getElementById('rnUploadZone');
       const rnDisplay = document.getElementById('rnDisplayZone');
       const btnDelRn = document.getElementById('btnDelRn');
@@ -452,9 +475,8 @@
         rnUpload.style.display = 'none';
         rnDisplay.style.display = 'block';
         btnDelRn.style.display = 'inline-block';
-        
         if (p.rnDoc.startsWith('data:application/pdf')) {
-          rnBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📋</span><p style="font-size:12px; color:#fbbf24; font-weight:bold; margin-top:8px;">PDF Radni Nalog (Klikni za pregled)</p></div>`;
+          rnBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📋</span><p style="font-size:12px; color:#fbbf24; font-weight:bold; margin-top:8px;">PDF Radni Nalog (Puni zaslon)</p></div>`;
         } else {
           rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:380px; object-fit:contain;">`;
         }
@@ -463,6 +485,22 @@
         rnDisplay.style.display = 'none';
         btnDelRn.style.display = 'none';
         rnBox.innerHTML = '';
+      }
+
+      // 4. Montaža
+      document.getElementById('mWorkers').value = p.montazaWorkers || '';
+      document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
+
+      const doneThumbs = document.getElementById('d-done-thumbs');
+      const doneImgs = p.doneImages || [];
+      if (doneImgs.length > 0) {
+        doneThumbs.innerHTML = doneImgs.map((src, idx) => `
+          <div class="gallery-thumb active" onclick="openLightbox('${src}')">
+            <img src="${src}">
+          </div>
+        `).join('');
+      } else {
+        doneThumbs.innerHTML = '<span style="font-size:11px; color:var(--text-muted); padding:10px;">Nema slika montaže.</span>';
       }
     }
 
@@ -506,15 +544,12 @@
       if (e.key === 'Escape') closeLightbox();
     });
 
-    // Univerzalna i sigurna obrada dokumenata i slika
     function processDocumentFile(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        
-        // Ako je PDF
         if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
           if (file.size > 850000) {
-            reject('PDF datoteka je prevelika (maksimalno 800 KB). Molimo smanjite je ili pošaljite kao sliku.');
+            reject('PDF datoteka je prevelika (maksimalno 800 KB).');
             return;
           }
           reader.onload = () => resolve(reader.result);
@@ -522,7 +557,6 @@
           return;
         }
 
-        // Ako je slika (JPG, PNG, HEIC) - automatski je smanji da stane u bazu
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
@@ -537,7 +571,7 @@
             ctx.drawImage(img, 0, 0, w, h);
             resolve(canvas.toDataURL('image/jpeg', 0.5));
           };
-          img.onerror = () => reject('Neispravan format slike');
+          img.onerror = () => reject('Neispravna slika');
           img.src = e.target.result;
         };
         reader.readAsDataURL(file);
@@ -547,8 +581,7 @@
     async function handleOfferUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
-      const statusTxt = document.getElementById('txtOfferStatus');
-      statusTxt.innerText = '⏳ Pripremam datoteku...';
+      document.getElementById('txtOfferStatus').innerText = '⏳ Pripremam datoteku...';
 
       try {
         const base64 = await processDocumentFile(file);
@@ -556,7 +589,7 @@
       } catch (err) {
         alert(err);
       } finally {
-        statusTxt.innerText = 'Nema ponude';
+        document.getElementById('txtOfferStatus').innerText = 'Nema ponude';
         e.target.value = '';
       }
     }
@@ -569,8 +602,7 @@
     async function handleRnUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
-      const statusTxt = document.getElementById('txtRnStatus');
-      statusTxt.innerText = '⏳ Pripremam datoteku...';
+      document.getElementById('txtRnStatus').innerText = '⏳ Pripremam datoteku...';
 
       try {
         const base64 = await processDocumentFile(file);
@@ -578,7 +610,7 @@
       } catch (err) {
         alert(err);
       } finally {
-        statusTxt.innerText = 'Nema radnog naloga';
+        document.getElementById('txtRnStatus').innerText = 'Nema radnog naloga';
         e.target.value = '';
       }
     }
@@ -586,6 +618,29 @@
     async function removeRn() {
       if (!selectedId || !confirm('Obrisati radni nalog za ovog klijenta?')) return;
       await db.collection("nalozi").doc(selectedId).update({ rnDoc: null });
+    }
+
+    // Spremanje podataka o montaži
+    async function saveMontazaData() {
+      if (!selectedId) return;
+      await db.collection("nalozi").doc(selectedId).update({
+        montazaWorkers: document.getElementById('mWorkers').value,
+        montazaNotes: document.getElementById('mMontazaNotes').value
+      });
+    }
+
+    async function uploadDoneImages(e) {
+      const files = Array.from(e.target.files);
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      const existing = p.doneImages || [];
+
+      for (let f of files) {
+        const b64 = await processDocumentFile(f);
+        existing.push(b64);
+      }
+      await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
+      e.target.value = '';
     }
 
     async function deleteCurrent() {
@@ -666,7 +721,10 @@
         notes: document.getElementById('cNotes').value,
         images: [...uploadedImages],
         offerDoc: null,
-        rnDoc: null
+        rnDoc: null,
+        montazaWorkers: '',
+        montazaNotes: '',
+        doneImages: []
       };
 
       try {
