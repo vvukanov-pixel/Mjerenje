@@ -24,6 +24,7 @@
       --text-muted: #94a3b8;
       --danger: #ef4444;
       --success: #10b981;
+      --warning: #f59e0b;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -119,6 +120,13 @@
     .btn-close-lightbox { background: var(--danger); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; }
     .lightbox-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
     .lightbox-img { max-width: 95vw; max-height: 88vh; object-fit: contain; border-radius: 6px; }
+
+    /* NOVO: zelena kartica kad je spremno za fakturu */
+    .card-ready {
+      border: 2px solid #10b981 !important;
+      background: rgba(16, 185, 129, 0.08) !important;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
 
     @media (max-width: 900px) {
       .main-container { display: block; }
@@ -230,6 +238,9 @@
           </div>
         </div>
 
+        <!-- UKUPNI STATUS NALOGA -->
+        <div id="overallStatusBox" style="display:none; padding: 12px 16px; border-radius: 10px; font-weight: bold; font-size: 14px; text-align: center; margin-bottom: 8px;"></div>
+
         <div class="grid-five-col">
           <!-- 1. MJERENJE -->
           <div class="card">
@@ -264,7 +275,7 @@
             </div>
           </div>
 
-          <!-- 3. RADNI NALOG -->
+          <!-- 3. RADNI NALOG & POZICIJE -->
           <div class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG & POZICIJE</h4>
@@ -283,11 +294,11 @@
               </div>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-top:1px solid var(--border-color); padding-top:8px;">
-              <label style="margin:0; color:#fbbf24;">📦 STANJE POZICIJA:</label>
+              <label style="margin:0; color:#fbbf24;">📦 STANJE POZICIJA (klikni za promjenu):</label>
               <button onclick="promptAddPosition()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj</button>
             </div>
             <div class="positions-box" id="positionsList">
-              <span style="font-size:11px; color:var(--text-muted);">Nema pozicija.</span>
+              <span style="font-size:11px; color:var(--text-muted);">Nema pozicija. Dodaj pozicije kad proizvodnja isporuči.</span>
             </div>
           </div>
 
@@ -305,21 +316,23 @@
             <div class="monteri-container" id="monteriCheckboxList"></div>
             <div class="form-group">
               <label>Napomene montaže:</label>
-              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1..." onchange="saveMontazaNotes()"></textarea>
+              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1, za 2 fali lajsna..." onchange="saveMontazaNotes()"></textarea>
             </div>
             <label>Fotografije montaže:</label>
             <div class="gallery-thumbs" id="d-done-thumbs"></div>
           </div>
 
           <!-- 5. FAKTURIRANJE -->
-          <div class="card" style="border-left: 4px solid var(--success);">
+          <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #34d399; font-size: 13px;">💰 5. FAKTURIRANJE</h4>
               <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
             </div>
-            <div id="readyForInvoiceAlert" style="display:none; background:rgba(16,185,129,0.2); border:1px solid var(--success); color:#a7f3d0; padding:8px; border-radius:6px; font-size:11px; font-weight:bold; margin-bottom:10px; text-align:center;">
-              📢 SVE JE MONTIRANO - MOŽE SE FAKTURIRATI!
+
+            <div id="readyForInvoiceAlert" style="display:none; background: rgba(16,185,129,0.25); border: 2px solid #10b981; color: #a7f3d0; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: bold; margin-bottom: 12px; text-align: center;">
+              ✅ SVE JE MONTIRANO – SPREMNO ZA FAKTURIRANJE!
             </div>
+
             <div class="form-group">
               <label>Broj Računa:</label>
               <input type="text" id="inpInvoiceNum" placeholder="npr. R1 142/2026" onchange="saveInvoiceData()">
@@ -362,7 +375,6 @@
     let uploadedImages = [];
     let globalWorkersList = [];
 
-    // ========== STORAGE HELPERS ==========
     async function compressToBlobs(file) {
       if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
         const buf = await file.arrayBuffer();
@@ -411,7 +423,6 @@
       return urls;
     }
 
-    // ========== WORKERS ==========
     db.collection("postavke").doc("monteri").onSnapshot(doc => {
       globalWorkersList = (doc.exists && doc.data().lista) ? doc.data().lista : [...DEFAULT_WORKERS];
       if (!doc.exists) db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
@@ -443,10 +454,9 @@
       }
     }
 
-    // ========== POSITIONS ==========
     async function promptAddPosition() {
       if (!selectedId) return;
-      const naziv = prompt('Naziv pozicije:');
+      const naziv = prompt('Naziv pozicije (npr. Pozicija 1 - Garažna vrata):');
       if (!naziv || !naziv.trim()) return;
       const p = projects.find(x => x.id === selectedId);
       const positions = p.positions || [];
@@ -460,6 +470,7 @@
       const positions = p.positions || [];
       if (!positions[i]) return;
       const s = positions[i].status || 'proizvodnja';
+      // Redoslijed: Proizvodnja → Skladište → Montirano → natrag
       positions[i].status = s === 'proizvodnja' ? 'skladiste' : s === 'skladiste' ? 'montirano' : 'proizvodnja';
       await db.collection("nalozi").doc(selectedId).update({ positions });
     }
@@ -478,18 +489,18 @@
       const p = projects.find(x => x.id === selectedId);
       const positions = (p && p.positions) || [];
       if (!positions.length) {
-        box.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">Nema pozicija.</span>';
+        box.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">Nema pozicija. Kad proizvodnja isporuči – dodaj pozicije i stavi ih na Skladište.</span>';
         return;
       }
       box.innerHTML = positions.map((pos, idx) => {
-        const chip = pos.status === 'proizvodnja' ? `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx})">🏭 U Proizvodnji</button>` :
-                     pos.status === 'skladiste' ? `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx})">📦 U Skladištu</button>` :
-                     `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx})">✅ Montirano</button>`;
+        let chip = '';
+        if (pos.status === 'proizvodnja') chip = `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx})">🏭 U Proizvodnji</button>`;
+        else if (pos.status === 'skladiste') chip = `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx})">📦 Na Skladištu</button>`;
+        else chip = `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx})">✅ Montirano</button>`;
         return `<div class="pos-item"><span class="pos-name">${pos.name}</span><div style="display:flex;gap:6px;align-items:center;">${chip}<button onclick="deletePosition(${idx},event)" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:11px;font-weight:bold;">✕</button></div></div>`;
       }).join('');
     }
 
-    // ========== MONTERI ==========
     async function addNewWorkerPrompt() {
       const n = prompt('Ime i prezime montera:');
       if (n && n.trim()) {
@@ -534,7 +545,6 @@
       await db.collection("nalozi").doc(selectedId).update({ montazaNotes: document.getElementById('mMontazaNotes').value });
     }
 
-    // ========== FAKTURIRANJE ==========
     async function saveInvoiceData() {
       if (!selectedId) return;
       await db.collection("nalozi").doc(selectedId).update({ invoiceNum: document.getElementById('inpInvoiceNum').value });
@@ -565,7 +575,6 @@
       });
     }
 
-    // ========== MAIN DATA ==========
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot(snap => {
       projects = [];
       snap.forEach(d => projects.push({ id: d.id, ...d.data() }));
@@ -590,9 +599,25 @@
         const total = pos.length;
         const mont = pos.filter(x => x.status === 'montirano').length;
         const skl = pos.filter(x => x.status === 'skladiste').length;
-        let st = total ? (mont === total ? `<span style="color:#10b981;font-weight:bold;">✅ Sve montirano (${mont}/${total})</span>` : `<span style="color:#38bdf8;">📦 ${skl}</span> • <span style="color:#10b981;">🛠️ ${mont}</span> • <span style="color:#f87171;">⏳ ${total-mont}</span>`) : '<span style="color:#94a3b8;">⏳ Nema pozicija</span>';
+        const proiz = pos.filter(x => x.status === 'proizvodnja').length;
+
+        let st = '';
+        if (total === 0) {
+          st = '<span style="color:#94a3b8;">⏳ Čeka pozicije</span>';
+        } else if (mont === total) {
+          st = `<span style="color:#10b981;font-weight:bold;">✅ SVE MONTIRANO (${mont}/${total})</span>`;
+        } else if (skl + mont === total) {
+          st = `<span style="color:#38bdf8;font-weight:bold;">📦 NA SKLADIŠTU</span> • <span style="color:#10b981;">🛠️ ${mont} mont.</span>`;
+        } else {
+          st = `<span style="color:#fbbf24;">🏭 ${proiz}</span> • <span style="color:#38bdf8;">📦 ${skl}</span> • <span style="color:#10b981;">🛠️ ${mont}</span>`;
+        }
+
         const badge = p.isInvoiced ? '<span style="color:#10b981;font-weight:bold;background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:4px;">🏁 FAKTURIRANO</span>' : '';
-        return `<div class="project-item ${p.id===selectedId?'selected':''}" onclick="openDetails('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;"><h4>${p.name}</h4>${badge}</div><p>${p.loc||'-'} • 📅 ${p.date}</p><div style="margin-top:5px;font-size:11px;">${st}</div></div>`;
+        return `<div class="project-item ${p.id===selectedId?'selected':''}" onclick="openDetails('${p.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><h4>${p.name}</h4>${badge}</div>
+          <p>${p.loc||'-'} • 📅 ${p.date}</p>
+          <div style="margin-top:5px;font-size:11px;line-height:1.4;">${st}</div>
+        </div>`;
       }).join('');
     }
 
@@ -620,6 +645,36 @@
       document.getElementById('d-sub').innerText = `Mjernik: ${p.worker||'-'} | Lokacija: ${p.loc||'-'} | Tel: ${p.phone||'-'} | Datum: ${p.date}`;
       document.getElementById('d-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
 
+      // Ukupni status
+      const pos = p.positions || [];
+      const total = pos.length;
+      const mont = pos.filter(x => x.status === 'montirano').length;
+      const skl = pos.filter(x => x.status === 'skladiste').length;
+      const proiz = pos.filter(x => x.status === 'proizvodnja').length;
+      const overall = document.getElementById('overallStatusBox');
+
+      if (total === 0) {
+        overall.style.display = 'none';
+      } else {
+        overall.style.display = 'block';
+        if (mont === total) {
+          overall.style.background = 'rgba(16,185,129,0.2)';
+          overall.style.border = '1px solid #10b981';
+          overall.style.color = '#34d399';
+          overall.innerText = `✅ SVE MONTIRANO (${mont}/${total}) – može se fakturirati`;
+        } else if (skl + mont === total) {
+          overall.style.background = 'rgba(56,189,248,0.15)';
+          overall.style.border = '1px solid #38bdf8';
+          overall.style.color = '#38bdf8';
+          overall.innerText = `📦 SVE NA SKLADIŠTU (${skl} skladište + ${mont} montirano)`;
+        } else {
+          overall.style.background = 'rgba(245,158,11,0.15)';
+          overall.style.border = '1px solid #f59e0b';
+          overall.style.color = '#fbbf24';
+          overall.innerText = `🏭 U TIJEKU: ${proiz} proizvodnja • ${skl} skladište • ${mont} montirano`;
+        }
+      }
+
       const images = p.images || [];
       currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
       const mainImg = document.getElementById('d-img');
@@ -633,7 +688,6 @@
       }
       document.getElementById('d-thumbs').innerHTML = images.length > 1 ? images.map((src,i) => `<div class="gallery-thumb ${i===currentImageIndex?'active':''}" onclick="selectThumb(${i})"><img src="${src}"></div>`).join('') : '';
 
-      // Offer
       if (p.offerDoc) {
         document.getElementById('offerUploadZone').style.display = 'none';
         document.getElementById('offerDisplayZone').style.display = 'block';
@@ -645,7 +699,6 @@
         document.getElementById('btnDelOffer').style.display = 'none';
       }
 
-      // RN
       if (p.rnDoc) {
         document.getElementById('rnUploadZone').style.display = 'none';
         document.getElementById('rnDisplayZone').style.display = 'block';
@@ -664,20 +717,33 @@
       const done = p.doneImages || [];
       document.getElementById('d-done-thumbs').innerHTML = done.length ? done.map((src,i) => `<div class="gallery-thumb active" onclick="openLightbox('${src}')"><img src="${src}"><button class="btn-del-thumb" onclick="deleteDoneImage(${i},event)">✕</button></div>`).join('') : '<span style="font-size:11px;color:var(--text-muted);padding:6px;">Nema slika.</span>';
 
-      // Invoice
+      // FAKTURIRANJE – zelena kad je sve montirano
       document.getElementById('inpInvoiceNum').value = p.invoiceNum || '';
-      const pos = p.positions || [];
-      const allDone = pos.length > 0 && pos.every(x => x.status === 'montirano');
-      document.getElementById('readyForInvoiceAlert').style.display = (allDone && !p.isInvoiced) ? 'block' : 'none';
-
+      const allDone = total > 0 && mont === total;
+      const fakturaCard = document.getElementById('fakturaCard');
+      const readyAlert = document.getElementById('readyForInvoiceAlert');
       const pill = document.getElementById('fakturaPill');
       const btn = document.getElementById('btnFinishInvoice');
+
+      if (allDone && !p.isInvoiced) {
+        readyAlert.style.display = 'block';
+        fakturaCard.classList.add('card-ready');
+      } else {
+        readyAlert.style.display = 'none';
+        fakturaCard.classList.remove('card-ready');
+      }
+
       if (p.isInvoiced) {
         pill.style.background = '#10b981'; pill.style.color = '#fff'; pill.innerText = '✅ FAKTURIRANO';
-        btn.innerText = '🔄 PONIŠTI STATUS'; btn.style.background = 'rgba(239,68,68,0.2)'; btn.style.color = '#f87171';
+        btn.innerText = '🔄 PONIŠTI STATUS FAKTURIRANO';
+        btn.style.background = 'rgba(239,68,68,0.2)'; btn.style.color = '#f87171';
       } else {
-        pill.style.background = 'rgba(255,255,255,0.1)'; pill.style.color = 'var(--text-muted)'; pill.innerText = 'ČEKA RAČUN';
-        btn.innerText = '✅ OZNAČI KAO FAKTURIRANO'; btn.style.background = 'var(--success)'; btn.style.color = '#fff';
+        pill.style.background = allDone ? '#10b981' : 'rgba(255,255,255,0.1)';
+        pill.style.color = allDone ? '#fff' : 'var(--text-muted)';
+        pill.innerText = allDone ? 'SPREMNO' : 'ČEKA RAČUN';
+        btn.innerText = '✅ OZNAČI KAO FAKTURIRANO';
+        btn.style.background = allDone ? '#10b981' : 'var(--success)';
+        btn.style.color = '#fff';
       }
 
       document.getElementById('invoiceDocPreview').innerHTML = p.invoiceDoc ? `<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.3);padding:6px;border-radius:6px;"><a href="#" onclick="openLightbox('${p.invoiceDoc}');return false;" style="color:#38bdf8;font-weight:bold;text-decoration:none;">📄 Pogledaj Fakturu</a><button onclick="removeInvoiceDoc()" style="background:none;border:none;color:#f87171;font-weight:bold;cursor:pointer;">✕</button></div>` : '';
@@ -700,7 +766,6 @@
 
     window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
-    // ========== UPLOADS ==========
     async function handleOfferUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
@@ -784,7 +849,6 @@
       backToSidebar();
     }
 
-    // ========== NEW PROJECT ==========
     async function handleImageSelection(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
