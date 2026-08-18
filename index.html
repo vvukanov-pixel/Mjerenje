@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TerenRad - Sustav Mjerenja, Ponuda, RN, Montaža & Fakturiranje</title>
+  <title>TerenRad - Sustav Mjerenja, Proizvodnje, Skladišta & Montaže</title>
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -21,6 +21,7 @@
       --danger: #ef4444;
       --warning: #f59e0b;
       --success: #10b981;
+      --purple: #a855f7;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -91,17 +92,21 @@
     .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
     .doc-preview img { width: 100%; max-height: 360px; object-fit: contain; }
 
-    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+    /* TABLICA POZICIJA (SKLADIŠTE & MONTAŽA) */
+    .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
+    .pos-name { font-size: 13px; font-weight: bold; flex: 1; color: white; }
+    
+    .status-chip { font-size: 11px; padding: 4px 8px; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
+    .chip-proizvodnja { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .chip-skladiste { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .chip-montirano { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
     .monter-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
     .monter-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
     .monter-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #c084fc; }
     .btn-del-worker { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-
-    .status-btns-row { display: flex; gap: 8px; margin-bottom: 10px; }
-    .btn-m-status { flex: 1; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 2px solid transparent; cursor: pointer; opacity: 0.45; transition: 0.2s; text-align: center; }
-    .btn-m-status.active { opacity: 1; transform: scale(1.02); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-    .btn-status-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success); }
-    .btn-status-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); border-color: var(--warning); }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
     .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; width: 100%; max-width: 360px; text-align: center; }
@@ -137,7 +142,7 @@
     <div class="modal-box">
       <h3 style="margin-bottom: 8px; font-size: 17px;">Prijava Korisnika</h3>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Unesite svoje ime:</p>
-      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Ivana, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
+      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Skladište, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
       <button onclick="saveWorkerName()" class="btn-submit">POTVRDI</button>
     </div>
   </div>
@@ -260,25 +265,35 @@
             </div>
           </div>
 
-          <!-- 3. MAPA: RADNI NALOG -->
-          <div class="card">
+          <!-- 3. MAPA: RADNI NALOG & POZICIJE ROBE -->
+          <div class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG</h4>
+              <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG & POZICIJE</h4>
               <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
             </div>
 
             <div id="rnUploadZone" class="doc-box">
               <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
-              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Radni Nalog</button>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN</button>
               <input type="file" id="rnFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleRnUpload(event)">
             </div>
 
-            <div id="rnDisplayZone" style="display:none;">
+            <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
               <div class="doc-preview" id="rnPreviewBox" onclick="openRnFull()"></div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">✅ Učitano</span>
+                <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">✅ RN Učitan</span>
                 <button onclick="document.getElementById('rnFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
               </div>
+            </div>
+
+            <!-- PRAĆENJE STAVKI / POZICIJA -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+              <label style="margin:0; color:#fbbf24;">📦 STANJE POZICIJA (KLIK ZA PROMJENU):</label>
+              <button onclick="promptAddPosition()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
+            </div>
+
+            <div class="positions-box" id="positionsList">
+              <span style="font-size:11px; color:var(--text-muted);">Nema unesenih pozicija.</span>
             </div>
           </div>
 
@@ -290,12 +305,6 @@
               <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
 
-            <label>Ishod montaže:</label>
-            <div class="status-btns-row">
-              <button type="button" id="btnStatusWarn" class="btn-m-status btn-status-warn" onclick="setMontazaOutcome('nedostatak')">⚠️ Nedostatak</button>
-              <button type="button" id="btnStatusOk" class="btn-m-status btn-status-ok" onclick="setMontazaOutcome('zavrseno')">✅ Završeno</button>
-            </div>
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
               <label style="margin:0;">MONTERI:</label>
               <button onclick="addNewWorkerPrompt()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj</button>
@@ -305,14 +314,14 @@
 
             <div class="form-group">
               <label>Nedostaci / Zapažanja:</label>
-              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirano sve, fali lajsna..." onchange="saveMontazaNotes()"></textarea>
+              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1, za poz. 2 fali lajsna..." onchange="saveMontazaNotes()"></textarea>
             </div>
 
             <label>Fotografije montaže:</label>
             <div class="gallery-thumbs" id="d-done-thumbs"></div>
           </div>
 
-          <!-- 5. MAPA: FAKTURIRANJE U UREDU (NOVO) -->
+          <!-- 5. MAPA: FAKTURIRANJE U UREDU -->
           <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #34d399; font-size: 13px;">💰 5. FAKTURIRANJE</h4>
@@ -320,7 +329,7 @@
             </div>
 
             <div id="readyForInvoiceAlert" style="display:none; background: rgba(16,185,129,0.2); border: 1px solid var(--success); color: #a7f3d0; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 10px; text-align: center;">
-              📢 MONTAŽA ZAVRŠENA - MOŽE SE FAKTURIRATI!
+              📢 SVE JE MONTIRANO - MOŽE SE FAKTURIRATI!
             </div>
 
             <div class="form-group">
@@ -361,14 +370,9 @@
     const db = firebase.firestore();
 
     const DEFAULT_WORKERS = [
-      "ZLATKO RADIŠ",
-      "SINIŠA PRAVICA",
-      "SLAVEN PUHALO",
-      "NIKOLA MRDIĆ",
-      "LJUBIŠA DOŠLO",
-      "BRANISLAV BEGENUŠIĆ",
-      "RANKO JANJIĆ",
-      "MIODRAG ĆERANIĆ"
+      "ZLATKO RADIŠ", "SINIŠA PRAVICA", "SLAVEN PUHALO",
+      "NIKOLA MRDIĆ", "LJUBIŠA DOŠLO", "BRANISLAV BEGENUŠIĆ",
+      "RANKO JANJIĆ", "MIODRAG ĆERANIĆ"
     ];
 
     let currentWorker = localStorage.getItem('teren_worker_name') || '';
@@ -414,6 +418,78 @@
       }
     }
 
+    // POZICIJE / STAVKE ROBE
+    async function promptAddPosition() {
+      if (!selectedId) return;
+      const naziv = prompt('Unesite naziv pozicije (npr. Pozicija 1 - Garažna vrata):');
+      if (!naziv || !naziv.trim()) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      const positions = p.positions || [];
+      positions.push({ name: naziv.trim(), status: 'proizvodnja' }); // statusi: proizvodnja, skladiste, montirano
+
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    async function cyclePositionStatus(index) {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      const positions = p.positions || [];
+      if (!positions[index]) return;
+
+      // Kružni ciklus statusa: Proizvodnja -> Skladište -> Montirano -> Proizvodnja
+      const current = positions[index].status || 'proizvodnja';
+      if (current === 'proizvodnja') positions[index].status = 'skladiste';
+      else if (current === 'skladiste') positions[index].status = 'montirano';
+      else positions[index].status = 'proizvodnja';
+
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    async function deletePosition(index, e) {
+      e.stopPropagation();
+      if (!selectedId || !confirm('Obrisati ovu poziciju?')) return;
+      const p = projects.find(item => item.id === selectedId);
+      const positions = p.positions || [];
+      positions.splice(index, 1);
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    function renderPositions() {
+      const box = document.getElementById('positionsList');
+      if (!box) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      const positions = (p && p.positions) ? p.positions : [];
+
+      if (positions.length === 0) {
+        box.innerHTML = '<span style="font-size:11px; color:var(--text-muted);">Nema unesenih pozicija. Kliknite "➕ Dodaj poziciju".</span>';
+        return;
+      }
+
+      box.innerHTML = positions.map((pos, idx) => {
+        let chip = '';
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx})" title="Klikni za promjenu u Skladište">🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx})" title="Klikni za promjenu u Montirano">📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx})" title="Klikni za promjenu">✅ Montirano</button>`;
+        }
+
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              ${chip}
+              <button onclick="deletePosition(${idx}, event)" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:11px; font-weight:bold;">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // MONTERI UPRAVLJANJE
     async function addNewWorkerPrompt() {
       const novo = prompt('Unesite ime i prezime novog montera:');
       if (novo && novo.trim()) {
@@ -468,13 +544,6 @@
       await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: currentAssigned });
     }
 
-    async function setMontazaOutcome(outcome) {
-      if (!selectedId) return;
-      const p = projects.find(item => item.id === selectedId);
-      const newStatus = (p.montazaOutcome === outcome) ? null : outcome;
-      await db.collection("nalozi").doc(selectedId).update({ montazaOutcome: newStatus });
-    }
-
     async function saveMontazaNotes() {
       if (!selectedId) return;
       await db.collection("nalozi").doc(selectedId).update({
@@ -482,7 +551,7 @@
       });
     }
 
-    // FAKTURIRANJE FUNKCIJE
+    // FAKTURIRANJE
     async function saveInvoiceData() {
       if (!selectedId) return;
       await db.collection("nalozi").doc(selectedId).update({
@@ -547,26 +616,36 @@
         return;
       }
       list.innerHTML = projects.map(p => {
-        const monteriTekst = (p.assignedMonteri && p.assignedMonteri.length > 0) ? p.assignedMonteri.join(', ') : 'Nisu odabrani';
-        
-        let statusBadge = '<span style="color:#94a3b8;">⏳ Nije montirano</span>';
-        if (p.isInvoiced) {
-          statusBadge = '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>';
-        } else if (p.montazaOutcome === 'zavrseno') {
-          statusBadge = '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.2); padding:2px 6px; border-radius:4px;">🟢 SPREMNO ZA FAKTURIRANJE</span>';
-        } else if (p.montazaOutcome === 'nedostatak') {
-          statusBadge = '<span style="color:#f59e0b; font-weight:bold;">⚠️ Nedostaci</span>';
+        const positions = p.positions || [];
+        const total = positions.length;
+        const montirano = positions.filter(x => x.status === 'montirano').length;
+        const skladiste = positions.filter(x => x.status === 'skladiste').length;
+        const proizvodnja = positions.filter(x => x.status === 'proizvodnja').length;
+
+        let statusText = '';
+        if (total > 0) {
+          if (montirano === total) {
+            statusText = `<span style="color:#10b981; font-weight:bold;">✅ Sve montirano (${montirano}/${total})</span>`;
+          } else {
+            statusText = `<span style="color:#38bdf8;">📦 Skladište: ${skladiste}</span> • <span style="color:#10b981;">🛠️ Montirano: ${montirano}</span> • <span style="color:#f87171; font-weight:bold;">⏳ Ostalo: ${total - montirano}</span>`;
+          }
+        } else {
+          statusText = '<span style="color:#94a3b8;">⏳ Nema unesenih pozicija</span>';
         }
+
+        let fakturaBadge = p.isInvoiced 
+          ? '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>'
+          : '';
 
         return `
           <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="openDetails('${p.id}')">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <h4>${p.name}</h4>
+              ${fakturaBadge}
             </div>
-            <p>${p.loc || '-'} • 👷 Mjerio: ${p.worker || '-'} • 📅 ${p.date}</p>
-            <p style="color:#c084fc; font-size:11px; margin-top:2px;">🛠️ ${monteriTekst}</p>
-            <div style="margin-top: 5px; font-size: 11px;">
-              ${statusBadge}
+            <p>${p.loc || '-'} • 📅 ${p.date}</p>
+            <div style="margin-top: 5px; font-size: 11px; line-height: 1.4;">
+              ${statusText}
             </div>
           </div>
         `;
@@ -645,7 +724,7 @@
         offBox.innerHTML = '';
       }
 
-      // 3. Radni Nalog
+      // 3. Radni Nalog & Pozicije
       const rnUpload = document.getElementById('rnUploadZone');
       const rnDisplay = document.getElementById('rnDisplayZone');
       const btnDelRn = document.getElementById('btnDelRn');
@@ -656,7 +735,7 @@
         rnDisplay.style.display = 'block';
         btnDelRn.style.display = 'inline-block';
         if (p.rnDoc.startsWith('data:application/pdf')) {
-          rnBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📋</span><p style="font-size:12px; color:#fbbf24; font-weight:bold; margin-top:8px;">PDF Radni Nalog (Puni zaslon)</p></div>`;
+          rnBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📋</span><p style="font-size:12px; color:#fbbf24; font-weight:bold; margin-top:8px;">PDF RN (Puni zaslon)</p></div>`;
         } else {
           rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:360px; object-fit:contain;">`;
         }
@@ -667,16 +746,11 @@
         rnBox.innerHTML = '';
       }
 
+      renderPositions();
+
       // 4. Montaža
       document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
       renderMonteriCheckboxes();
-
-      const btnOk = document.getElementById('btnStatusOk');
-      const btnWarn = document.getElementById('btnStatusWarn');
-      if (btnOk && btnWarn) {
-        btnOk.classList.toggle('active', p.montazaOutcome === 'zavrseno');
-        btnWarn.classList.toggle('active', p.montazaOutcome === 'nedostatak');
-      }
 
       const doneThumbs = document.getElementById('d-done-thumbs');
       const doneImgs = p.doneImages || [];
@@ -696,7 +770,12 @@
       const pill = document.getElementById('fakturaPill');
       const btnFinal = document.getElementById('btnFinishInvoice');
 
-      if (p.montazaOutcome === 'zavrseno' && !p.isInvoiced) {
+      const positions = p.positions || [];
+      const total = positions.length;
+      const montirano = positions.filter(x => x.status === 'montirano').length;
+      const allDone = (total > 0 && montirano === total);
+
+      if (allDone && !p.isInvoiced) {
         readyAlert.style.display = 'block';
       } else {
         readyAlert.style.display = 'none';
@@ -940,9 +1019,9 @@
         images: [...uploadedImages],
         offerDoc: null,
         rnDoc: null,
+        positions: [],
         assignedMonteri: [],
         montazaNotes: '',
-        montazaOutcome: null,
         doneImages: [],
         invoiceNum: '',
         invoiceDoc: null,
