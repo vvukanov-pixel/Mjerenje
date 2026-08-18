@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TerenRad - Sustav Mjerenja, Ponuda, RN & Montaža</title>
+  <title>TerenRad - Sustav Mjerenja, Ponuda, RN, Montaža & Fakturiranje</title>
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -78,26 +78,25 @@
     .btn-print { background: var(--accent); color: white; }
     .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
 
-    .grid-four-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .grid-five-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 
-    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 250px; max-height: 380px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
-    .main-sketch img { width: 100%; height: 100%; max-height: 380px; object-fit: contain; }
+    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 360px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
+    .main-sketch img { width: 100%; height: 100%; max-height: 360px; object-fit: contain; }
     .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
     .gallery-thumb { width: 55px; height: 55px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; }
     .gallery-thumb.active { border-color: #38bdf8; opacity: 1; }
     .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-    .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; background: rgba(0,0,0,0.2); min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .doc-preview { width: 100%; min-height: 250px; max-height: 380px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
-    .doc-preview img { width: 100%; max-height: 380px; object-fit: contain; }
+    .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 18px; text-align: center; background: rgba(0,0,0,0.2); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
+    .doc-preview img { width: 100%; max-height: 360px; object-fit: contain; }
 
-    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
     .monter-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
-    .monter-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
-    .monter-label input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: #c084fc; }
+    .monter-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
+    .monter-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #c084fc; }
     .btn-del-worker { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
-    /* STATUS GUMBI */
     .status-btns-row { display: flex; gap: 8px; margin-bottom: 10px; }
     .btn-m-status { flex: 1; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 2px solid transparent; cursor: pointer; opacity: 0.45; transition: 0.2s; text-align: center; }
     .btn-m-status.active { opacity: 1; transform: scale(1.02); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
@@ -138,7 +137,7 @@
     <div class="modal-box">
       <h3 style="margin-bottom: 8px; font-size: 17px;">Prijava Korisnika</h3>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Unesite svoje ime:</p>
-      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
+      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Ivana, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
       <button onclick="saveWorkerName()" class="btn-submit">POTVRDI</button>
     </div>
   </div>
@@ -222,7 +221,7 @@
           </div>
         </div>
 
-        <div class="grid-four-col">
+        <div class="grid-five-col">
           
           <!-- 1. MAPA: SLIKE MJERENJA -->
           <div class="card">
@@ -291,7 +290,7 @@
               <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
 
-            <!-- GUMBI ZA ISHOD -->
+            <label>Ishod montaže:</label>
             <div class="status-btns-row">
               <button type="button" id="btnStatusWarn" class="btn-m-status btn-status-warn" onclick="setMontazaOutcome('nedostatak')">⚠️ Nedostatak</button>
               <button type="button" id="btnStatusOk" class="btn-m-status btn-status-ok" onclick="setMontazaOutcome('zavrseno')">✅ Završeno</button>
@@ -299,7 +298,7 @@
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
               <label style="margin:0;">MONTERI:</label>
-              <button onclick="addNewWorkerPrompt()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj montera</button>
+              <button onclick="addNewWorkerPrompt()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj</button>
             </div>
             
             <div class="monteri-container" id="monteriCheckboxList"></div>
@@ -311,6 +310,34 @@
 
             <label>Fotografije montaže:</label>
             <div class="gallery-thumbs" id="d-done-thumbs"></div>
+          </div>
+
+          <!-- 5. MAPA: FAKTURIRANJE U UREDU (NOVO) -->
+          <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 style="color: #34d399; font-size: 13px;">💰 5. FAKTURIRANJE</h4>
+              <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
+            </div>
+
+            <div id="readyForInvoiceAlert" style="display:none; background: rgba(16,185,129,0.2); border: 1px solid var(--success); color: #a7f3d0; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 10px; text-align: center;">
+              📢 MONTAŽA ZAVRŠENA - MOŽE SE FAKTURIRATI!
+            </div>
+
+            <div class="form-group">
+              <label>Broj Računa / Fakture:</label>
+              <input type="text" id="inpInvoiceNum" placeholder="npr. R1 142/2026" onchange="saveInvoiceData()">
+            </div>
+
+            <div class="form-group">
+              <label>Priloži Račun (Slika / PDF):</label>
+              <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
+              <input type="file" id="invoiceFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleInvoiceUpload(event)">
+              <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
+            </div>
+
+            <button type="button" id="btnFinishInvoice" class="btn-submit" style="background: var(--success); margin-top: 6px;" onclick="finalizeProjectInvoice()">
+              ✅ OZNAČI KAO FAKTURIRANO
+            </button>
           </div>
 
         </div>
@@ -455,6 +482,43 @@
       });
     }
 
+    // FAKTURIRANJE FUNKCIJE
+    async function saveInvoiceData() {
+      if (!selectedId) return;
+      await db.collection("nalozi").doc(selectedId).update({
+        invoiceNum: document.getElementById('inpInvoiceNum').value
+      });
+    }
+
+    async function handleInvoiceUpload(e) {
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      try {
+        const base64 = await processDocumentFile(file);
+        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: base64 });
+      } catch (err) {
+        alert(err);
+      }
+      e.target.value = '';
+    }
+
+    async function removeInvoiceDoc() {
+      if (!selectedId || !confirm('Obrisati račun?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: null });
+    }
+
+    async function finalizeProjectInvoice() {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      const num = document.getElementById('inpInvoiceNum').value.trim();
+      const isAlreadyInvoiced = p.isInvoiced;
+
+      await db.collection("nalozi").doc(selectedId).update({
+        invoiceNum: num,
+        isInvoiced: !isAlreadyInvoiced
+      });
+    }
+
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
       projects = [];
       snapshot.forEach(doc => {
@@ -485,11 +549,13 @@
       list.innerHTML = projects.map(p => {
         const monteriTekst = (p.assignedMonteri && p.assignedMonteri.length > 0) ? p.assignedMonteri.join(', ') : 'Nisu odabrani';
         
-        let montazaBadge = '<span style="color:#94a3b8;">⏳ Nije montirano</span>';
-        if (p.montazaOutcome === 'zavrseno') {
-          montazaBadge = '<span style="color:var(--success); font-weight:bold;">✅ Montirano</span>';
+        let statusBadge = '<span style="color:#94a3b8;">⏳ Nije montirano</span>';
+        if (p.isInvoiced) {
+          statusBadge = '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>';
+        } else if (p.montazaOutcome === 'zavrseno') {
+          statusBadge = '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.2); padding:2px 6px; border-radius:4px;">🟢 SPREMNO ZA FAKTURIRANJE</span>';
         } else if (p.montazaOutcome === 'nedostatak') {
-          montazaBadge = '<span style="color:var(--warning); font-weight:bold;">⚠️ Nedostaci</span>';
+          statusBadge = '<span style="color:#f59e0b; font-weight:bold;">⚠️ Nedostaci</span>';
         }
 
         return `
@@ -499,12 +565,8 @@
             </div>
             <p>${p.loc || '-'} • 👷 Mjerio: ${p.worker || '-'} • 📅 ${p.date}</p>
             <p style="color:#c084fc; font-size:11px; margin-top:2px;">🛠️ ${monteriTekst}</p>
-            <div style="margin-top: 4px; font-size: 10px; display:flex; gap:6px; flex-wrap: wrap;">
-              <span style="color:${p.offerDoc ? '#34d399' : '#94a3b8'};">${p.offerDoc ? '✅ Ponuda' : '⏳ Bez ponude'}</span>
-              <span>•</span>
-              <span style="color:${p.rnDoc ? '#fbbf24' : '#94a3b8'};">${p.rnDoc ? '✅ RN' : '⏳ Bez RN'}</span>
-              <span>•</span>
-              ${montazaBadge}
+            <div style="margin-top: 5px; font-size: 11px;">
+              ${statusBadge}
             </div>
           </div>
         `;
@@ -574,7 +636,7 @@
         if (p.offerDoc.startsWith('data:application/pdf')) {
           offBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📄</span><p style="font-size:12px; color:#38bdf8; font-weight:bold; margin-top:8px;">PDF Ponuda (Puni zaslon)</p></div>`;
         } else {
-          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:380px; object-fit:contain;">`;
+          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:360px; object-fit:contain;">`;
         }
       } else {
         offUpload.style.display = 'flex';
@@ -596,7 +658,7 @@
         if (p.rnDoc.startsWith('data:application/pdf')) {
           rnBox.innerHTML = `<div style="text-align:center; padding:20px;"><span style="font-size:40px;">📋</span><p style="font-size:12px; color:#fbbf24; font-weight:bold; margin-top:8px;">PDF Radni Nalog (Puni zaslon)</p></div>`;
         } else {
-          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:380px; object-fit:contain;">`;
+          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:360px; object-fit:contain;">`;
         }
       } else {
         rnUpload.style.display = 'flex';
@@ -626,6 +688,46 @@
         `).join('');
       } else {
         doneThumbs.innerHTML = '<span style="font-size:11px; color:var(--text-muted); padding:6px;">Nema slika montaže.</span>';
+      }
+
+      // 5. Fakturiranje Prikaz
+      document.getElementById('inpInvoiceNum').value = p.invoiceNum || '';
+      const readyAlert = document.getElementById('readyForInvoiceAlert');
+      const pill = document.getElementById('fakturaPill');
+      const btnFinal = document.getElementById('btnFinishInvoice');
+
+      if (p.montazaOutcome === 'zavrseno' && !p.isInvoiced) {
+        readyAlert.style.display = 'block';
+      } else {
+        readyAlert.style.display = 'none';
+      }
+
+      if (p.isInvoiced) {
+        pill.style.background = '#10b981';
+        pill.style.color = '#fff';
+        pill.innerText = '✅ FAKTURIRANO';
+        btnFinal.innerText = '🔄 PONIŠTI STATUS FAKTURIRANO';
+        btnFinal.style.background = 'rgba(239, 68, 68, 0.2)';
+        btnFinal.style.color = '#f87171';
+      } else {
+        pill.style.background = 'rgba(255,255,255,0.1)';
+        pill.style.color = 'var(--text-muted)';
+        pill.innerText = 'ČEKA RAČUN';
+        btnFinal.innerText = '✅ OZNAČI KAO FAKTURIRANO';
+        btnFinal.style.background = 'var(--success)';
+        btnFinal.style.color = '#fff';
+      }
+
+      const invoicePrev = document.getElementById('invoiceDocPreview');
+      if (p.invoiceDoc) {
+        invoicePrev.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
+            <a href="#" onclick="openLightbox('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
+            <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
+          </div>
+        `;
+      } else {
+        invoicePrev.innerHTML = '';
       }
     }
 
@@ -841,7 +943,10 @@
         assignedMonteri: [],
         montazaNotes: '',
         montazaOutcome: null,
-        doneImages: []
+        doneImages: [],
+        invoiceNum: '',
+        invoiceDoc: null,
+        isInvoiced: false
       };
 
       try {
