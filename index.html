@@ -3,10 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TerenRad - Mjerenje, Ponuda, RN, Montaža & Fakturiranje</title>
+  <title>TerenRad - Sustav Mjerenja, Proizvodnje, Skladišta & Montaže</title>
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  </script>
 
   <style>
     :root {
@@ -15,13 +20,10 @@
       --card-dark: #1e294b;
       --border-color: #2e3d66;
       --accent: #2563eb;
-      --accent-hover: #1d4ed8;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --danger: #ef4444;
-      --warning: #f59e0b;
       --success: #10b981;
-      --purple: #a855f7;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -85,9 +87,10 @@
     .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 360px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
     .main-sketch img { width: 100%; height: 100%; max-height: 360px; object-fit: contain; }
     .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
-    .gallery-thumb { width: 55px; height: 55px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; }
+    .gallery-thumb { width: 55px; height: 55px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; position: relative; }
     .gallery-thumb.active { border-color: #38bdf8; opacity: 1; }
     .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .btn-del-thumb { position: absolute; top: 1px; right: 1px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: bold; cursor: pointer; }
 
     .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 18px; text-align: center; background: rgba(0,0,0,0.2); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
@@ -125,24 +128,30 @@
       .detail-panel.mobile-show { display: flex; }
       .btn-mobile-back { display: block; }
     }
+
+    @media print {
+      header, .sidebar, .btn-action-group, .btn-mobile-back, .view-toggle, .user-tag, button, .upload-zone, input[type="file"] {
+        display: none !important;
+      }
+      .main-container, #admin-view, .detail-panel { display: block !important; width: 100% !important; height: auto !important; }
+      body { background: white; color: black; }
+    }
   </style>
 </head>
 <body>
 
   <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox(event)">
     <div class="lightbox-header">
-      <button class="btn-close-lightbox" onclick="closeLightbox()">✕ ZATVORI (ESC)</button>
+      <button class="btn-close-lightbox" onclick="closeLightbox()">✕ ZATVORI</button>
     </div>
-    <div class="lightbox-content" id="lightboxContent">
-      <img id="lightboxImg" class="lightbox-img" src="" alt="Pregled">
-    </div>
+    <div class="lightbox-content" id="lightboxContent"></div>
   </div>
 
   <div id="loginModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
       <h3 style="margin-bottom: 8px; font-size: 17px;">Prijava Korisnika</h3>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Unesite svoje ime:</p>
-      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Skladište, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
+      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
       <button onclick="saveWorkerName()" class="btn-submit">POTVRDI</button>
     </div>
   </div>
@@ -159,25 +168,20 @@
   </header>
 
   <div class="main-container">
-    
     <div id="monter-view">
       <div class="card">
         <h3 style="font-size: 15px; margin-bottom: 12px;">Novo Terensko Mjerenje</h3>
-
         <form onsubmit="saveNewProject(event)">
           <label>Fotografije Skica / Mjerenja</label>
           <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
             <span id="upload-status">📷 Dodaj stranice bilježnice</span>
-            <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleImageSelection(event)">
+            <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display:none" onchange="handleImageSelection(event)">
           </div>
-
           <div class="preview-grid" id="previewGrid"></div>
-
           <div class="form-group">
             <label>Klijent / Objekt</label>
-            <input type="text" id="cName" required placeholder="npr. ELLABO IND ili Tomičić">
+            <input type="text" id="cName" required placeholder="npr. ELLABO IND">
           </div>
-
           <div style="display: flex; gap: 8px;">
             <div class="form-group" style="flex:1;">
               <label>Telefon</label>
@@ -188,12 +192,10 @@
               <input type="text" id="cLoc" placeholder="npr. Lapad">
             </div>
           </div>
-
           <div class="form-group">
-            <label>Opće napomene s mjerenja</label>
-            <textarea id="cNotes" rows="3" placeholder="Boja, profil, staklo, situacija..."></textarea>
+            <label>Napomene</label>
+            <textarea id="cNotes" rows="3" placeholder="Boja, profil, staklo..."></textarea>
           </div>
-
           <button type="submit" id="btnSubmit" class="btn-submit">💾 SPREMI MJERENJE</button>
         </form>
       </div>
@@ -206,7 +208,7 @@
             <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
             <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
           </div>
-          <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži klijenta ili lokaciju..." oninput="renderSidebar()">
+          <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži..." oninput="renderSidebar()">
         </div>
         <div class="sidebar-list" id="projectList">
           <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje...</p>
@@ -214,7 +216,6 @@
       </div>
 
       <div class="detail-panel" id="detailPanel">
-        
         <div class="full-width">
           <div style="display: flex; align-items: center; gap: 10px;">
             <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
@@ -230,132 +231,112 @@
         </div>
 
         <div class="grid-five-col">
-          
-          <!-- 1. MAPA: SLIKE MJERENJA -->
+          <!-- 1. MJERENJE -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE</h4>
               <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
             </div>
-
             <div class="main-sketch" onclick="openSketchFull()">
-              <img id="d-img" src="" alt="Skica" title="Puni zaslon">
+              <img id="d-img" src="" alt="Skica">
             </div>
-
             <div class="gallery-thumbs" id="d-thumbs"></div>
             <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
           </div>
 
-          <!-- 2. MAPA: PONUDA -->
+          <!-- 2. PONUDA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #34d399; font-size: 13px;">📄 2. PONUDA</h4>
-              <button id="btnDelOffer" onclick="removeOffer()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
+              <button id="btnDelOffer" onclick="removeOffer()" style="display:none; background: rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🗑️</button>
             </div>
-
             <div id="offerUploadZone" class="doc-box">
-              <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
-              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu</button>
-              <input type="file" id="offerFileInput" accept="image/*" style="display:none" onchange="handleOfferUpload(event)">
+              <p id="txtOfferStatus" style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Nema ponude</p>
+              <button onclick="document.getElementById('offerFileInput').click()" style="background:#0284c7; color:white; border:none; padding:6px 12px; border-radius:5px; font-size:12px; font-weight:bold; cursor:pointer;">📤 Učitaj Ponudu</button>
+              <input type="file" id="offerFileInput" accept="image/*,.pdf" style="display:none" onchange="handleOfferUpload(event)">
             </div>
-
             <div id="offerDisplayZone" style="display:none;">
               <div class="doc-preview" id="offerPreviewBox" onclick="openOfferFull()"></div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size: 11px; color: #34d399; font-weight: bold;">✅ Učitano</span>
-                <button onclick="document.getElementById('offerFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
+                <span style="font-size:11px; color:#34d399; font-weight:bold;">✅ Učitano</span>
+                <button onclick="document.getElementById('offerFileInput').click()" style="background:var(--card-dark); color:white; border:1px solid var(--border-color); padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🔄 Zamijeni</button>
               </div>
             </div>
           </div>
 
-          <!-- 3. MAPA: RADNI NALOG & POZICIJE ROBE -->
+          <!-- 3. RADNI NALOG -->
           <div class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG & POZICIJE</h4>
-              <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
+              <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🗑️</button>
             </div>
-
             <div id="rnUploadZone" class="doc-box">
-              <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
-              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN</button>
-              <input type="file" id="rnFileInput" accept="image/*" style="display:none" onchange="handleRnUpload(event)">
+              <p id="txtRnStatus" style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Nema radnog naloga</p>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background:#0284c7; color:white; border:none; padding:6px 12px; border-radius:5px; font-size:12px; font-weight:bold; cursor:pointer;">📤 Učitaj RN</button>
+              <input type="file" id="rnFileInput" accept="image/*,.pdf" style="display:none" onchange="handleRnUpload(event)">
             </div>
-
-            <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
+            <div id="rnDisplayZone" style="display:none; margin-bottom:12px;">
               <div class="doc-preview" id="rnPreviewBox" onclick="openRnFull()"></div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">✅ RN Učitan</span>
-                <button onclick="document.getElementById('rnFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
+                <span style="font-size:11px; color:#fbbf24; font-weight:bold;">✅ RN Učitan</span>
+                <button onclick="document.getElementById('rnFileInput').click()" style="background:var(--card-dark); color:white; border:1px solid var(--border-color); padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">🔄 Zamijeni</button>
               </div>
             </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; border-top: 1px solid var(--border-color); padding-top: 8px;">
-              <label style="margin:0; color:#fbbf24;">📦 STANJE POZICIJA (KLIK ZA PROMJENU):</label>
-              <button onclick="promptAddPosition()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-top:1px solid var(--border-color); padding-top:8px;">
+              <label style="margin:0; color:#fbbf24;">📦 STANJE POZICIJA:</label>
+              <button onclick="promptAddPosition()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj</button>
             </div>
-
             <div class="positions-box" id="positionsList">
-              <span style="font-size:11px; color:var(--text-muted);">Nema unesenih pozicija. Kliknite "➕ Dodaj poziciju".</span>
+              <span style="font-size:11px; color:var(--text-muted);">Nema pozicija.</span>
             </div>
           </div>
 
-          <!-- 4. MAPA: MONTAŽA -->
+          <!-- 4. MONTAŽA -->
           <div class="card" style="border-left: 4px solid #a855f7;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #c084fc; font-size: 13px;">🛠️ 4. MONTAŽA</h4>
-              <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike</button>
-              <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
+              <button onclick="document.getElementById('doneFileInput').click()" style="background:#7e22ce; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">📷 + Slike</button>
+              <input type="file" id="doneFileInput" accept="image/*,.pdf" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <label style="margin:0;">MONTERI:</label>
               <button onclick="addNewWorkerPrompt()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj</button>
             </div>
-            
             <div class="monteri-container" id="monteriCheckboxList"></div>
-
             <div class="form-group">
-              <label>Nedostaci / Zapažanja:</label>
-              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1, za poz. 2 fali lajsna..." onchange="saveMontazaNotes()"></textarea>
+              <label>Napomene montaže:</label>
+              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1..." onchange="saveMontazaNotes()"></textarea>
             </div>
-
             <label>Fotografije montaže:</label>
             <div class="gallery-thumbs" id="d-done-thumbs"></div>
           </div>
 
-          <!-- 5. MAPA: FAKTURIRANJE U UREDU -->
-          <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
+          <!-- 5. FAKTURIRANJE -->
+          <div class="card" style="border-left: 4px solid var(--success);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #34d399; font-size: 13px;">💰 5. FAKTURIRANJE</h4>
               <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
             </div>
-
-            <div id="readyForInvoiceAlert" style="display:none; background: rgba(16,185,129,0.2); border: 1px solid var(--success); color: #a7f3d0; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 10px; text-align: center;">
+            <div id="readyForInvoiceAlert" style="display:none; background:rgba(16,185,129,0.2); border:1px solid var(--success); color:#a7f3d0; padding:8px; border-radius:6px; font-size:11px; font-weight:bold; margin-bottom:10px; text-align:center;">
               📢 SVE JE MONTIRANO - MOŽE SE FAKTURIRATI!
             </div>
-
             <div class="form-group">
-              <label>Broj Računa / Fakture:</label>
+              <label>Broj Računa:</label>
               <input type="text" id="inpInvoiceNum" placeholder="npr. R1 142/2026" onchange="saveInvoiceData()">
             </div>
-
             <div class="form-group">
-              <label>Priloži Račun (Slika):</label>
-              <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
-              <input type="file" id="invoiceFileInput" accept="image/*" style="display:none" onchange="handleInvoiceUpload(event)">
-              <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
+              <label>Priloži Račun:</label>
+              <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background:#065f46; color:#a7f3d0; border:1px dashed #10b981; padding:8px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📎 Učitaj Fakturu</button>
+              <input type="file" id="invoiceFileInput" accept="image/*,.pdf" style="display:none" onchange="handleInvoiceUpload(event)">
+              <div id="invoiceDocPreview" style="margin-top:6px; font-size:12px;"></div>
             </div>
-
-            <button type="button" id="btnFinishInvoice" class="btn-submit" style="background: var(--success); margin-top: 6px;" onclick="finalizeProjectInvoice()">
+            <button type="button" id="btnFinishInvoice" class="btn-submit" style="background:var(--success); margin-top:6px;" onclick="finalizeProjectInvoice()">
               ✅ OZNAČI KAO FAKTURIRANO
             </button>
           </div>
-
         </div>
-
       </div>
     </div>
-
   </div>
 
   <script>
@@ -370,12 +351,9 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const storage = firebase.storage();
 
-    const DEFAULT_WORKERS = [
-      "ZLATKO RADIŠ", "SINIŠA PRAVICA", "SLAVEN PUHALO",
-      "NIKOLA MRDIĆ", "LJUBIŠA DOŠLO", "BRANISLAV BEGENUŠIĆ",
-      "RANKO JANJIĆ", "MIODRAG ĆERANIĆ"
-    ];
+    const DEFAULT_WORKERS = ["ZLATKO RADIŠ", "SINIŠA PRAVICA", "SLAVEN PUHALO", "NIKOLA MRDIĆ", "LJUBIŠA DOŠLO", "BRANISLAV BEGENUŠIĆ", "RANKO JANJIĆ", "MIODRAG ĆERANIĆ"];
 
     let currentWorker = localStorage.getItem('teren_worker_name') || '';
     let projects = [];
@@ -384,20 +362,65 @@
     let uploadedImages = [];
     let globalWorkersList = [];
 
-    db.collection("postavke").doc("monteri").onSnapshot(doc => {
-      if (doc.exists && doc.data().lista) {
-        globalWorkersList = doc.data().lista;
-      } else {
-        globalWorkersList = [...DEFAULT_WORKERS];
-        db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
+    // ========== STORAGE HELPERS ==========
+    async function compressToBlobs(file) {
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(buf).promise;
+        const blobs = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const vp = page.getViewport({ scale: 1 });
+          const scale = Math.min(1, 900 / Math.max(vp.width, vp.height));
+          const scaled = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = scaled.width;
+          canvas.height = scaled.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaled }).promise;
+          const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.42));
+          blobs.push(blob);
+        }
+        return blobs;
       }
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 900;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+          else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(b => { URL.revokeObjectURL(url); resolve([b]); }, 'image/jpeg', 0.42);
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    async function uploadBlobs(blobs, folder) {
+      const urls = [];
+      for (let i = 0; i < blobs.length; i++) {
+        const path = `${folder}/${Date.now()}_${i}.jpg`;
+        const ref = storage.ref(path);
+        await ref.put(blobs[i], { contentType: 'image/jpeg' });
+        urls.push(await ref.getDownloadURL());
+      }
+      return urls;
+    }
+
+    // ========== WORKERS ==========
+    db.collection("postavke").doc("monteri").onSnapshot(doc => {
+      globalWorkersList = (doc.exists && doc.data().lista) ? doc.data().lista : [...DEFAULT_WORKERS];
+      if (!doc.exists) db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
       renderMonteriCheckboxes();
     });
 
     function checkWorkerAuth() {
-      if (!currentWorker) {
-        document.getElementById('loginModal').style.display = 'flex';
-      } else {
+      if (!currentWorker) document.getElementById('loginModal').style.display = 'flex';
+      else {
         document.getElementById('loginModal').style.display = 'none';
         document.getElementById('userBadge').innerText = `👷 ${currentWorker}`;
       }
@@ -412,125 +435,76 @@
     }
 
     function promptChangeWorker() {
-      const novoIme = prompt('Ime korisnika na ovom uređaju:', currentWorker);
-      if (novoIme && novoIme.trim()) {
-        currentWorker = novoIme.trim();
+      const n = prompt('Ime korisnika:', currentWorker);
+      if (n && n.trim()) {
+        currentWorker = n.trim();
         localStorage.setItem('teren_worker_name', currentWorker);
         checkWorkerAuth();
       }
     }
 
-    // POUZDANA KOMPRESIJA SLIKA (Max 600px, JPEG 0.35 -> ~20 KB)
-    function processImageFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX = 600;
-            let w = img.width;
-            let h = img.height;
-            if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
-            else { if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; } }
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.35));
-          };
-          img.onerror = () => reject('Neispravna slika');
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // POZICIJE
+    // ========== POSITIONS ==========
     async function promptAddPosition() {
       if (!selectedId) return;
-      const naziv = prompt('Unesite naziv pozicije (npr. Pozicija 1 - Garažna vrata):');
+      const naziv = prompt('Naziv pozicije:');
       if (!naziv || !naziv.trim()) return;
-
-      const p = projects.find(item => item.id === selectedId);
+      const p = projects.find(x => x.id === selectedId);
       const positions = p.positions || [];
       positions.push({ name: naziv.trim(), status: 'proizvodnja' });
-
-      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+      await db.collection("nalozi").doc(selectedId).update({ positions });
     }
 
-    async function cyclePositionStatus(index) {
+    async function cyclePositionStatus(i) {
       if (!selectedId) return;
-      const p = projects.find(item => item.id === selectedId);
+      const p = projects.find(x => x.id === selectedId);
       const positions = p.positions || [];
-      if (!positions[index]) return;
-
-      const current = positions[index].status || 'proizvodnja';
-      if (current === 'proizvodnja') positions[index].status = 'skladiste';
-      else if (current === 'skladiste') positions[index].status = 'montirano';
-      else positions[index].status = 'proizvodnja';
-
-      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+      if (!positions[i]) return;
+      const s = positions[i].status || 'proizvodnja';
+      positions[i].status = s === 'proizvodnja' ? 'skladiste' : s === 'skladiste' ? 'montirano' : 'proizvodnja';
+      await db.collection("nalozi").doc(selectedId).update({ positions });
     }
 
-    async function deletePosition(index, e) {
+    async function deletePosition(i, e) {
       e.stopPropagation();
-      if (!selectedId || !confirm('Obrisati ovu poziciju?')) return;
-      const p = projects.find(item => item.id === selectedId);
+      if (!selectedId || !confirm('Obrisati poziciju?')) return;
+      const p = projects.find(x => x.id === selectedId);
       const positions = p.positions || [];
-      positions.splice(index, 1);
-      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+      positions.splice(i, 1);
+      await db.collection("nalozi").doc(selectedId).update({ positions });
     }
 
     function renderPositions() {
       const box = document.getElementById('positionsList');
-      if (!box) return;
-
-      const p = projects.find(item => item.id === selectedId);
-      const positions = (p && p.positions) ? p.positions : [];
-
-      if (positions.length === 0) {
-        box.innerHTML = '<span style="font-size:11px; color:var(--text-muted);">Nema unesenih pozicija. Kliknite "➕ Dodaj poziciju".</span>';
+      const p = projects.find(x => x.id === selectedId);
+      const positions = (p && p.positions) || [];
+      if (!positions.length) {
+        box.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">Nema pozicija.</span>';
         return;
       }
-
       box.innerHTML = positions.map((pos, idx) => {
-        let chip = '';
-        if (pos.status === 'proizvodnja') {
-          chip = `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx})">🏭 U Proizvodnji</button>`;
-        } else if (pos.status === 'skladiste') {
-          chip = `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx})">📦 U Skladištu</button>`;
-        } else if (pos.status === 'montirano') {
-          chip = `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx})">✅ Montirano</button>`;
-        }
-
-        return `
-          <div class="pos-item">
-            <span class="pos-name">${pos.name}</span>
-            <div style="display:flex; align-items:center; gap:6px;">
-              ${chip}
-              <button onclick="deletePosition(${idx}, event)" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:11px; font-weight:bold;">✕</button>
-            </div>
-          </div>
-        `;
+        const chip = pos.status === 'proizvodnja' ? `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx})">🏭 U Proizvodnji</button>` :
+                     pos.status === 'skladiste' ? `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx})">📦 U Skladištu</button>` :
+                     `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx})">✅ Montirano</button>`;
+        return `<div class="pos-item"><span class="pos-name">${pos.name}</span><div style="display:flex;gap:6px;align-items:center;">${chip}<button onclick="deletePosition(${idx},event)" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:11px;font-weight:bold;">✕</button></div></div>`;
       }).join('');
     }
 
-    // MONTERI
+    // ========== MONTERI ==========
     async function addNewWorkerPrompt() {
-      const novo = prompt('Unesite ime i prezime novog montera:');
-      if (novo && novo.trim()) {
-        const nameUpper = novo.trim().toUpperCase();
-        if (!globalWorkersList.includes(nameUpper)) {
-          globalWorkersList.push(nameUpper);
+      const n = prompt('Ime i prezime montera:');
+      if (n && n.trim()) {
+        const name = n.trim().toUpperCase();
+        if (!globalWorkersList.includes(name)) {
+          globalWorkersList.push(name);
           await db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
         }
       }
     }
 
-    async function deleteWorker(workerName, e) {
+    async function deleteWorker(name, e) {
       e.stopPropagation();
-      if (confirm(`Ukloniti montera: ${workerName}?`)) {
-        globalWorkersList = globalWorkersList.filter(w => w !== workerName);
+      if (confirm(`Ukloniti ${name}?`)) {
+        globalWorkersList = globalWorkersList.filter(w => w !== name);
         await db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
       }
     }
@@ -538,62 +512,42 @@
     function renderMonteriCheckboxes() {
       const cont = document.getElementById('monteriCheckboxList');
       if (!cont) return;
-
-      const p = projects.find(item => item.id === selectedId);
-      const selectedWorkers = (p && p.assignedMonteri) ? p.assignedMonteri : [];
-
+      const p = projects.find(x => x.id === selectedId);
+      const selected = (p && p.assignedMonteri) || [];
       cont.innerHTML = globalWorkersList.map(name => {
-        const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
-        return `
-          <div class="monter-row">
-            <label class="monter-label">
-              <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
-              <span>${name}</span>
-            </label>
-            <button type="button" class="btn-del-worker" title="Ukloni" onclick="deleteWorker('${name}', event)">✕</button>
-          </div>
-        `;
+        const checked = selected.includes(name) ? 'checked' : '';
+        return `<div class="monter-row"><label class="monter-label"><input type="checkbox" ${checked} onchange="toggleMonter('${name}',this.checked)"><span>${name}</span></label><button class="btn-del-worker" onclick="deleteWorker('${name}',event)">✕</button></div>`;
       }).join('');
     }
 
-    async function toggleMonter(name, isChecked) {
+    async function toggleMonter(name, checked) {
       if (!selectedId) return;
-      const p = projects.find(item => item.id === selectedId);
-      let currentAssigned = p.assignedMonteri || [];
-
-      if (isChecked) {
-        if (!currentAssigned.includes(name)) currentAssigned.push(name);
-      } else {
-        currentAssigned = currentAssigned.filter(item => item !== name);
-      }
-
-      await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: currentAssigned });
+      const p = projects.find(x => x.id === selectedId);
+      let list = p.assignedMonteri || [];
+      if (checked) { if (!list.includes(name)) list.push(name); }
+      else list = list.filter(x => x !== name);
+      await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: list });
     }
 
     async function saveMontazaNotes() {
       if (!selectedId) return;
-      await db.collection("nalozi").doc(selectedId).update({
-        montazaNotes: document.getElementById('mMontazaNotes').value
-      });
+      await db.collection("nalozi").doc(selectedId).update({ montazaNotes: document.getElementById('mMontazaNotes').value });
     }
 
-    // FAKTURIRANJE
+    // ========== FAKTURIRANJE ==========
     async function saveInvoiceData() {
       if (!selectedId) return;
-      await db.collection("nalozi").doc(selectedId).update({
-        invoiceNum: document.getElementById('inpInvoiceNum').value
-      });
+      await db.collection("nalozi").doc(selectedId).update({ invoiceNum: document.getElementById('inpInvoiceNum').value });
     }
 
     async function handleInvoiceUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
       try {
-        const base64 = await processImageFile(file);
-        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: base64 });
-      } catch (err) {
-        alert('Molimo odaberite sliku fakture (JPG/PNG).');
-      }
+        const blobs = await compressToBlobs(file);
+        const urls = await uploadBlobs(blobs, `nalozi/${selectedId}/invoice`);
+        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: urls[0] });
+      } catch (err) { alert('Greška: ' + err.message); }
       e.target.value = '';
     }
 
@@ -604,87 +558,41 @@
 
     async function finalizeProjectInvoice() {
       if (!selectedId) return;
-      const p = projects.find(item => item.id === selectedId);
-      const num = document.getElementById('inpInvoiceNum').value.trim();
-      const isAlreadyInvoiced = p.isInvoiced;
-
+      const p = projects.find(x => x.id === selectedId);
       await db.collection("nalozi").doc(selectedId).update({
-        invoiceNum: num,
-        isInvoiced: !isAlreadyInvoiced
+        invoiceNum: document.getElementById('inpInvoiceNum').value.trim(),
+        isInvoiced: !p.isInvoiced
       });
     }
 
-    // UČITAVANJE IZ BAZE
-    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+    // ========== MAIN DATA ==========
+    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot(snap => {
       projects = [];
-      snapshot.forEach(doc => {
-        projects.push({ id: doc.id, ...doc.data() });
-      });
-
+      snap.forEach(d => projects.push({ id: d.id, ...d.data() }));
       renderSidebar();
-
-      if (projects.length > 0) {
+      if (projects.length) {
         if (!selectedId || !projects.find(p => p.id === selectedId)) {
-          if (window.innerWidth > 900) {
-            openDetails(projects[0].id);
-          }
-        } else {
-          renderDetails();
-        }
-      } else {
-        selectedId = null;
-      }
+          if (window.innerWidth > 900) openDetails(projects[0].id);
+        } else renderDetails();
+      } else selectedId = null;
     });
 
     function renderSidebar() {
       const list = document.getElementById('projectList');
-      const query = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
-
-      const filtered = projects.filter(p => {
-        if (!query) return true;
-        const nameMatch = (p.name || '').toLowerCase().includes(query);
-        const locMatch = (p.loc || '').toLowerCase().includes(query);
-        return nameMatch || locMatch;
-      });
-
-      if (filtered.length === 0) {
-        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema pronađenih naloga.</p>`;
+      const q = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
+      const filtered = projects.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.loc||'').toLowerCase().includes(q));
+      if (!filtered.length) {
+        list.innerHTML = '<p style="padding:20px;font-size:12px;color:var(--text-muted);text-align:center;">Nema naloga.</p>';
         return;
       }
-
       list.innerHTML = filtered.map(p => {
-        const positions = p.positions || [];
-        const total = positions.length;
-        const montirano = positions.filter(x => x.status === 'montirano').length;
-        const skladiste = positions.filter(x => x.status === 'skladiste').length;
-
-        let statusText = '';
-        if (total > 0) {
-          if (montirano === total) {
-            statusText = `<span style="color:#10b981; font-weight:bold;">✅ Sve montirano (${montirano}/${total})</span>`;
-          } else {
-            statusText = `<span style="color:#38bdf8;">📦 Skladište: ${skladiste}</span> • <span style="color:#10b981;">🛠️ Montirano: ${montirano}</span> • <span style="color:#f87171; font-weight:bold;">⏳ Ostalo: ${total - montirano}</span>`;
-          }
-        } else {
-          statusText = '<span style="color:#94a3b8;">⏳ Nema unesenih pozicija</span>';
-        }
-
-        let fakturaBadge = p.isInvoiced 
-          ? '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>'
-          : '';
-
-        return `
-          <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="openDetails('${p.id}')">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <h4>${p.name}</h4>
-              ${fakturaBadge}
-            </div>
-            <p>${p.loc || '-'} • 📅 ${p.date}</p>
-            <div style="margin-top: 5px; font-size: 11px; line-height: 1.4;">
-              ${statusText}
-            </div>
-          </div>
-        `;
+        const pos = p.positions || [];
+        const total = pos.length;
+        const mont = pos.filter(x => x.status === 'montirano').length;
+        const skl = pos.filter(x => x.status === 'skladiste').length;
+        let st = total ? (mont === total ? `<span style="color:#10b981;font-weight:bold;">✅ Sve montirano (${mont}/${total})</span>` : `<span style="color:#38bdf8;">📦 ${skl}</span> • <span style="color:#10b981;">🛠️ ${mont}</span> • <span style="color:#f87171;">⏳ ${total-mont}</span>`) : '<span style="color:#94a3b8;">⏳ Nema pozicija</span>';
+        const badge = p.isInvoiced ? '<span style="color:#10b981;font-weight:bold;background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:4px;">🏁 FAKTURIRANO</span>' : '';
+        return `<div class="project-item ${p.id===selectedId?'selected':''}" onclick="openDetails('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;"><h4>${p.name}</h4>${badge}</div><p>${p.loc||'-'} • 📅 ${p.date}</p><div style="margin-top:5px;font-size:11px;">${st}</div></div>`;
       }).join('');
     }
 
@@ -693,7 +601,6 @@
       currentImageIndex = 0;
       renderSidebar();
       renderDetails();
-
       if (window.innerWidth <= 900) {
         document.getElementById('sidebar').classList.add('mobile-hide');
         document.getElementById('detailPanel').classList.add('mobile-show');
@@ -706,237 +613,160 @@
     }
 
     function renderDetails() {
-      const p = projects.find(item => item.id === selectedId);
+      const p = projects.find(x => x.id === selectedId);
       if (!p) return;
 
       document.getElementById('d-name').innerText = p.name;
-      document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
-      document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
+      document.getElementById('d-sub').innerText = `Mjernik: ${p.worker||'-'} | Lokacija: ${p.loc||'-'} | Tel: ${p.phone||'-'} | Datum: ${p.date}`;
+      document.getElementById('d-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
 
-      // 1. Skice
-      const images = (p.images && p.images.length > 0) ? p.images : [];
+      const images = p.images || [];
       currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
-      
       const mainImg = document.getElementById('d-img');
-      if (images.length > 0) {
+      if (images.length) {
         mainImg.src = images[currentImageIndex];
         mainImg.style.display = 'block';
-        document.getElementById('d-page').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
+        document.getElementById('d-page').innerText = `Stranica ${currentImageIndex+1} od ${images.length}`;
       } else {
         mainImg.style.display = 'none';
         document.getElementById('d-page').innerText = 'Nema slika';
       }
+      document.getElementById('d-thumbs').innerHTML = images.length > 1 ? images.map((src,i) => `<div class="gallery-thumb ${i===currentImageIndex?'active':''}" onclick="selectThumb(${i})"><img src="${src}"></div>`).join('') : '';
 
-      const thumbs = document.getElementById('d-thumbs');
-      if (images.length > 1) {
-        thumbs.innerHTML = images.map((src, idx) => `
-          <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="selectThumb(${idx})">
-            <img src="${src}">
-          </div>
-        `).join('');
-      } else {
-        thumbs.innerHTML = '';
-      }
-
-      // 2. Ponuda
-      const offUpload = document.getElementById('offerUploadZone');
-      const offDisplay = document.getElementById('offerDisplayZone');
-      const btnDelOff = document.getElementById('btnDelOffer');
-      const offBox = document.getElementById('offerPreviewBox');
-
+      // Offer
       if (p.offerDoc) {
-        offUpload.style.display = 'none';
-        offDisplay.style.display = 'block';
-        btnDelOff.style.display = 'inline-block';
-        offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:360px; object-fit:contain;">`;
+        document.getElementById('offerUploadZone').style.display = 'none';
+        document.getElementById('offerDisplayZone').style.display = 'block';
+        document.getElementById('btnDelOffer').style.display = 'inline-block';
+        document.getElementById('offerPreviewBox').innerHTML = `<img src="${p.offerDoc}" style="width:100%;max-height:360px;object-fit:contain;">`;
       } else {
-        offUpload.style.display = 'flex';
-        offDisplay.style.display = 'none';
-        btnDelOff.style.display = 'none';
-        offBox.innerHTML = '';
+        document.getElementById('offerUploadZone').style.display = 'flex';
+        document.getElementById('offerDisplayZone').style.display = 'none';
+        document.getElementById('btnDelOffer').style.display = 'none';
       }
 
-      // 3. Radni Nalog
-      const rnUpload = document.getElementById('rnUploadZone');
-      const rnDisplay = document.getElementById('rnDisplayZone');
-      const btnDelRn = document.getElementById('btnDelRn');
-      const rnBox = document.getElementById('rnPreviewBox');
-
+      // RN
       if (p.rnDoc) {
-        rnUpload.style.display = 'none';
-        rnDisplay.style.display = 'block';
-        btnDelRn.style.display = 'inline-block';
-        rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:360px; object-fit:contain;">`;
+        document.getElementById('rnUploadZone').style.display = 'none';
+        document.getElementById('rnDisplayZone').style.display = 'block';
+        document.getElementById('btnDelRn').style.display = 'inline-block';
+        document.getElementById('rnPreviewBox').innerHTML = `<img src="${p.rnDoc}" style="width:100%;max-height:360px;object-fit:contain;">`;
       } else {
-        rnUpload.style.display = 'flex';
-        rnDisplay.style.display = 'none';
-        btnDelRn.style.display = 'none';
-        rnBox.innerHTML = '';
+        document.getElementById('rnUploadZone').style.display = 'flex';
+        document.getElementById('rnDisplayZone').style.display = 'none';
+        document.getElementById('btnDelRn').style.display = 'none';
       }
 
       renderPositions();
-
-      // 4. Montaža
       document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
       renderMonteriCheckboxes();
 
-      const doneThumbs = document.getElementById('d-done-thumbs');
-      const doneImgs = p.doneImages || [];
-      if (doneImgs.length > 0) {
-        doneThumbs.innerHTML = doneImgs.map(src => `
-          <div class="gallery-thumb active" onclick="openLightbox('${src}')">
-            <img src="${src}">
-          </div>
-        `).join('');
-      } else {
-        doneThumbs.innerHTML = '<span style="font-size:11px; color:var(--text-muted); padding:6px;">Nema slika montaže.</span>';
-      }
+      const done = p.doneImages || [];
+      document.getElementById('d-done-thumbs').innerHTML = done.length ? done.map((src,i) => `<div class="gallery-thumb active" onclick="openLightbox('${src}')"><img src="${src}"><button class="btn-del-thumb" onclick="deleteDoneImage(${i},event)">✕</button></div>`).join('') : '<span style="font-size:11px;color:var(--text-muted);padding:6px;">Nema slika.</span>';
 
-      // 5. Fakturiranje Prikaz
+      // Invoice
       document.getElementById('inpInvoiceNum').value = p.invoiceNum || '';
-      const readyAlert = document.getElementById('readyForInvoiceAlert');
+      const pos = p.positions || [];
+      const allDone = pos.length > 0 && pos.every(x => x.status === 'montirano');
+      document.getElementById('readyForInvoiceAlert').style.display = (allDone && !p.isInvoiced) ? 'block' : 'none';
+
       const pill = document.getElementById('fakturaPill');
-      const btnFinal = document.getElementById('btnFinishInvoice');
-
-      const positions = p.positions || [];
-      const total = positions.length;
-      const montirano = positions.filter(x => x.status === 'montirano').length;
-      const allDone = (total > 0 && montirano === total);
-
-      if (allDone && !p.isInvoiced) {
-        readyAlert.style.display = 'block';
-      } else {
-        readyAlert.style.display = 'none';
-      }
-
+      const btn = document.getElementById('btnFinishInvoice');
       if (p.isInvoiced) {
-        pill.style.background = '#10b981';
-        pill.style.color = '#fff';
-        pill.innerText = '✅ FAKTURIRANO';
-        btnFinal.innerText = '🔄 PONIŠTI STATUS FAKTURIRANO';
-        btnFinal.style.background = 'rgba(239, 68, 68, 0.2)';
-        btnFinal.style.color = '#f87171';
+        pill.style.background = '#10b981'; pill.style.color = '#fff'; pill.innerText = '✅ FAKTURIRANO';
+        btn.innerText = '🔄 PONIŠTI STATUS'; btn.style.background = 'rgba(239,68,68,0.2)'; btn.style.color = '#f87171';
       } else {
-        pill.style.background = 'rgba(255,255,255,0.1)';
-        pill.style.color = 'var(--text-muted)';
-        pill.innerText = 'ČEKA RAČUN';
-        btnFinal.innerText = '✅ OZNAČI KAO FAKTURIRANO';
-        btnFinal.style.background = 'var(--success)';
-        btnFinal.style.color = '#fff';
+        pill.style.background = 'rgba(255,255,255,0.1)'; pill.style.color = 'var(--text-muted)'; pill.innerText = 'ČEKA RAČUN';
+        btn.innerText = '✅ OZNAČI KAO FAKTURIRANO'; btn.style.background = 'var(--success)'; btn.style.color = '#fff';
       }
 
-      const invoicePrev = document.getElementById('invoiceDocPreview');
-      if (p.invoiceDoc) {
-        invoicePrev.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
-            <a href="#" onclick="openLightbox('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
-            <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
-          </div>
-        `;
-      } else {
-        invoicePrev.innerHTML = '';
-      }
+      document.getElementById('invoiceDocPreview').innerHTML = p.invoiceDoc ? `<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.3);padding:6px;border-radius:6px;"><a href="#" onclick="openLightbox('${p.invoiceDoc}');return false;" style="color:#38bdf8;font-weight:bold;text-decoration:none;">📄 Pogledaj Fakturu</a><button onclick="removeInvoiceDoc()" style="background:none;border:none;color:#f87171;font-weight:bold;cursor:pointer;">✕</button></div>` : '';
     }
 
-    function selectThumb(idx) {
-      currentImageIndex = idx;
-      renderDetails();
-    }
+    function selectThumb(i) { currentImageIndex = i; renderDetails(); }
 
     function openLightbox(src) {
       if (!src) return;
-      const box = document.getElementById('lightboxContent');
-      box.innerHTML = `<img class="lightbox-img" src="${src}" alt="Pregled">`;
+      document.getElementById('lightboxContent').innerHTML = `<img class="lightbox-img" src="${src}">`;
       document.getElementById('lightbox').style.display = 'flex';
     }
-
     function closeLightbox(e) {
       if (e && e.target && e.target.tagName === 'IMG') return;
       document.getElementById('lightbox').style.display = 'none';
     }
+    function openOfferFull() { const p = projects.find(x => x.id === selectedId); if (p?.offerDoc) openLightbox(p.offerDoc); }
+    function openRnFull() { const p = projects.find(x => x.id === selectedId); if (p?.rnDoc) openLightbox(p.rnDoc); }
+    function openSketchFull() { const p = projects.find(x => x.id === selectedId); if (p?.images?.[currentImageIndex]) openLightbox(p.images[currentImageIndex]); }
 
-    function openOfferFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.offerDoc) openLightbox(p.offerDoc);
-    }
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
-    function openRnFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.rnDoc) openLightbox(p.rnDoc);
-    }
-
-    function openSketchFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.images && p.images[currentImageIndex]) openLightbox(p.images[currentImageIndex]);
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLightbox();
-    });
-
+    // ========== UPLOADS ==========
     async function handleOfferUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
-      document.getElementById('txtOfferStatus').innerText = '⏳ Pripremam...';
-
+      document.getElementById('txtOfferStatus').innerText = '⏳ Uploadam...';
       try {
-        const base64 = await processImageFile(file);
-        await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
-      } catch (err) {
-        alert('Molimo odaberite sliku ponude (JPG ili PNG format / screenshot).');
-      } finally {
-        document.getElementById('txtOfferStatus').innerText = 'Nema ponude';
-        e.target.value = '';
-      }
+        const blobs = await compressToBlobs(file);
+        const urls = await uploadBlobs(blobs, `nalozi/${selectedId}/offer`);
+        await db.collection("nalozi").doc(selectedId).update({ offerDoc: urls[0] });
+      } catch (err) { alert('Greška: ' + err.message); }
+      document.getElementById('txtOfferStatus').innerText = 'Nema ponude';
+      e.target.value = '';
     }
 
     async function removeOffer() {
-      if (!selectedId || !confirm('Obrisati ponudu za ovog klijenta?')) return;
+      if (!selectedId || !confirm('Obrisati ponudu?')) return;
       await db.collection("nalozi").doc(selectedId).update({ offerDoc: null });
     }
 
     async function handleRnUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
-      document.getElementById('txtRnStatus').innerText = '⏳ Pripremam...';
-
+      document.getElementById('txtRnStatus').innerText = '⏳ Uploadam...';
       try {
-        const base64 = await processImageFile(file);
-        await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
-      } catch (err) {
-        alert('Molimo odaberite sliku radnog naloga (JPG ili PNG format / screenshot).');
-      } finally {
-        document.getElementById('txtRnStatus').innerText = 'Nema radnog naloga';
-        e.target.value = '';
-      }
+        const blobs = await compressToBlobs(file);
+        const urls = await uploadBlobs(blobs, `nalozi/${selectedId}/rn`);
+        await db.collection("nalozi").doc(selectedId).update({ rnDoc: urls[0] });
+      } catch (err) { alert('Greška: ' + err.message); }
+      document.getElementById('txtRnStatus').innerText = 'Nema radnog naloga';
+      e.target.value = '';
     }
 
     async function removeRn() {
-      if (!selectedId || !confirm('Obrisati radni nalog za ovog klijenta?')) return;
+      if (!selectedId || !confirm('Obrisati RN?')) return;
       await db.collection("nalozi").doc(selectedId).update({ rnDoc: null });
     }
 
     async function uploadDoneImages(e) {
       const files = Array.from(e.target.files);
-      if (!selectedId) return;
-      const p = projects.find(item => item.id === selectedId);
+      if (!selectedId || !files.length) return;
+      const p = projects.find(x => x.id === selectedId);
       const existing = p.doneImages || [];
-
-      for (let f of files) {
-        const b64 = await processImageFile(f);
-        existing.push(b64);
-      }
-      await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
+      try {
+        for (const f of files) {
+          const blobs = await compressToBlobs(f);
+          const urls = await uploadBlobs(blobs, `nalozi/${selectedId}/done`);
+          existing.push(...urls);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
+      } catch (err) { alert('Greška: ' + err.message); }
       e.target.value = '';
     }
 
+    async function deleteDoneImage(i, e) {
+      e.stopPropagation();
+      if (!selectedId || !confirm('Obrisati sliku?')) return;
+      const p = projects.find(x => x.id === selectedId);
+      const imgs = p.doneImages || [];
+      imgs.splice(i, 1);
+      await db.collection("nalozi").doc(selectedId).update({ doneImages: imgs });
+    }
+
     async function deleteCurrent() {
-      const p = projects.find(item => item.id === selectedId);
-      if (!p) return;
-      if (confirm(`Izbrisati cijeli radni nalog za: ${p.name}?`)) {
-        await db.collection("nalozi").doc(selectedId).delete();
-        backToSidebar();
-      }
+      const p = projects.find(x => x.id === selectedId);
+      if (!p || !confirm(`Izbrisati nalog za ${p.name}?`)) return;
+      await db.collection("nalozi").doc(selectedId).delete();
+      backToSidebar();
     }
 
     function showMonterView() {
@@ -954,72 +784,71 @@
       backToSidebar();
     }
 
+    // ========== NEW PROJECT ==========
     async function handleImageSelection(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
-      
       for (let i = 0; i < files.length; i++) {
-        status.innerText = `⏳ Pripremam sliku ${i+1}/${files.length}...`;
-        const base64 = await processImageFile(files[i]);
-        uploadedImages.push(base64);
+        status.innerText = `⏳ Pripremam ${i+1}/${files.length}...`;
+        try {
+          const blobs = await compressToBlobs(files[i]);
+          for (const b of blobs) {
+            const dataUrl = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
+            uploadedImages.push(dataUrl);
+          }
+        } catch (err) { alert('Greška: ' + err.message); }
       }
       renderPreviews();
       e.target.value = '';
     }
 
-    function removeImage(idx) {
-      uploadedImages.splice(idx, 1);
+    function removeImage(i) {
+      uploadedImages.splice(i, 1);
       renderPreviews();
     }
 
     function renderPreviews() {
-      const grid = document.getElementById('previewGrid');
-      grid.innerHTML = uploadedImages.map((src, i) => `
-        <div class="preview-thumb">
-          <img src="${src}">
-          <button type="button" class="btn-remove" onclick="removeImage(${i})">✕</button>
-        </div>
-      `).join('');
-
-      const count = uploadedImages.length;
-      document.getElementById('upload-status').innerText = count > 0 
-        ? `✅ Učitano: ${count} slika` 
-        : '📷 Dodaj slike bilježnice';
+      document.getElementById('previewGrid').innerHTML = uploadedImages.map((src,i) => `<div class="preview-thumb"><img src="${src}"><button type="button" class="btn-remove" onclick="removeImage(${i})">✕</button></div>`).join('');
+      document.getElementById('upload-status').innerText = uploadedImages.length ? `✅ Učitano: ${uploadedImages.length}` : '📷 Dodaj slike bilježnice';
     }
 
     async function saveNewProject(e) {
       e.preventDefault();
       if (!currentWorker) { checkWorkerAuth(); return; }
-
       const btn = document.getElementById('btnSubmit');
       btn.disabled = true;
       btn.innerText = 'Spremanje...';
 
       const d = new Date();
-      const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}.${d.getFullYear()}.`;
-
-      const newProj = {
-        worker: currentWorker,
-        name: document.getElementById('cName').value,
-        phone: document.getElementById('cPhone').value || '-',
-        loc: document.getElementById('cLoc').value || '-',
-        date: formattedDate,
-        timestamp: Date.now(),
-        notes: document.getElementById('cNotes').value,
-        images: [...uploadedImages],
-        offerDoc: null,
-        rnDoc: null,
-        positions: [],
-        assignedMonteri: [],
-        montazaNotes: '',
-        doneImages: [],
-        invoiceNum: '',
-        invoiceDoc: null,
-        isInvoiced: false
-      };
+      const date = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
 
       try {
-        const docRef = await db.collection("nalozi").add(newProj);
+        const docRef = await db.collection("nalozi").add({
+          worker: currentWorker,
+          name: document.getElementById('cName').value,
+          phone: document.getElementById('cPhone').value || '-',
+          loc: document.getElementById('cLoc').value || '-',
+          date,
+          timestamp: Date.now(),
+          notes: document.getElementById('cNotes').value,
+          images: [],
+          offerDoc: null, rnDoc: null, positions: [], assignedMonteri: [],
+          montazaNotes: '', doneImages: [], invoiceNum: '', invoiceDoc: null, isInvoiced: false
+        });
+
+        if (uploadedImages.length) {
+          btn.innerText = 'Uploadam slike...';
+          const urls = [];
+          for (let i = 0; i < uploadedImages.length; i++) {
+            const res = await fetch(uploadedImages[i]);
+            const blob = await res.blob();
+            const path = `nalozi/${docRef.id}/images/${Date.now()}_${i}.jpg`;
+            await storage.ref(path).put(blob, { contentType: 'image/jpeg' });
+            urls.push(await storage.ref(path).getDownloadURL());
+          }
+          await docRef.update({ images: urls });
+        }
+
         uploadedImages = [];
         renderPreviews();
         document.querySelector('form').reset();
@@ -1027,6 +856,7 @@
         openDetails(docRef.id);
       } catch (err) {
         alert('Greška: ' + err.message);
+        console.error(err);
       } finally {
         btn.disabled = false;
         btn.innerText = '💾 SPREMI MJERENJE';
