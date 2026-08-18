@@ -91,13 +91,18 @@
     .doc-preview { width: 100%; min-height: 250px; max-height: 380px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
     .doc-preview img { width: 100%; max-height: 380px; object-fit: contain; }
 
-    /* MONTERI LISTA & CHECKBOXES */
-    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
     .monter-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
     .monter-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
     .monter-label input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: #c084fc; }
     .btn-del-worker { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-    .btn-del-worker:hover { background: rgba(239, 68, 68, 0.2); }
+
+    /* STATUS GUMBI MONTAŽE */
+    .status-btns-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .btn-m-status { flex: 1; padding: 10px 6px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 2px solid transparent; cursor: pointer; opacity: 0.5; transition: 0.2s; }
+    .btn-m-status.active { opacity: 1; transform: scale(1.02); }
+    .btn-status-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success); }
+    .btn-status-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); border-color: var(--warning); }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
     .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; width: 100%; max-width: 360px; text-align: center; }
@@ -278,7 +283,7 @@
             </div>
           </div>
 
-          <!-- 4. MAPA: MONTAŽA & MONTERI -->
+          <!-- 4. MAPA: MONTAŽA -->
           <div class="card" style="border-left: 4px solid #a855f7;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #c084fc; font-size: 13px;">🛠️ 4. MONTAŽA</h4>
@@ -286,14 +291,19 @@
               <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
 
+            <!-- STATUS ISHODA MONTAŽE -->
+            <label>Ishod montaže:</label>
+            <div class="status-btns-row">
+              <button type="button" id="btnStatusWarn" class="btn-m-status btn-status-warn" onclick="setMontazaOutcome('nedostatak')">⚠️ Nedostatak</button>
+              <button type="button" id="btnStatusOk" class="btn-m-status btn-status-ok" onclick="setMontazaOutcome('zavrseno')">✅ Završeno</button>
+            </div>
+
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
               <label style="margin:0;">MONTERI:</label>
               <button onclick="addNewWorkerPrompt()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj montera</button>
             </div>
             
-            <div class="monteri-container" id="monteriCheckboxList">
-              <span style="font-size:11px; color:var(--text-muted);">Učitavanje montera...</span>
-            </div>
+            <div class="monteri-container" id="monteriCheckboxList"></div>
 
             <div class="form-group">
               <label>Nedostaci / Zapažanja:</label>
@@ -342,7 +352,6 @@
     let uploadedImages = [];
     let globalWorkersList = [];
 
-    // Osluškivanje globalnog popisa radnika iz baze
     db.collection("postavke").doc("monteri").onSnapshot(doc => {
       if (doc.exists && doc.data().lista) {
         globalWorkersList = doc.data().lista;
@@ -379,7 +388,6 @@
       }
     }
 
-    // Upravljanje bazom montera
     async function addNewWorkerPrompt() {
       const novo = prompt('Unesite ime i prezime novog montera:');
       if (novo && novo.trim()) {
@@ -393,13 +401,12 @@
 
     async function deleteWorker(workerName, e) {
       e.stopPropagation();
-      if (confirm(`Ukloniti montera: ${workerName} s popisa?`)) {
+      if (confirm(`Ukloniti montera: ${workerName}?`)) {
         globalWorkersList = globalWorkersList.filter(w => w !== workerName);
         await db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
       }
     }
 
-    // Prikaz popisa montera s kvačicama
     function renderMonteriCheckboxes() {
       const cont = document.getElementById('monteriCheckboxList');
       if (!cont) return;
@@ -415,7 +422,7 @@
               <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
               <span>${name}</span>
             </label>
-            <button type="button" class="btn-del-worker" title="Ukloni montera" onclick="deleteWorker('${name}', event)">✕</button>
+            <button type="button" class="btn-del-worker" title="Ukloni" onclick="deleteWorker('${name}', event)">✕</button>
           </div>
         `;
       }).join('');
@@ -433,6 +440,14 @@
       }
 
       await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: currentAssigned });
+    }
+
+    // Postavljanje ishoda montaže
+    async function setMontazaOutcome(outcome) {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      const newStatus = (p.montazaOutcome === outcome) ? null : outcome; // klik na isti ga poništava
+      await db.collection("nalozi").doc(selectedId).update({ montazaOutcome: newStatus });
     }
 
     async function saveMontazaNotes() {
@@ -471,19 +486,27 @@
       }
       list.innerHTML = projects.map(p => {
         const monteriTekst = (p.assignedMonteri && p.assignedMonteri.length > 0) ? p.assignedMonteri.join(', ') : 'Nisu odabrani';
+        
+        let montazaBadge = '<span style="color:#94a3b8;">⏳ Nije montirano</span>';
+        if (p.montazaOutcome === 'zavrseno') {
+          montazaBadge = '<span style="color:var(--success); font-weight:bold;">✅ Montirano</span>';
+        } else if (p.montazaOutcome === 'nedostatak') {
+          montazaBadge = '<span style="color:var(--warning); font-weight:bold;">⚠️ Nedostaci</span>';
+        }
+
         return `
           <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="openDetails('${p.id}')">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <h4>${p.name}</h4>
             </div>
             <p>${p.loc || '-'} • 👷 Mjerio: ${p.worker || '-'} • 📅 ${p.date}</p>
-            <p style="color:#c084fc; font-size:11px; margin-top:2px;">🛠️ Monteri: ${monteriTekst}</p>
+            <p style="color:#c084fc; font-size:11px; margin-top:2px;">🛠️ ${monteriTekst}</p>
             <div style="margin-top: 4px; font-size: 10px; display:flex; gap:6px; flex-wrap: wrap;">
               <span style="color:${p.offerDoc ? '#34d399' : '#94a3b8'};">${p.offerDoc ? '✅ Ponuda' : '⏳ Bez ponude'}</span>
               <span>•</span>
               <span style="color:${p.rnDoc ? '#fbbf24' : '#94a3b8'};">${p.rnDoc ? '✅ RN' : '⏳ Bez RN'}</span>
               <span>•</span>
-              <span style="color:${(p.doneImages && p.doneImages.length > 0) ? '#c084fc' : '#94a3b8'};">${(p.doneImages && p.doneImages.length > 0) ? '📸 Slike montaže' : '⏳ Bez slika'}</span>
+              ${montazaBadge}
             </div>
           </div>
         `;
@@ -587,6 +610,12 @@
       // 4. Montaža
       document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
       renderMonteriCheckboxes();
+
+      // Oznaka statusnih gumba
+      const btnOk = document.getElementById('btnStatusOk');
+      const btnWarn = document.getElementById('btnStatusWarn');
+      btnOk.classList.toggle('active', p.montazaOutcome === 'zavrseno');
+      btnWarn.classList.toggle('active', p.montazaOutcome === 'nedostatak');
 
       const doneThumbs = document.getElementById('d-done-thumbs');
       const doneImgs = p.doneImages || [];
@@ -812,6 +841,7 @@
         rnDoc: null,
         assignedMonteri: [],
         montazaNotes: '',
+        montazaOutcome: null,
         doneImages: []
       };
 
