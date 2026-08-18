@@ -62,7 +62,8 @@
     #admin-view.active { display: flex; }
     
     .sidebar { width: 340px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; height: calc(100vh - 52px); }
-    .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
+    .search-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 7px 10px; border-radius: 6px; font-size: 12px; outline: none; }
     .sidebar-list { flex: 1; overflow-y: auto; }
     .project-item { padding: 12px 14px; border-bottom: 1px solid var(--border-color); cursor: pointer; border-left: 4px solid #38bdf8; }
     .project-item:hover { background: var(--card-dark); }
@@ -201,8 +202,11 @@
     <div id="admin-view" class="active">
       <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
-          <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
+            <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
+          </div>
+          <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži klijenta ili lokaciju..." oninput="renderSidebar()">
         </div>
         <div class="sidebar-list" id="projectList">
           <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje...</p>
@@ -336,7 +340,7 @@
             </div>
 
             <div class="form-group">
-              <label>Priloži Račun (Slika / PDF):</label>
+              <label>Priloži Račun (Slika):</label>
               <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
               <input type="file" id="invoiceFileInput" accept="image/*" style="display:none" onchange="handleInvoiceUpload(event)">
               <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
@@ -416,7 +420,7 @@
       }
     }
 
-    // VISOKO-EFIKASNA KOMPRESIJA (Max 650px, JPEG 0.35 -> ~25-35 KB po slici)
+    // VISOKO-EFIKASNO SAŽIMANJE (Max 600px, Web-optimizirano, ~15-20 KB po slici)
     function processImageFile(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -424,7 +428,7 @@
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX = 650;
+            const MAX = 600;
             let w = img.width;
             let h = img.height;
             if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
@@ -434,7 +438,7 @@
             ctx.drawImage(img, 0, 0, w, h);
             resolve(canvas.toDataURL('image/jpeg', 0.35));
           };
-          img.onerror = () => reject('Neispravna slika');
+          img.onerror = () => reject('Neispravan format slike');
           img.src = e.target.result;
         };
         reader.readAsDataURL(file);
@@ -610,6 +614,7 @@
       });
     }
 
+    // UČITAVANJE IZ BAZE
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
       projects = [];
       snapshot.forEach(doc => {
@@ -633,11 +638,21 @@
 
     function renderSidebar() {
       const list = document.getElementById('projectList');
-      if (projects.length === 0) {
-        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema naloga.</p>`;
+      const query = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
+
+      const filtered = projects.filter(p => {
+        if (!query) return true;
+        const nameMatch = (p.name || '').toLowerCase().includes(query);
+        const locMatch = (p.loc || '').toLowerCase().includes(query);
+        return nameMatch || locMatch;
+      });
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema pronađenih naloga.</p>`;
         return;
       }
-      list.innerHTML = projects.map(p => {
+
+      list.innerHTML = filtered.map(p => {
         const positions = p.positions || [];
         const total = positions.length;
         const montirano = positions.filter(x => x.status === 'montirano').length;
@@ -830,12 +845,13 @@
 
     function openLightbox(src) {
       if (!src) return;
-      document.getElementById('lightboxImg').src = src;
+      const box = document.getElementById('lightboxContent');
+      box.innerHTML = `<img class="lightbox-img" src="${src}" alt="Pregled">`;
       document.getElementById('lightbox').style.display = 'flex';
     }
 
     function closeLightbox(e) {
-      if (e && e.target && e.target.id === 'lightboxImg') return;
+      if (e && e.target && e.target.tagName === 'IMG') return;
       document.getElementById('lightbox').style.display = 'none';
     }
 
@@ -867,7 +883,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
       } catch (err) {
-        alert(err);
+        alert('Molimo odaberite sliku naloga/ponude (JPG/PNG).');
       } finally {
         document.getElementById('txtOfferStatus').innerText = 'Nema ponude';
         e.target.value = '';
@@ -888,7 +904,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
       } catch (err) {
-        alert(err);
+        alert('Molimo odaberite sliku radnog naloga (JPG/PNG).');
       } finally {
         document.getElementById('txtRnStatus').innerText = 'Nema radnog naloga';
         e.target.value = '';
