@@ -2,7 +2,7 @@
 <html lang="hr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TerenRad - Sustav Mjerenja</title>
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -10,10 +10,10 @@
 
   <style>
     :root {
-      --bg-dark: #090d16;
-      --panel-dark: #131b2e;
-      --card-dark: #1b2640;
-      --border-color: #2a3b61;
+      --bg-dark: #0b1120;
+      --panel-dark: #151f38;
+      --card-dark: #1e294b;
+      --border-color: #2e3d66;
       --accent: #2563eb;
       --accent-hover: #1d4ed8;
       --text-main: #f8fafc;
@@ -22,92 +22,83 @@
       --warning: #f59e0b;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
     
-    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; }
+    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 17px; font-weight: bold; letter-spacing: 0.5px; }
     .logo span { color: #38bdf8; }
     
-    .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); gap: 2px; }
-    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; }
+    .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); gap: 4px; }
+    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; }
     .view-toggle button.active { background: var(--accent); color: white; }
 
-    .container { flex: 1; display: flex; position: relative; overflow: hidden; }
-    .view-container { width: 100%; height: 100%; display: none; }
-    .view-container.active { display: flex; }
+    .main-container { flex: 1; display: flex; width: 100%; position: relative; }
 
-    #monter-view { max-width: 600px; margin: 0 auto; padding: 16px; flex-direction: column; overflow-y: auto; }
-    .card { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    /* Monter unos */
+    #monter-view { width: 100%; max-width: 650px; margin: 0 auto; padding: 16px; display: none; }
+    #monter-view.active { display: block; }
+    .card { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
     .form-group { margin-bottom: 12px; }
-    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; }
     input, textarea { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
     input:focus, textarea:focus { border-color: #38bdf8; }
 
-    .upload-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 18px; text-align: center; cursor: pointer; background: rgba(0,0,0,0.2); margin-bottom: 12px; }
-    .upload-zone:hover { border-color: var(--accent); }
+    .upload-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; background: rgba(0,0,0,0.25); margin-bottom: 12px; }
+    .upload-zone:active { border-color: var(--accent); }
     
-    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin-bottom: 12px; }
-    .preview-thumb { position: relative; width: 100%; height: 75px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin-bottom: 14px; }
+    .preview-thumb { position: relative; width: 100%; height: 75px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); background: #000; }
     .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .btn-remove { position: absolute; top: 2px; right: 2px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; }
+    .btn-remove { position: absolute; top: 2px; right: 2px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold; cursor: pointer; }
 
-    .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    .btn-submit:hover { background: var(--accent-hover); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-submit:disabled { opacity: 0.5; }
 
-    #admin-view { flex-direction: row; width: 100%; height: 100%; }
-    .sidebar { width: 320px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+    /* Admin & Pregled */
+    #admin-view { width: 100%; display: none; }
+    #admin-view.active { display: flex; }
+    
+    .sidebar { width: 320px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; height: calc(100vh - 55px); }
     .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
     .sidebar-list { flex: 1; overflow-y: auto; }
-    .project-item { padding: 12px 14px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: 0.15s; }
-    .project-item:hover { background: var(--card-dark); }
-    .project-item.selected { background: rgba(37,99,235,0.15); border-left: 4px solid var(--accent); }
-    .project-item h4 { font-size: 14px; margin-bottom: 3px; }
+    .project-item { padding: 14px; border-bottom: 1px solid var(--border-color); cursor: pointer; }
+    .project-item:active, .project-item:hover { background: var(--card-dark); }
+    .project-item.selected { background: rgba(37,99,235,0.2); border-left: 4px solid var(--accent); }
+    .project-item h4 { font-size: 14px; margin-bottom: 4px; }
     .project-item p { font-size: 11px; color: var(--text-muted); }
 
-    .main-panel { flex: 1; padding: 16px 20px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-content: start; }
+    .detail-panel { flex: 1; padding: 20px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-content: start; height: calc(100vh - 55px); }
     .full-width { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 8px; }
 
-    .btn-back-list { display: none; background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .btn-mobile-back { display: none; background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
     .btn-action-group { display: flex; gap: 8px; }
-    .btn-action { padding: 7px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-action { padding: 8px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; }
     .btn-print { background: var(--accent); color: white; }
-    .btn-delete { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .btn-delete:hover { background: var(--danger); color: white; }
+    .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
 
-    .gallery-container { display: flex; flex-direction: column; gap: 10px; }
-    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 380px; max-height: 550px; overflow: hidden; }
-    .main-sketch img { max-width: 100%; max-height: 550px; object-fit: contain; }
+    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 350px; max-height: 480px; overflow: hidden; margin-bottom: 10px; }
+    .main-sketch img { width: 100%; height: 100%; max-height: 480px; object-fit: contain; }
     .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
-    .gallery-thumb { width: 65px; height: 65px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.6; }
+    .gallery-thumb { width: 65px; height: 65px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; }
     .gallery-thumb.active { border-color: var(--accent); opacity: 1; }
     .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
     table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    th { text-align: left; padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); font-weight: 600; }
-    td { padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .badge { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; }
-    .badge-novo { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+    th { text-align: left; padding: 8px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); }
+    td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-    /* Puna prilagodba za mobitele i tablete */
-    @media (max-width: 850px) {
-      .container { overflow: hidden; }
-      #admin-view { position: relative; width: 100%; height: 100%; }
-      .sidebar { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; border-right: none; }
-      .main-panel { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 20; background: var(--bg-dark); display: none; flex-direction: column; padding: 12px; }
-      .main-panel.mobile-active { display: flex; }
-      .btn-back-list { display: inline-block; }
+    /* iPhone & Mobilni prikaz */
+    @media (max-width: 800px) {
+      .main-container { display: block; }
+      .sidebar { width: 100%; height: auto; min-height: calc(100vh - 55px); border-right: none; display: block; }
+      .sidebar.mobile-hide { display: none; }
+      
+      .detail-panel { width: 100%; height: auto; min-height: calc(100vh - 55px); display: none; flex-direction: column; padding: 12px; }
+      .detail-panel.mobile-show { display: flex; }
       .full-width { grid-column: span 1; }
-      .main-sketch { min-height: 280px; max-height: 420px; }
-    }
-
-    @media print {
-      header, .sidebar, .btn-action-group, .btn-back-list, .view-toggle, .gallery-thumbs { display: none !important; }
-      body { background: white !important; color: black !important; }
-      .main-panel { display: block !important; position: static !important; }
-      .card { border: none !important; box-shadow: none !important; color: black !important; }
-      td, th { color: black !important; border-bottom: 1px solid #ccc !important; }
+      .btn-mobile-back { display: block; }
+      .main-sketch { min-height: 280px; }
     }
   </style>
 </head>
@@ -116,44 +107,45 @@
   <header>
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="view-toggle">
-      <button id="btn-monter" onclick="switchView('monter')">➕ Novo</button>
-      <button id="btn-admin" class="active" onclick="switchView('admin')">📋 Nalozi</button>
+      <button id="tab-monter" onclick="showMonterView()">➕ Novo</button>
+      <button id="tab-admin" class="active" onclick="showAdminView()">📋 Nalozi</button>
     </div>
   </header>
 
-  <div class="container">
+  <div class="main-container">
     
-    <div id="monter-view" class="view-container">
+    <!-- MONTER UNOS -->
+    <div id="monter-view">
       <div class="card">
         <h3 style="margin-bottom: 12px; font-size: 16px;">Novo Mjerenje s Terena</h3>
-        <form onsubmit="handleFormSubmit(event)">
+        <form onsubmit="saveNewProject(event)">
           <label>Fotografije Skica / Bilježnice</label>
           <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-            <span id="upload-status">📷 Dodaj stranice bilježnice</span>
-            <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleMultipleImages(event)">
+            <span id="upload-status">📷 Dodaj slike (klikni ovdje)</span>
+            <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleImageSelection(event)">
           </div>
 
           <div class="preview-grid" id="previewGrid"></div>
 
           <div class="form-group">
-            <label>Ime i prezime klijenta / Objekt</label>
-            <input type="text" id="clientName" required placeholder="npr. Josip Tomičić ili ELLABO">
+            <label>Naziv Klijenta / Objekt</label>
+            <input type="text" id="cName" required placeholder="npr. Baldo Glumac">
           </div>
 
           <div style="display: flex; gap: 8px;">
             <div class="form-group" style="flex:1;">
               <label>Telefon</label>
-              <input type="text" id="clientPhone" placeholder="095...">
+              <input type="text" id="cPhone" placeholder="095...">
             </div>
             <div class="form-group" style="flex:1;">
               <label>Lokacija</label>
-              <input type="text" id="clientLoc" placeholder="npr. Lapad">
+              <input type="text" id="cLoc" placeholder="npr. Grad">
             </div>
           </div>
 
           <div class="form-group">
             <label>Opće napomene</label>
-            <textarea id="generalNotes" rows="3" placeholder="RAL boja, profil, pod -2cm..."></textarea>
+            <textarea id="cNotes" rows="3" placeholder="RAL, profil, staklo..."></textarea>
           </div>
 
           <button type="submit" id="btnSubmit" class="btn-submit">💾 SPREMI I POŠALJI NALOG</button>
@@ -161,42 +153,43 @@
       </div>
     </div>
 
-    <div id="admin-view" class="view-container active">
-      <div class="sidebar" id="sidebarSection">
+    <!-- PREGLED NALOGA -->
+    <div id="admin-view" class="active">
+      <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI (OBLAK)</span>
-          <button onclick="switchView('monter')" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
+          <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
+          <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
         </div>
         <div class="sidebar-list" id="projectList">
-          <p style="padding: 15px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje s oblaka...</p>
+          <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje s oblaka...</p>
         </div>
       </div>
 
-      <div class="main-panel" id="mainPanel">
+      <div class="detail-panel" id="detailPanel">
         <div class="full-width">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <button onclick="closeMobileDetails()" class="btn-back-list">← Popis</button>
+            <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
             <div>
-              <h2 id="det-client-name" style="font-size: 18px;">-</h2>
-              <p id="det-client-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">-</p>
+              <h2 id="d-name" style="font-size: 18px;">-</h2>
+              <p id="d-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">-</p>
             </div>
           </div>
           <div class="btn-action-group">
-            <button onclick="deleteCurrentProject()" class="btn-action btn-delete">🗑️ Izbriši</button>
+            <button onclick="deleteCurrent()" class="btn-action btn-delete">🗑️ Izbriši</button>
             <button onclick="window.print()" class="btn-action btn-print">🖨️ Ispiši</button>
           </div>
         </div>
 
-        <div class="card gallery-container">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
             <h4 style="color: #38bdf8; font-size: 13px;">Skice / Bilježnica</h4>
-            <span id="page-count" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
+            <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
           </div>
           <div class="main-sketch">
-            <img id="det-sketch" src="" alt="Skica">
+            <img id="d-img" src="" alt="Skica">
           </div>
-          <div class="gallery-thumbs" id="galleryThumbs"></div>
-          <p id="det-notes" style="font-size: 12px; color: #f59e0b;"></p>
+          <div class="gallery-thumbs" id="d-thumbs"></div>
+          <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
         </div>
 
         <div class="card">
@@ -206,12 +199,12 @@
               <tr>
                 <th>Br.</th>
                 <th>Pozicija</th>
-                <th>Širina (cm)</th>
-                <th>Visina (cm)</th>
+                <th>Širina</th>
+                <th>Visina</th>
                 <th>Napomena</th>
               </tr>
             </thead>
-            <tbody id="det-table-body"></tbody>
+            <tbody id="d-table"></tbody>
           </table>
         </div>
       </div>
@@ -235,226 +228,220 @@
     let projects = [];
     let selectedId = null;
     let currentImageIndex = 0;
-    let monterUploadedImages = [];
+    let uploadedImages = [];
 
-    // Učitavanje iz baze u realnom vremenu
+    // Osluškivanje baze
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-      const list = [];
+      projects = [];
       snapshot.forEach(doc => {
-        list.push({ id: doc.id, ...doc.data() });
+        projects.push({ id: doc.id, ...doc.data() });
       });
 
-      projects = list;
+      renderSidebar();
 
       if (projects.length > 0) {
         if (!selectedId || !projects.find(p => p.id === selectedId)) {
-          selectedId = window.innerWidth > 850 ? projects[0].id : null;
+          if (window.innerWidth > 800) {
+            openDetails(projects[0].id);
+          }
+        } else {
+          renderDetails();
         }
       } else {
         selectedId = null;
+        renderDetails();
       }
-
-      renderSidebar();
-      if (selectedId) renderDetails();
     });
 
     function renderSidebar() {
       const list = document.getElementById('projectList');
       if (projects.length === 0) {
-        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema otvorenih naloga.</p>`;
+        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema unesenih naloga.</p>`;
         return;
       }
       list.innerHTML = projects.map(p => `
-        <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="selectProject('${p.id}')">
+        <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="openDetails('${p.id}')">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <h4>${p.name}</h4>
-            <span class="badge badge-novo">NOVO</span>
+            <span style="background: rgba(245,158,11,0.2); color:#f59e0b; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">NOVO</span>
           </div>
-          <p>${p.loc || '-'} • ${p.date}</p>
+          <p>${p.loc || '-'} • ${p.date} • 📷 ${(p.images || []).length} str.</p>
         </div>
       `).join('');
     }
 
-    function renderDetails() {
-      const panel = document.getElementById('mainPanel');
-      const p = projects.find(item => item.id === selectedId);
-
-      if (!p) {
-        panel.style.display = 'none';
-        return;
-      }
-
-      if (window.innerWidth > 850) {
-        panel.style.display = 'grid';
-      } else {
-        panel.classList.add('mobile-active');
-      }
-
-      document.getElementById('det-client-name').innerText = p.name;
-      document.getElementById('det-client-sub').innerText = `${p.loc || '-'} • ${p.phone || '-'} • Datum: ${p.date}`;
-      document.getElementById('det-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
-
-      const images = (p.images && p.images.length > 0) ? p.images : [];
-      currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
-      
-      const mainImg = document.getElementById('det-sketch');
-      if (images.length > 0 && images[currentImageIndex]) {
-        mainImg.src = images[currentImageIndex];
-        mainImg.style.display = 'block';
-        document.getElementById('page-count').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
-      } else {
-        mainImg.style.display = 'none';
-        document.getElementById('page-count').innerText = 'Nema slika';
-      }
-
-      const thumbsContainer = document.getElementById('galleryThumbs');
-      if (images.length > 1) {
-        thumbsContainer.innerHTML = images.map((imgUrl, idx) => `
-          <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="setMainImage(${idx})">
-            <img src="${imgUrl}" alt="Stranica ${idx + 1}">
-          </div>
-        `).join('');
-      } else {
-        thumbsContainer.innerHTML = '';
-      }
-
-      const tbody = document.getElementById('det-table-body');
-      const items = p.items || [{ num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike' }];
-      tbody.innerHTML = items.map(item => `
-        <tr>
-          <td style="font-weight:bold; color:#38bdf8;">#${item.num}</td>
-          <td style="font-weight:600;">${item.name}</td>
-          <td style="font-weight:bold; font-size:14px;">${item.w}</td>
-          <td style="font-weight:bold; font-size:14px;">${item.h}</td>
-          <td style="color:#94a3b8;">${item.note}</td>
-        </tr>
-      `).join('');
-    }
-
-    function selectProject(id) {
+    function openDetails(id) {
       selectedId = id;
       currentImageIndex = 0;
       renderSidebar();
       renderDetails();
-    }
 
-    function closeMobileDetails() {
-      document.getElementById('mainPanel').classList.remove('mobile-active');
-    }
-
-    async function deleteCurrentProject() {
-      const p = projects.find(item => item.id === selectedId);
-      if (!p) return;
-      
-      if (confirm(`Sigurno želite trajno izbrisati nalog: ${p.name}?`)) {
-        try {
-          await db.collection("nalozi").doc(selectedId).delete();
-          closeMobileDetails();
-        } catch (err) {
-          alert('Greška pri brisanju: ' + err.message);
-        }
+      if (window.innerWidth <= 800) {
+        document.getElementById('sidebar').classList.add('mobile-hide');
+        document.getElementById('detailPanel').classList.add('mobile-show');
       }
     }
 
-    function setMainImage(index) {
-      currentImageIndex = index;
+    function backToSidebar() {
+      document.getElementById('sidebar').classList.remove('mobile-hide');
+      document.getElementById('detailPanel').classList.remove('mobile-show');
+    }
+
+    function renderDetails() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+
+      document.getElementById('d-name').innerText = p.name;
+      document.getElementById('d-sub').innerText = `${p.loc || '-'} • ${p.phone || '-'} • Datum: ${p.date}`;
+      document.getElementById('d-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
+
+      const images = (p.images && p.images.length > 0) ? p.images : [];
+      currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
+      
+      const mainImg = document.getElementById('d-img');
+      if (images.length > 0) {
+        mainImg.src = images[currentImageIndex];
+        mainImg.style.display = 'block';
+        document.getElementById('d-page').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
+      } else {
+        mainImg.style.display = 'none';
+        document.getElementById('d-page').innerText = 'Nema slika';
+      }
+
+      const thumbs = document.getElementById('d-thumbs');
+      if (images.length > 1) {
+        thumbs.innerHTML = images.map((src, idx) => `
+          <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="selectThumb(${idx})">
+            <img src="${src}">
+          </div>
+        `).join('');
+      } else {
+        thumbs.innerHTML = '';
+      }
+
+      const tbody = document.getElementById('d-table');
+      const items = p.items || [{ num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike' }];
+      tbody.innerHTML = items.map(it => `
+        <tr>
+          <td style="font-weight:bold; color:#38bdf8;">#${it.num}</td>
+          <td style="font-weight:600;">${it.name}</td>
+          <td style="font-weight:bold;">${it.w}</td>
+          <td style="font-weight:bold;">${it.h}</td>
+          <td style="color:#94a3b8;">${it.note}</td>
+        </tr>
+      `).join('');
+    }
+
+    function selectThumb(idx) {
+      currentImageIndex = idx;
       renderDetails();
     }
 
-    function switchView(view) {
-      document.getElementById('monter-view').classList.toggle('active', view === 'monter');
-      document.getElementById('admin-view').classList.toggle('active', view === 'admin');
-      document.getElementById('btn-monter').classList.toggle('active', view === 'monter');
-      document.getElementById('btn-admin').classList.toggle('active', view === 'admin');
-      if (view === 'admin') closeMobileDetails();
+    async function deleteCurrent() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      if (confirm(`Izbrisati nalog: ${p.name}?`)) {
+        await db.collection("nalozi").doc(selectedId).delete();
+        backToSidebar();
+      }
     }
 
-    // Optimizacija slike: smanjuje memorijsko zauzeće uz zadržavanje oštrine linija i brojeva
-    function compressImage(file) {
+    function showMonterView() {
+      document.getElementById('monter-view').classList.add('active');
+      document.getElementById('admin-view').classList.remove('active');
+      document.getElementById('tab-monter').classList.add('active');
+      document.getElementById('tab-admin').classList.remove('active');
+    }
+
+    function showAdminView() {
+      document.getElementById('monter-view').classList.remove('active');
+      document.getElementById('admin-view').classList.add('active');
+      document.getElementById('tab-monter').classList.remove('active');
+      document.getElementById('tab-admin').classList.add('active');
+      backToSidebar();
+    }
+
+    // Mobilni kompresor prilagođen za iPhone kameru
+    function compressFile(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = (event) => {
+        reader.onload = (e) => {
           const img = new Image();
-          img.src = event.target.result;
+          img.src = e.target.result;
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_DIM = 650;
-            let width = img.width;
-            let height = img.height;
+            const MAX = 600;
+            let w = img.width;
+            let h = img.height;
 
-            if (width > height) {
-              if (width > MAX_DIM) {
-                height = Math.round((height * MAX_DIM) / width);
-                width = MAX_DIM;
-              }
+            if (w > h) {
+              if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; }
             } else {
-              if (height > MAX_DIM) {
-                width = Math.round((width * MAX_DIM) / height);
-                height = MAX_DIM;
-              }
+              if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; }
             }
 
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = w;
+            canvas.height = h;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.45));
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.4));
           };
         };
       });
     }
 
-    async function handleMultipleImages(e) {
+    async function handleImageSelection(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
-      status.innerText = '⏳ Pripremam fotografije...';
       
-      for (const file of files) {
-        const compressed = await compressImage(file);
-        monterUploadedImages.push(compressed);
+      for (let i = 0; i < files.length; i++) {
+        status.innerText = `⏳ Obrađujem sliku ${i+1}/${files.length}...`;
+        const base64 = await compressFile(files[i]);
+        uploadedImages.push(base64);
       }
-      renderMonterPreviews();
+      
+      renderPreviews();
       e.target.value = '';
     }
 
-    function removeMonterImage(index) {
-      monterUploadedImages.splice(index, 1);
-      renderMonterPreviews();
+    function removeImage(idx) {
+      uploadedImages.splice(idx, 1);
+      renderPreviews();
     }
 
-    function renderMonterPreviews() {
+    function renderPreviews() {
       const grid = document.getElementById('previewGrid');
-      grid.innerHTML = monterUploadedImages.map((src, i) => `
+      grid.innerHTML = uploadedImages.map((src, i) => `
         <div class="preview-thumb">
           <img src="${src}">
-          <button type="button" class="btn-remove" onclick="removeMonterImage(${i})">✕</button>
+          <button type="button" class="btn-remove" onclick="removeImage(${i})">✕</button>
         </div>
       `).join('');
-      
-      const count = monterUploadedImages.length;
+
+      const count = uploadedImages.length;
       document.getElementById('upload-status').innerText = count > 0 
         ? `✅ Učitano stranica: ${count} (klikni za još)` 
-        : '📷 Dodaj stranice bilježnice';
+        : '📷 Dodaj slike (klikni ovdje)';
     }
 
-    async function handleFormSubmit(e) {
+    async function saveNewProject(e) {
       e.preventDefault();
-      const submitBtn = document.getElementById('btnSubmit');
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Spremanje...';
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = 'Spremanje na oblak...';
 
       const d = new Date();
       const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}.${d.getFullYear()}.`;
 
       const newProj = {
-        name: document.getElementById('clientName').value,
-        phone: document.getElementById('clientPhone').value || '-',
-        loc: document.getElementById('clientLoc').value || '-',
+        name: document.getElementById('cName').value,
+        phone: document.getElementById('cPhone').value || '-',
+        loc: document.getElementById('cLoc').value || '-',
         date: formattedDate,
         timestamp: Date.now(),
-        notes: document.getElementById('generalNotes').value,
-        images: [...monterUploadedImages],
+        notes: document.getElementById('cNotes').value,
+        images: [...uploadedImages],
         items: [
           { num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike' }
         ]
@@ -462,17 +449,16 @@
 
       try {
         const docRef = await db.collection("nalozi").add(newProj);
-        selectedId = docRef.id;
-        monterUploadedImages = [];
-        renderMonterPreviews();
+        uploadedImages = [];
+        renderPreviews();
         document.querySelector('form').reset();
-        switchView('admin');
-        renderDetails();
+        showAdminView();
+        openDetails(docRef.id);
       } catch (err) {
         alert('Greška pri spremanju: ' + err.message);
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = '💾 SPREMI I POŠALJI NALOG';
+        btn.disabled = false;
+        btn.innerText = '💾 SPREMI I POŠALJI NALOG';
       }
     }
   </script>
