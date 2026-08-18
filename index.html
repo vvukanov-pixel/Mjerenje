@@ -91,16 +91,16 @@
     .doc-preview { width: 100%; min-height: 250px; max-height: 380px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
     .doc-preview img { width: 100%; max-height: 380px; object-fit: contain; }
 
-    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
     .monter-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
     .monter-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
     .monter-label input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: #c084fc; }
     .btn-del-worker { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
-    /* STATUS GUMBI MONTAŽE */
-    .status-btns-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .btn-m-status { flex: 1; padding: 10px 6px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 2px solid transparent; cursor: pointer; opacity: 0.5; transition: 0.2s; }
-    .btn-m-status.active { opacity: 1; transform: scale(1.02); }
+    /* STATUS GUMBI */
+    .status-btns-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .btn-m-status { flex: 1; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 2px solid transparent; cursor: pointer; opacity: 0.45; transition: 0.2s; text-align: center; }
+    .btn-m-status.active { opacity: 1; transform: scale(1.02); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
     .btn-status-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); border-color: var(--success); }
     .btn-status-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); border-color: var(--warning); }
 
@@ -291,8 +291,7 @@
               <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
 
-            <!-- STATUS ISHODA MONTAŽE -->
-            <label>Ishod montaže:</label>
+            <!-- GUMBI ZA ISHOD -->
             <div class="status-btns-row">
               <button type="button" id="btnStatusWarn" class="btn-m-status btn-status-warn" onclick="setMontazaOutcome('nedostatak')">⚠️ Nedostatak</button>
               <button type="button" id="btnStatusOk" class="btn-m-status btn-status-ok" onclick="setMontazaOutcome('zavrseno')">✅ Završeno</button>
@@ -442,11 +441,10 @@
       await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: currentAssigned });
     }
 
-    // Postavljanje ishoda montaže
     async function setMontazaOutcome(outcome) {
       if (!selectedId) return;
       const p = projects.find(item => item.id === selectedId);
-      const newStatus = (p.montazaOutcome === outcome) ? null : outcome; // klik na isti ga poništava
+      const newStatus = (p.montazaOutcome === outcome) ? null : outcome;
       await db.collection("nalozi").doc(selectedId).update({ montazaOutcome: newStatus });
     }
 
@@ -611,11 +609,12 @@
       document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
       renderMonteriCheckboxes();
 
-      // Oznaka statusnih gumba
       const btnOk = document.getElementById('btnStatusOk');
       const btnWarn = document.getElementById('btnStatusWarn');
-      btnOk.classList.toggle('active', p.montazaOutcome === 'zavrseno');
-      btnWarn.classList.toggle('active', p.montazaOutcome === 'nedostatak');
+      if (btnOk && btnWarn) {
+        btnOk.classList.toggle('active', p.montazaOutcome === 'zavrseno');
+        btnWarn.classList.toggle('active', p.montazaOutcome === 'nedostatak');
+      }
 
       const doneThumbs = document.getElementById('d-done-thumbs');
       const doneImgs = p.doneImages || [];
