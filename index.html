@@ -30,7 +30,7 @@
     .logo span { color: #38bdf8; }
     
     .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); gap: 2px; }
-    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
     .view-toggle button.active { background: var(--accent); color: white; }
 
     .container { flex: 1; display: flex; overflow: hidden; }
@@ -89,11 +89,14 @@
     .badge { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; }
     .badge-novo { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-    @media (max-width: 768px) {
-      #admin-view { flex-direction: column; overflow-y: auto; }
-      .sidebar { width: 100%; max-height: 220px; border-right: none; border-bottom: 1px solid var(--border-color); }
+    /* Optimizacija za iPhone i iPad */
+    @media (max-width: 900px) {
+      .container { overflow-y: auto; display: block; }
+      #admin-view { flex-direction: column; height: auto; }
+      .sidebar { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid var(--border-color); }
       .main-panel { display: flex; flex-direction: column; padding: 12px; }
       .full-width { grid-column: span 1; }
+      .main-sketch { min-height: 280px; max-height: 360px; }
     }
 
     @media print {
@@ -110,8 +113,8 @@
   <header>
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="view-toggle">
-      <button id="btn-monter" onclick="switchView('monter')">➕ Novo Mjerenje</button>
-      <button id="btn-admin" class="active" onclick="switchView('admin')">📋 Svi Nalozi</button>
+      <button id="btn-monter" onclick="switchView('monter')">➕ Novo</button>
+      <button id="btn-admin" class="active" onclick="switchView('admin')">📋 Nalozi</button>
     </div>
   </header>
 
@@ -228,8 +231,8 @@
     let currentImageIndex = 0;
     let monterUploadedImages = [];
 
-    // Osluškivanje baze u realnom vremenu
-    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot(async (snapshot) => {
+    // Osluškivanje baze u stvarnom vremenu
+    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
       const list = [];
       snapshot.forEach(doc => {
         list.push({ id: doc.id, ...doc.data() });
@@ -280,21 +283,32 @@
       document.getElementById('det-client-sub').innerText = `${p.loc || '-'} • ${p.phone || '-'} • Datum: ${p.date}`;
       document.getElementById('det-notes').innerText = p.notes ? 'Napomena: ' + p.notes : '';
 
-      const images = p.images && p.images.length > 0 ? p.images : ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80'];
+      const images = (p.images && p.images.length > 0) ? p.images : [''];
       currentImageIndex = Math.min(currentImageIndex, images.length - 1);
       
-      document.getElementById('det-sketch').src = images[currentImageIndex];
+      const mainImg = document.getElementById('det-sketch');
+      if (images[currentImageIndex]) {
+        mainImg.src = images[currentImageIndex];
+        mainImg.style.display = 'block';
+      } else {
+        mainImg.style.display = 'none';
+      }
+
       document.getElementById('page-count').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
 
       const thumbsContainer = document.getElementById('galleryThumbs');
-      thumbsContainer.innerHTML = images.map((imgUrl, idx) => `
-        <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="setMainImage(${idx})">
-          <img src="${imgUrl}" alt="Stranica ${idx + 1}">
-        </div>
-      `).join('');
+      if (images.length > 1) {
+        thumbsContainer.innerHTML = images.map((imgUrl, idx) => `
+          <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="setMainImage(${idx})">
+            <img src="${imgUrl}" alt="Stranica ${idx + 1}">
+          </div>
+        `).join('');
+      } else {
+        thumbsContainer.innerHTML = '';
+      }
 
       const tbody = document.getElementById('det-table-body');
-      const items = p.items || [{ num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike skica' }];
+      const items = p.items || [{ num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike' }];
       tbody.innerHTML = items.map(item => `
         <tr>
           <td style="font-weight:bold; color:#38bdf8;">#${item.num}</td>
@@ -338,7 +352,7 @@
       document.getElementById('btn-admin').classList.toggle('active', view === 'admin');
     }
 
-    // Balansirana kompresija kako bi stalo 10+ slika i da tekst skice ostane oštar
+    // Optimizirana kompresija prilagođena za skice i tekst
     function compressImage(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -423,9 +437,9 @@
         date: formattedDate,
         timestamp: Date.now(),
         notes: document.getElementById('generalNotes').value,
-        images: monterUploadedImages.length > 0 ? [...monterUploadedImages] : ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80'],
+        images: [...monterUploadedImages],
         items: [
-          { num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike skica' }
+          { num: 1, name: 'Mjere sa skice', w: '-', h: '-', note: 'Pogledati slike' }
         ]
       };
 
@@ -435,7 +449,7 @@
         monterUploadedImages = [];
         renderMonterPreviews();
         document.querySelector('form').reset();
-        switchView('admin'); // automatski prebaci montera na spisak naloga!
+        switchView('admin');
       } catch (err) {
         alert('Greška pri spremanju u bazu: ' + err.message);
       } finally {
