@@ -348,16 +348,32 @@
 
     db.collection("nalozi").orderBy("timestamp","desc").onSnapshot(snap=>{projects=[];snap.forEach(d=>projects.push({id:d.id,...d.data()}));renderSidebar();if(projects.length){if(!selectedId||!projects.find(p=>p.id===selectedId)){if(window.innerWidth>900)openDetails(projects[0].id)}else renderDetails()}else selectedId=null});
 
-    function renderSidebar(){const list=document.getElementById('projectList'),q=(document.getElementById('searchQuery')?.value||'').toLowerCase().trim();
-      let filtered=projects.filter(p=>{const nameMatch=!q||(p.name||'').toLowerCase().includes(q)||(p.loc||'').toLowerCase().includes(q);if(!nameMatch)return false;
-        const pos=p.positions||[],total=pos.length,mont=pos.filter(x=>x.status==='montirano').length,skl=pos.filter(x=>x.status==='skladiste').length;
-        if(currentFilter==='svi')return true;if(currentFilter==='fakturirano')return!!p.isInvoiced;if(currentFilter==='montirano')return total>0&&mont===total;
-        if(currentFilter==='skladiste')return total>0&&skl+mont===total&&mont<total;if(currentFilter==='proizvodnja')return total===0||pos.some(x=>x.status==='proizvodnja');return true});
+    function renderSidebar(){
+      const list=document.getElementById('projectList'),q=(document.getElementById('searchQuery')?.value||'').toLowerCase().trim();
+      let filtered=projects.filter(p=>{
+        const nameMatch=!q||(p.name||'').toLowerCase().includes(q)||(p.loc||'').toLowerCase().includes(q);
+        if(!nameMatch)return false;
+        const pos=p.positions||[],total=pos.length,mont=pos.filter(x=>x.status==='montirano').length,skl=pos.filter(x=>x.status==='skladiste').length,proiz=pos.filter(x=>x.status==='proizvodnja').length;
+        if(currentFilter==='svi')return true;
+        if(currentFilter==='fakturirano')return !!p.isInvoiced;
+        if(currentFilter==='montirano')return total>0&&mont===total;
+        if(currentFilter==='skladiste')return total>0&&skl>0&&mont<total;
+        if(currentFilter==='proizvodnja')return total>0&&proiz>0;
+        return true;
+      });
       if(!filtered.length){list.innerHTML='<p style="padding:20px;font-size:12px;color:var(--text-muted);text-align:center">Nema naloga.</p>';return}
-      list.innerHTML=filtered.map(p=>{const pos=p.positions||[],total=pos.length,mont=pos.filter(x=>x.status==='montirano').length,skl=pos.filter(x=>x.status==='skladiste').length;
-        let st=total===0?'<span style="color:#94a3b8">⏳ Nema pozicija</span>':mont===total?`<span style="color:#10b981;font-weight:bold">✅ SVE MONTIRANO (${mont}/${total})</span>`:skl+mont===total?`<span style="color:#38bdf8;font-weight:bold">📦 SVE U SKLADIŠTU</span> • <span style="color:#10b981">🛠️ ${mont}</span>`:`<span style="color:#fbbf24">🏭 ${total-skl-mont}</span> • <span style="color:#38bdf8">📦 ${skl}</span> • <span style="color:#10b981">🛠️ ${mont}</span>`;
+      list.innerHTML=filtered.map(p=>{
+        const pos=p.positions||[],total=pos.length,mont=pos.filter(x=>x.status==='montirano').length,skl=pos.filter(x=>x.status==='skladiste').length,proiz=pos.filter(x=>x.status==='proizvodnja').length;
+        let st='';
+        if(total===0){
+          st='<span style="color:#94a3b8">⏳ Nema pozicija</span>';
+        } else {
+          st=`<span style="color:#fbbf24;font-weight:bold">🏭 ${proiz}</span> &nbsp; <span style="color:#38bdf8;font-weight:bold">📦 ${skl}</span> &nbsp; <span style="color:#10b981;font-weight:bold">🛠️ ${mont}</span>`;
+        }
         const badge=p.isInvoiced?'<span style="color:#10b981;font-weight:bold;background:rgba(16,185,129,.15);padding:2px 6px;border-radius:4px">🏁 FAKTURIRANO</span>':'';
-        return`<div class="project-item ${p.id===selectedId?'selected':''}" onclick="openDetails('${p.id}')"><div style="display:flex;justify-content:space-between"><h4>${p.name}</h4>${badge}</div><p>${p.loc||'-'} • 📅 ${p.date}</p><div style="margin-top:5px;font-size:11px">${st}</div></div>`}).join('')}
+        return`<div class="project-item ${p.id===selectedId?'selected':''}" onclick="openDetails('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center"><h4>${p.name}</h4>${badge}</div><p>${p.loc||'-'} • 📅 ${p.date}</p><div style="margin-top:5px;font-size:12px">${st}</div></div>`;
+      }).join('');
+    }
 
     function openDetails(id){selectedId=id;currentImageIndex=0;renderSidebar();renderDetails();if(window.innerWidth<=900){document.getElementById('sidebar').classList.add('mobile-hide');document.getElementById('detailPanel').classList.add('mobile-show')}}
     function backToSidebar(){document.getElementById('sidebar').classList.remove('mobile-hide');document.getElementById('detailPanel').classList.remove('mobile-show')}
