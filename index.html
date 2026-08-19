@@ -77,7 +77,7 @@ select option{background:var(--panel);color:#fff}
 .mlab{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;cursor:pointer;margin:0;text-transform:none;color:#fff;flex:1}
 .mlab input{width:16px;height:16px;margin:0;accent-color:#c084fc}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
-.mbox{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:380px;text-align:center}
+.mbox{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:400px;text-align:center}
 .mbox h3{font-size:18px;margin-bottom:6px}.mbox p{font-size:13px;color:var(--muted);margin-bottom:16px}
 .lb{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px}
 .hidden{display:none!important}
@@ -88,29 +88,62 @@ select option{background:var(--panel);color:#fff}
 .dot.red{background:#ef4444;box-shadow:0 0 6px #ef4444}
 .dot.green{background:#10b981;box-shadow:0 0 6px #10b981}
 .rek-note{font-size:11px;color:#f87171;width:100%;margin-top:4px;font-style:italic}
+.pin-row{display:flex;gap:8px;align-items:center;background:var(--bg);padding:8px 10px;border-radius:8px;margin-bottom:6px}
+.pin-row span{flex:1;font-size:12px;font-weight:600;text-align:left}
+.pin-row input{width:70px;text-align:center;letter-spacing:4px;font-size:16px;font-weight:bold}
 @media(max-width:900px){.main{display:block}.sidebar{width:100%;height:auto;min-height:calc(100vh - 52px);border-right:none}.sidebar.hide{display:none}.detail{width:100%;height:auto;min-height:calc(100vh - 52px);display:none;padding:12px}.detail.show{display:flex}.back{display:block}}
 </style>
 </head>
 <body>
 <div id="lb" class="lb" onclick="closeLb(event)"><button onclick="closeLb()" style="position:absolute;top:12px;right:16px;background:var(--danger);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:bold;cursor:pointer">ZATVORI</button><div id="lbContent"></div></div>
+
+<!-- PRIJAVA -->
 <div id="login" class="modal" style="display:none">
   <div class="mbox">
     <h3>Tko koristi ovaj mobitel?</h3>
-    <p>Odaberite svoje ime</p>
-    <select id="wSelect" style="margin-bottom:16px;font-size:15px;padding:12px"></select>
+    <p>Odaberite ime i upišite PIN</p>
+    <select id="wSelect" style="margin-bottom:12px;font-size:15px;padding:12px"></select>
+    <input type="password" id="pinInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="PIN (4 znamenke)" style="margin-bottom:12px;text-align:center;letter-spacing:8px;font-size:20px;font-weight:bold">
     <button class="btn" onclick="saveWorker()">POTVRDI</button>
+    <p id="pinErr" style="color:#f87171;font-size:12px;margin-top:10px;display:none">Pogrešan PIN</p>
   </div>
 </div>
+
+<!-- PROMJENA PIN-a -->
+<div id="pinModal" class="modal" style="display:none">
+  <div class="mbox">
+    <h3>Moj PIN</h3>
+    <p id="pinModalTitle">Promjena PIN-a</p>
+    <input type="password" id="oldPin" maxlength="4" inputmode="numeric" placeholder="Stari PIN" style="margin-bottom:8px;text-align:center;letter-spacing:6px;font-size:18px">
+    <input type="password" id="newPin" maxlength="4" inputmode="numeric" placeholder="Novi PIN (4 znamenke)" style="margin-bottom:8px;text-align:center;letter-spacing:6px;font-size:18px">
+    <input type="password" id="newPin2" maxlength="4" inputmode="numeric" placeholder="Ponovi novi PIN" style="margin-bottom:12px;text-align:center;letter-spacing:6px;font-size:18px">
+    <button class="btn" onclick="changeMyPin()">SPREMI NOVI PIN</button>
+    <button class="btn" style="background:var(--border);margin-top:8px" onclick="closePinModal()">ODUSTANI</button>
+    <p id="pinChangeErr" style="color:#f87171;font-size:12px;margin-top:10px;display:none"></p>
+  </div>
+</div>
+
+<!-- ADMIN: UPRAVLJANJE PIN-ovima -->
+<div id="adminPinModal" class="modal" style="display:none">
+  <div class="mbox" style="max-width:420px;text-align:left;max-height:80vh;overflow-y:auto">
+    <h3 style="text-align:center">Upravljanje PIN-ovima</h3>
+    <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:12px">Postavi ili poništi PIN svakome</p>
+    <div id="adminPinList"></div>
+    <button class="btn" style="margin-top:12px;background:var(--border)" onclick="closeAdminPinModal()">ZATVORI</button>
+  </div>
+</div>
+
 <header>
   <div class="logo">TEREN<span>RAD</span></div>
   <div class="header-right">
-    <div class="user-tag" id="badge" onclick="changeWorker()">Prijava...</div>
+    <div class="user-tag" id="badge" onclick="openUserMenu()">Prijava...</div>
     <div class="view-toggle">
       <button id="t1" onclick="showMonter()">Novo</button>
       <button id="t2" class="active" onclick="showAdmin()">Nalozi</button>
     </div>
   </div>
 </header>
+
 <div class="main">
   <div id="monter-view">
     <div class="card">
@@ -266,7 +299,8 @@ const db=firebase.firestore(),st=firebase.storage();
 const USERS={"VEDRAN VUKANOVIC - ADMINISTRATOR":"admin","ANKICA PRKACIN BACIC":"admin","NIKOLINA BURNAC":"admin","ZLATKO RADIS":"measure","SINISA PRAVICA":"measure","SLAVEN PUHALO":"measure","NIKOLA MRDIC":"measure","BRANISLAV BEGENUSIC":"warehouse","LJUBISA DOSLO":"montage","RANKO JANJIC":"montage","MIODRAG CERANIC":"montage"};
 const ALL_NAMES=Object.keys(USERS);
 const MONTERI_NAMES=["ZLATKO RADIS","SINISA PRAVICA","SLAVEN PUHALO","NIKOLA MRDIC","LJUBISA DOSLO","BRANISLAV BEGENUSIC","RANKO JANJIC","MIODRAG CERANIC"];
-let worker=localStorage.getItem('tw')||'',projects=[],sel=null,idx=0,ups=[],workers=[],filt='svi';
+let worker=localStorage.getItem('tw')||'',projects=[],sel=null,idx=0,ups=[],workers=[],filt='svi',pins={};
+
 function getRole(){return USERS[worker]||'montage'}
 function isAdmin(){return getRole()==='admin'}
 function canMeasure(){return getRole()==='admin'||getRole()==='measure'}
@@ -285,6 +319,115 @@ function applyPermissions(){
   document.getElementById('btnAddPos').style.display=(isAdmin()||canWarehouse())?'':'none';
   document.getElementById('btnAddMonter').style.display=isAdmin()?'':'none';
 }
+
+/* ===== PIN SUSTAV ===== */
+db.collection('postavke').doc('pins').onSnapshot(doc=>{
+  if(doc.exists){pins=doc.data()||{}}
+  else{
+    // Prvi put – svi PIN-ovi prazni, admin mora postaviti
+    const init={};ALL_NAMES.forEach(n=>init[n]='');
+    db.collection('postavke').doc('pins').set(init);
+    pins=init;
+  }
+});
+
+function fillSelect(){
+  const s=document.getElementById('wSelect');if(!s)return;
+  s.innerHTML='<option value="">-- Odaberite ime --</option>';
+  ALL_NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;s.appendChild(o)});
+}
+function checkAuth(){
+  if(!worker){document.getElementById('login').style.display='flex';fillSelect();document.getElementById('pinInput').value='';document.getElementById('pinErr').style.display='none'}
+  else{document.getElementById('login').style.display='none';document.getElementById('badge').innerText=worker;applyPermissions()}
+}
+function saveWorker(){
+  const v=document.getElementById('wSelect').value;
+  const pin=(document.getElementById('pinInput').value||'').trim();
+  if(!v)return alert('Odaberite ime');
+  if(!/^\d{4}$/.test(pin)){document.getElementById('pinErr').innerText='PIN mora imati 4 znamenke';document.getElementById('pinErr').style.display='block';return}
+  const stored=pins[v];
+  // Ako PIN još nije postavljen – samo admin može ući prvi put s bilo kojim 4-znamenkastim (ili ti postaviš)
+  if(!stored||stored===''){
+    // Dozvoli ulazak samo ako je admin uloga, inače traži da admin postavi PIN
+    if(USERS[v]==='admin'){
+      // Admin prvi put postavlja svoj PIN
+      pins[v]=pin;
+      db.collection('postavke').doc('pins').set(pins,{merge:true});
+    } else {
+      document.getElementById('pinErr').innerText='PIN još nije postavljen. Javite administratoru.';
+      document.getElementById('pinErr').style.display='block';
+      return;
+    }
+  } else if(stored!==pin){
+    document.getElementById('pinErr').innerText='Pogrešan PIN';
+    document.getElementById('pinErr').style.display='block';
+    return;
+  }
+  worker=v;localStorage.setItem('tw',worker);
+  document.getElementById('pinErr').style.display='none';
+  checkAuth();if(sel)drawDetails();
+}
+function openUserMenu(){
+  if(!worker)return;
+  const opts=isAdmin()
+    ? '1 = Promijeni moj PIN\n2 = Upravljaj PIN-ovima (admin)\n3 = Odjava'
+    : '1 = Promijeni moj PIN\n2 = Odjava';
+  const c=prompt(opts);
+  if(c==='1')openPinModal();
+  else if(c==='2'&&isAdmin())openAdminPinModal();
+  else if((c==='2'&&!isAdmin())||(c==='3'&&isAdmin())){worker='';localStorage.removeItem('tw');checkAuth()}
+}
+function openPinModal(){
+  document.getElementById('oldPin').value='';
+  document.getElementById('newPin').value='';
+  document.getElementById('newPin2').value='';
+  document.getElementById('pinChangeErr').style.display='none';
+  document.getElementById('pinModal').style.display='flex';
+}
+function closePinModal(){document.getElementById('pinModal').style.display='none'}
+async function changeMyPin(){
+  const oldP=document.getElementById('oldPin').value.trim();
+  const n1=document.getElementById('newPin').value.trim();
+  const n2=document.getElementById('newPin2').value.trim();
+  const err=document.getElementById('pinChangeErr');
+  if(pins[worker]!==oldP){err.innerText='Stari PIN nije točan';err.style.display='block';return}
+  if(!/^\d{4}$/.test(n1)){err.innerText='Novi PIN mora imati 4 znamenke';err.style.display='block';return}
+  if(n1!==n2){err.innerText='Novi PIN se ne podudara';err.style.display='block';return}
+  pins[worker]=n1;
+  await db.collection('postavke').doc('pins').set(pins,{merge:true});
+  alert('PIN uspješno promijenjen');
+  closePinModal();
+}
+function openAdminPinModal(){
+  const box=document.getElementById('adminPinList');
+  box.innerHTML=ALL_NAMES.map(n=>{
+    const has=pins[n]&&pins[n].length===4;
+    return '<div class="pin-row"><span>'+n+'</span>'+
+      '<input type="text" maxlength="4" inputmode="numeric" id="pin_'+n.replace(/[^a-zA-Z0-9]/g,'_')+'" value="'+(has?pins[n]:'')+'" placeholder="----">'+
+      '<button onclick="adminSetPin(\''+n.replace(/'/g,"\\'")+'\')" style="background:#10b981;color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer">Spremi</button>'+
+      '<button onclick="adminResetPin(\''+n.replace(/'/g,"\\'")+'\')" style="background:#ef4444;color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer">Poništi</button></div>';
+  }).join('');
+  document.getElementById('adminPinModal').style.display='flex';
+}
+function closeAdminPinModal(){document.getElementById('adminPinModal').style.display='none'}
+async function adminSetPin(name){
+  const id='pin_'+name.replace(/[^a-zA-Z0-9]/g,'_');
+  const val=(document.getElementById(id).value||'').trim();
+  if(!/^\d{4}$/.test(val)){alert('PIN mora imati točno 4 znamenke');return}
+  pins[name]=val;
+  await db.collection('postavke').doc('pins').set(pins,{merge:true});
+  alert('PIN za '+name+' postavljen: '+val);
+}
+async function adminResetPin(name){
+  if(!confirm('Poništiti PIN za '+name+'?'))return;
+  pins[name]='';
+  await db.collection('postavke').doc('pins').set(pins,{merge:true});
+  const id='pin_'+name.replace(/[^a-zA-Z0-9]/g,'_');
+  const el=document.getElementById(id);if(el)el.value='';
+  alert('PIN poništen. Osoba ne može ući dok ne postaviš novi.');
+}
+
+/* ===== OSTALO (isto kao prije) ===== */
 async function compress(file){
   if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
     const buf=await file.arrayBuffer(),pdf=await pdfjsLib.getDocument(buf).promise,blobs=[];
@@ -298,10 +441,6 @@ function getImgs(p,f){if(f==='images')return p.images||[];if(f==='offerImages')r
 async function addImgs(e,field){const files=Array.from(e.target.files);if(!sel||!files.length)return;const p=projects.find(x=>x.id===sel);let arr=getImgs(p,field);try{for(const f of files){try{const blobs=await compress(f);const urls=await upload(blobs,'nalozi/'+sel+'/'+field);arr.push(...urls)}catch(err){alert(f.name+': '+err.message)}}const u={};u[field]=arr;if(field==='offerImages')u.offerDoc=null;if(field==='rnImages')u.rnDoc=null;await db.collection('nalozi').doc(sel).update(u)}catch(err){alert(err.message)}e.target.value=''}
 async function delImg(field,i,e){e.stopPropagation();if(!sel||!confirm('Obrisati?'))return;const p=projects.find(x=>x.id===sel);let arr=[...getImgs(p,field)];arr.splice(i,1);const u={};u[field]=arr;await db.collection('nalozi').doc(sel).update(u);if(field==='images'&&idx>=arr.length)idx=Math.max(0,arr.length-1)}
 db.collection('postavke').doc('monteri').onSnapshot(doc=>{workers=(doc.exists&&doc.data().lista)?doc.data().lista:[...MONTERI_NAMES];if(!doc.exists)db.collection('postavke').doc('monteri').set({lista:workers});drawMonteri()});
-function fillSelect(){const s=document.getElementById('wSelect');if(!s)return;s.innerHTML='<option value="">-- Odaberite ime --</option>';ALL_NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;if(n===worker)o.selected=true;s.appendChild(o)})}
-function checkAuth(){if(!worker){document.getElementById('login').style.display='flex';fillSelect()}else{document.getElementById('login').style.display='none';document.getElementById('badge').innerText=worker;applyPermissions()}}
-function saveWorker(){const v=document.getElementById('wSelect').value;if(!v)return alert('Odaberite ime');worker=v;localStorage.setItem('tw',worker);checkAuth();if(sel)drawDetails()}
-function changeWorker(){worker='';localStorage.removeItem('tw');checkAuth()}
 function setF(f){filt=f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.dataset.f===f));drawList()}
 async function addPos(){if(!sel)return;const n=prompt('Naziv pozicije:');if(!n||!n.trim())return;const p=projects.find(x=>x.id===sel),pos=p.positions||[];pos.push({name:n.trim(),status:'proizvodnja',rekNote:''});await db.collection('nalozi').doc(sel).update({positions:pos})}
 async function setStatus(i,next){
@@ -348,14 +487,7 @@ function drawMontazaPos(){
     const i=pos.indexOf(x);
     const canAct=canMontage()||isAdmin();
     let btns='';
-    if(canAct){
-      btns='<div class="btns">'+
-        '<button class="chip c3" onclick="setStatus('+i+',\'montirano\')">🏠 Montirano</button>'+
-        '<button class="chip c4" onclick="setStatus('+i+',\'reklamacija\')">🏠 Reklamacija</button>'+
-        (isAdmin()?'<button class="chip c2" onclick="setStatus('+i+',\'skladiste\')">↩ Skladiste</button>':'')+
-        (isAdmin()?'<button class="chip c1" onclick="setStatus('+i+',\'proizvodnja\')">↩ Proizvodnja</button>':'')+
-        '</div>';
-    }
+    if(canAct){btns='<div class="btns"><button class="chip c3" onclick="setStatus('+i+',\'montirano\')">🏠 Montirano</button><button class="chip c4" onclick="setStatus('+i+',\'reklamacija\')">🏠 Reklamacija</button>'+(isAdmin()?'<button class="chip c2" onclick="setStatus('+i+',\'skladiste\')">↩ Skladiste</button><button class="chip c1" onclick="setStatus('+i+',\'proizvodnja\')">↩ Proizvodnja</button>':'')+'</div>'}
     const cur=x.status==='montirano'?' <span class="chip c3">Montirano</span>':x.status==='reklamacija'?' <span class="chip c4">Reklamacija</span>':x.status==='skladiste'?' <span class="chip c2">U Skladistu</span>':'';
     const note=x.rekNote?'<div class="rek-note">⚠ '+x.rekNote+'</div>':'';
     return '<div class="pos"><span class="posname">'+x.name+cur+'</span>'+btns+note+'</div>';
@@ -414,25 +546,13 @@ function drawDetails(){
     if(oi.length){document.getElementById('oEmpty').style.display='none';document.getElementById('oGal').style.display='block';document.getElementById('oImg').src=oi[0];document.getElementById('oThumbs').innerHTML=oi.map((s,i)=>'<div class="thumb '+(i===0?'on':'')+'" onclick="selT(\'offerImages\','+i+')"><img src="'+s+'"><button class="xd" onclick="delImg(\'offerImages\','+i+',event)">X</button></div>').join('')}
     else{document.getElementById('oEmpty').style.display='flex';document.getElementById('oGal').style.display='none'}
   }
-  // RN – svi vide kartici, ali financije (slike) samo admin
   const ri=getImgs(p,'rnImages');
-  const rSketch=document.getElementById('rSketch');
-  const rBlurMsg=document.getElementById('rBlurMsg');
+  const rSketch=document.getElementById('rSketch'),rBlurMsg=document.getElementById('rBlurMsg');
   if(ri.length){
-    document.getElementById('rEmpty').style.display='none';
-    document.getElementById('rGal').style.display='block';
-    document.getElementById('rImg').src=ri[0];
-    if(canSeeOffice()){
-      rSketch.classList.remove('blurred');rBlurMsg.style.display='none';
-      document.getElementById('rThumbs').innerHTML=ri.map((s,i)=>'<div class="thumb '+(i===0?'on':'')+'" onclick="selT(\'rnImages\','+i+')"><img src="'+s+'"><button class="xd" onclick="delImg(\'rnImages\','+i+',event)">X</button></div>').join('');
-    } else {
-      rSketch.classList.add('blurred');rBlurMsg.style.display='flex';
-      document.getElementById('rThumbs').innerHTML=ri.map((s,i)=>'<div class="thumb blurred"><img src="'+s+'"></div>').join('');
-    }
-  } else {
-    document.getElementById('rEmpty').style.display='flex';
-    document.getElementById('rGal').style.display='none';
-  }
+    document.getElementById('rEmpty').style.display='none';document.getElementById('rGal').style.display='block';document.getElementById('rImg').src=ri[0];
+    if(canSeeOffice()){rSketch.classList.remove('blurred');rBlurMsg.style.display='none';document.getElementById('rThumbs').innerHTML=ri.map((s,i)=>'<div class="thumb '+(i===0?'on':'')+'" onclick="selT(\'rnImages\','+i+')"><img src="'+s+'"><button class="xd" onclick="delImg(\'rnImages\','+i+',event)">X</button></div>').join('')}
+    else{rSketch.classList.add('blurred');rBlurMsg.style.display='flex';document.getElementById('rThumbs').innerHTML=ri.map((s,i)=>'<div class="thumb blurred"><img src="'+s+'"></div>').join('')}
+  } else {document.getElementById('rEmpty').style.display='flex';document.getElementById('rGal').style.display='none'}
   drawPos();drawSkladiste();drawMontazaPos();
   document.getElementById('mNotes').value=p.montazaNotes||'';drawMonteri();
   const done=getImgs(p,'doneImages');
@@ -463,6 +583,9 @@ async function saveNew(e){e.preventDefault();if(!worker){checkAuth();return}if(!
     if(ups.length){btn.innerText='Upload...';const urls=[];for(let i=0;i<ups.length;i++){const res=await fetch(ups[i]),blob=await res.blob(),path='nalozi/'+ref.id+'/images/'+Date.now()+'_'+i+'.jpg';await st.ref(path).put(blob,{contentType:'image/jpeg'});urls.push(await st.ref(path).getDownloadURL())}await ref.update({images:urls})}
     ups=[];drawPrev();document.querySelector('form').reset();showAdmin();openDetails(ref.id)}catch(err){alert(err.message)}finally{btn.disabled=false;btn.innerText='SPREMI'}
 }
+// Pri učitavanju – ako je spremljen worker, traži ponovni PIN (sigurnije)
+localStorage.removeItem('tw');
+worker='';
 checkAuth();
 </script>
 </body>
