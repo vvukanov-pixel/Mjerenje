@@ -22,7 +22,9 @@ header{background:var(--panel);border-bottom:1px solid var(--border);padding:10p
 .view-toggle button.active{background:var(--accent);color:#fff}
 .main{flex:1;display:flex;width:100%}
 #monter-view{width:100%;max-width:650px;margin:0 auto;padding:16px;display:none}#monter-view.active{display:block}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;transition:border-color .3s,box-shadow .3s}
+.card.red{border-color:#ef4444;box-shadow:0 0 0 1px rgba(239,68,68,.3)}
+.card.green{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.3)}
 .form-group{margin-bottom:12px}label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
 input,textarea,select{width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:10px 12px;border-radius:8px;font-size:14px;outline:none}
 select option{background:var(--panel);color:#fff}
@@ -74,6 +76,12 @@ select option{background:var(--panel);color:#fff}
 .mbox h3{font-size:18px;margin-bottom:6px}.mbox p{font-size:13px;color:var(--muted);margin-bottom:16px}
 .lb{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px}
 .hidden{display:none!important}
+.light{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px}
+.light.red{background:rgba(239,68,68,.2);color:#f87171}
+.light.green{background:rgba(16,185,129,.2);color:#34d399}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.red{background:#ef4444;box-shadow:0 0 6px #ef4444}
+.dot.green{background:#10b981;box-shadow:0 0 6px #10b981}
 @media(max-width:900px){.main{display:block}.sidebar{width:100%;height:auto;min-height:calc(100vh - 52px);border-right:none}.sidebar.hide{display:none}.detail{width:100%;height:auto;min-height:calc(100vh - 52px);display:none;padding:12px}.detail.show{display:flex}.back{display:block}}
 </style>
 </head>
@@ -153,11 +161,11 @@ select option{background:var(--panel);color:#fff}
         </div>
       </div>
       <div class="grid">
-        <!-- 1. MJERENJE -->
         <div class="card" id="cardMjerenje">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#38bdf8;font-size:13px">1. MJERENJE</h4>
             <div style="display:flex;gap:6px;align-items:center">
+              <span id="lightM" class="light red"><span class="dot red"></span> CEKA</span>
               <span id="dPage" style="font-size:11px;color:var(--muted)">0</span>
               <button id="btnAddM" onclick="document.getElementById('addM').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
               <input type="file" id="addM" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'images')">
@@ -167,22 +175,26 @@ select option{background:var(--panel);color:#fff}
           <div class="thumbs" id="dThumbs"></div>
           <p id="dNotes" style="font-size:12px;color:#f59e0b;margin-top:8px"></p>
         </div>
-        <!-- 2. PONUDA -->
         <div class="card" id="cardPonuda">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#34d399;font-size:13px">2. PONUDA</h4>
-            <button id="btnAddO" onclick="document.getElementById('addO').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
-            <input type="file" id="addO" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'offerImages')">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span id="lightP" class="light red"><span class="dot red"></span> CEKA</span>
+              <button id="btnAddO" onclick="document.getElementById('addO').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
+              <input type="file" id="addO" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'offerImages')">
+            </div>
           </div>
           <div id="oEmpty" class="docbox"><p style="font-size:12px;color:var(--muted)">Nema ponude</p></div>
           <div id="oGal" style="display:none"><div class="sketch" onclick="openG('offerImages')"><img id="oImg"></div><div class="thumbs" id="oThumbs"></div></div>
         </div>
-        <!-- 3. RADNI NALOG -->
         <div class="card" id="cardRN" style="border-left:4px solid #fbbf24">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h4 style="color:#fbbf24;font-size:13px">3. RADNI NALOG</h4>
-            <button id="btnAddR" onclick="document.getElementById('addR').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
-            <input type="file" id="addR" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'rnImages')">
+            <h4 style="color:#fbbf24;font-size:13px">3. RADNI NALOG / PROIZVODNJA</h4>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span id="lightR" class="light red"><span class="dot red"></span> CEKA</span>
+              <button id="btnAddR" onclick="document.getElementById('addR').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
+              <input type="file" id="addR" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'rnImages')">
+            </div>
           </div>
           <div id="rEmpty" class="docbox"><p style="font-size:12px;color:var(--muted)">Nema RN</p></div>
           <div id="rGal" style="display:none;margin-bottom:12px"><div class="sketch" onclick="openG('rnImages')"><img id="rImg"></div><div class="thumbs" id="rThumbs"></div></div>
@@ -192,12 +204,22 @@ select option{background:var(--panel);color:#fff}
           </div>
           <div class="posbox" id="posList"><span style="font-size:11px;color:var(--muted)">Nema pozicija</span></div>
         </div>
-        <!-- 4. MONTAZA -->
+        <div class="card" id="cardSkladiste" style="border-left:4px solid #38bdf8">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h4 style="color:#38bdf8;font-size:13px">🏠 SKLADISTE (zaprimanje)</h4>
+            <span id="lightS" class="light red"><span class="dot red"></span> CEKA</span>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Samo Branislav moze zaprimiti robu (proizvodnja → skladiste)</p>
+          <div id="skladisteList" class="posbox"><span style="font-size:11px;color:var(--muted)">Nema pozicija za zaprimanje</span></div>
+        </div>
         <div class="card" id="cardMontaza" style="border-left:4px solid #a855f7">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#c084fc;font-size:13px">4. MONTAZA</h4>
-            <button onclick="document.getElementById('addD').click()" style="background:#7e22ce;color:#fff;border:none;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
-            <input type="file" id="addD" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'doneImages')">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span id="lightMo" class="light red"><span class="dot red"></span> CEKA</span>
+              <button onclick="document.getElementById('addD').click()" style="background:#7e22ce;color:#fff;border:none;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
+              <input type="file" id="addD" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'doneImages')">
+            </div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <label style="margin:0">MONTERI:</label>
@@ -208,11 +230,10 @@ select option{background:var(--panel);color:#fff}
           <label>Slike montaze:</label>
           <div class="thumbs" id="dDone"></div>
         </div>
-        <!-- 5. FAKTURIRANJE -->
         <div class="card" id="cardFaktura" style="border-left:4px solid var(--ok)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#34d399;font-size:13px">5. FAKTURIRANJE</h4>
-            <span id="fPill" style="font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.1)">CEKA</span>
+            <span id="lightF" class="light red"><span class="dot red"></span> CEKA</span>
           </div>
           <div id="fAlert" style="display:none;background:rgba(16,185,129,.25);border:1px solid #10b981;color:#a7f3d0;padding:8px;border-radius:6px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center">SVE MONTIRANO - MOZE SE FAKTURIRATI</div>
           <div class="form-group"><label>Broj racuna:</label><input id="invNum" onchange="saveInv()"></div>
@@ -234,12 +255,6 @@ const cfg={apiKey:"AIzaSyABrJCjpEBj6ZsXu4Or2TCTDvi1yQkAnVc",authDomain:"mjerenje
 firebase.initializeApp(cfg);
 const db=firebase.firestore(),st=firebase.storage();
 
-/* ULOGE:
-   admin     = Vedran, Ankica, Nikolina  → sve
-   measure   = Zlatko, Sinisa, Sla ven, Nikola → mjerenje + montaza
-   warehouse = Branislav → samo zaprimanje u skladiste
-   montage   = ostali → samo montaza
-*/
 const USERS={
   "VEDRAN VUKANOVIC - ADMINISTRATOR":"admin",
   "ANKICA PRKACIN BACIC":"admin",
@@ -256,33 +271,37 @@ const USERS={
 const ALL_NAMES=Object.keys(USERS);
 const MONTERI_NAMES=["ZLATKO RADIS","SINISA PRAVICA","SLAVEN PUHALO","NIKOLA MRDIC","LJUBISA DOSLO","BRANISLAV BEGENUSIC","RANKO JANJIC","MIODRAG CERANIC"];
 
-let worker=localStorage.getItem('tw')||'',role='',projects=[],sel=null,idx=0,ups=[],workers=[],filt='svi';
+let worker=localStorage.getItem('tw')||'',projects=[],sel=null,idx=0,ups=[],workers=[],filt='svi';
 
 function getRole(){return USERS[worker]||'montage'}
 function isAdmin(){return getRole()==='admin'}
 function canMeasure(){return getRole()==='admin'||getRole()==='measure'}
 function canWarehouse(){return getRole()==='admin'||getRole()==='warehouse'}
-function canSeeOffice(){return getRole()==='admin'} // ponuda, RN doc, faktura
+function canSeeOffice(){return getRole()==='admin'}
+
+function setLight(id,ok){
+  const el=document.getElementById(id);if(!el)return;
+  el.className='light '+(ok?'green':'red');
+  el.innerHTML='<span class="dot '+(ok?'green':'red')+'"></span> '+(ok?'GOTOVO':'CEKA');
+}
+function setCard(id,ok){
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.remove('red','green');
+  el.classList.add(ok?'green':'red');
+}
 
 function applyPermissions(){
-  role=getRole();
-  // Novo mjerenje
   const showNovo=canMeasure();
   document.getElementById('t1').style.display=showNovo?'':'none';
   document.getElementById('btnNovoSide').style.display=showNovo?'':'none';
-  // Kartice
   document.getElementById('cardPonuda').classList.toggle('hidden',!canSeeOffice());
   document.getElementById('cardFaktura').classList.toggle('hidden',!canSeeOffice());
-  // RN dokumenti - sakrij upload za ne-admin, ali pozicije ostaju
   document.getElementById('btnAddR').style.display=canSeeOffice()?'':'none';
-  document.getElementById('rEmpty').style.display=canSeeOffice()?'flex':'none';
-  document.getElementById('rGal').style.display='none';
-  // Brisanje naloga samo admin
   document.getElementById('btnDel').style.display=isAdmin()?'':'none';
-  // Dodaj poziciju - admin ili warehouse
   document.getElementById('btnAddPos').style.display=(isAdmin()||canWarehouse())?'':'none';
-  // Dodaj monter - samo admin
   document.getElementById('btnAddMonter').style.display=isAdmin()?'':'none';
+  // Skladiste kartica - vidljiva svima, ali akcije samo Branislav/admin
+  document.getElementById('cardSkladiste').classList.toggle('hidden',false);
 }
 
 async function compress(file){
@@ -365,35 +384,28 @@ function saveWorker(){
   if(sel)drawDetails();
 }
 function changeWorker(){worker='';localStorage.removeItem('tw');checkAuth()}
-
 function setF(f){filt=f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.dataset.f===f));drawList()}
 
 async function addPos(){if(!sel)return;const n=prompt('Naziv pozicije:');if(!n||!n.trim())return;const p=projects.find(x=>x.id===sel),pos=p.positions||[];pos.push({name:n.trim(),status:'proizvodnja'});await db.collection('nalozi').doc(sel).update({positions:pos})}
 
-/* STATUS PRAVILA:
-   - proizvodnja → skladiste : samo Branislav (warehouse) ili admin
-   - skladiste → montirano  : measure, montage, admin
-   - montirano → proizvodnja: samo admin
-*/
 async function cycle(i){
   if(!sel)return;
   const p=projects.find(x=>x.id===sel),pos=p.positions||[];if(!pos[i])return;
   const s=pos[i].status||'proizvodnja';
   let next=null;
   if(s==='proizvodnja'){
-    if(!canWarehouse()){alert('Samo Branislav (skladiste) moze zaprimiti robu iz proizvodnje.');return}
+    if(!canWarehouse()){alert('Samo Branislav (skladiste) moze zaprimiti robu.');return}
     next='skladiste';
   } else if(s==='skladiste'){
     if(!(canMeasure()||getRole()==='montage'||isAdmin())){alert('Nemate dozvolu.');return}
     next='montirano';
   } else {
-    if(!isAdmin()){alert('Samo administrator moze vratiti status.');return}
+    if(!isAdmin()){alert('Samo administrator.');return}
     next='proizvodnja';
   }
   pos[i].status=next;
   await db.collection('nalozi').doc(sel).update({positions:pos});
 }
-
 async function delPos(i,e){e.stopPropagation();if(!isAdmin()){alert('Samo admin');return}if(!sel||!confirm('Obrisati?'))return;const p=projects.find(x=>x.id===sel),pos=p.positions||[];pos.splice(i,1);await db.collection('nalozi').doc(sel).update({positions:pos})}
 
 function drawPos(){
@@ -407,6 +419,31 @@ function drawPos(){
     const del=isAdmin()?'<button onclick="delPos('+i+',event)" style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold">X</button>':'';
     return '<div class="pos"><span class="posname">'+x.name+'</span><div style="display:flex;gap:6px;align-items:center">'+btn+del+'</div></div>';
   }).join('');
+}
+
+function drawSkladiste(){
+  const box=document.getElementById('skladisteList'),p=projects.find(x=>x.id===sel),pos=(p&&p.positions)||[];
+  const waiting=pos.filter(x=>x.status==='proizvodnja');
+  const received=pos.filter(x=>x.status==='skladiste'||x.status==='montirano');
+  if(!pos.length){box.innerHTML='<span style="font-size:11px;color:var(--muted)">Nema pozicija</span>';return}
+  let html='';
+  if(waiting.length){
+    html+='<p style="font-size:11px;color:#fbbf24;margin-bottom:6px;font-weight:bold">CEKA ZAPRIMANJE:</p>';
+    waiting.forEach((x,i)=>{
+      const realIdx=pos.indexOf(x);
+      const btn=canWarehouse()?'<button class="chip c2" onclick="cycle('+realIdx+')">🏠 ZAPRIMI</button>':'<span class="chip c1">U Proizvodnji</span>';
+      html+='<div class="pos"><span class="posname">'+x.name+'</span>'+btn+'</div>';
+    });
+  }
+  if(received.length){
+    html+='<p style="font-size:11px;color:#38bdf8;margin:10px 0 6px;font-weight:bold">U SKLADISTU / DALJE:</p>';
+    received.forEach(x=>{
+      const t=x.status==='skladiste'?'U Skladistu':'Montirano';
+      const c=x.status==='skladiste'?'c2':'c3';
+      html+='<div class="pos"><span class="posname">'+x.name+'</span><span class="chip '+c+'">'+t+'</span></div>';
+    });
+  }
+  box.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">Nema pozicija</span>';
 }
 
 async function addWorker(){if(!isAdmin())return;const n=prompt('Ime montera:');if(n&&n.trim()){const name=n.trim().toUpperCase();if(!workers.includes(name)){workers.push(name);await db.collection('postavke').doc('monteri').set({lista:workers})}}}
@@ -465,6 +502,31 @@ function drawDetails(){
   document.getElementById('dSub').innerText='Mjernik: '+(p.worker||'-')+' | '+(p.loc||'-')+' | '+(p.phone||'-')+' | '+p.date;
   document.getElementById('dNotes').innerText=p.notes?'Napomena: '+p.notes:'';
 
+  // SEMAFOR LOGIKA
+  const hasRN=getImgs(p,'rnImages').length>0||!!p.rnDoc;
+  const pos=p.positions||[];
+  const total=pos.length;
+  const allOutOfProd=total>0&&pos.every(x=>x.status!=='proizvodnja');
+  const allMont=total>0&&pos.every(x=>x.status==='montirano');
+  const hasSklad=pos.some(x=>x.status==='skladiste'||x.status==='montirano');
+
+  // 1+2 Mjerenje i Ponuda: crveno dok nema RN, onda zeleno
+  setLight('lightM',hasRN); setCard('cardMjerenje',hasRN);
+  setLight('lightP',hasRN); setCard('cardPonuda',hasRN);
+
+  // 3 RN/Proizvodnja: crveno dok sve ne izadje iz proizvodnje, onda zeleno
+  setLight('lightR',allOutOfProd); setCard('cardRN',allOutOfProd);
+
+  // Skladiste: crveno dok ima nesto u proizvodnji ili nista nije zaprimljeno; zeleno kad je sve zaprimljeno (nista vise u proizvodnji)
+  setLight('lightS',allOutOfProd&&total>0); setCard('cardSkladiste',allOutOfProd&&total>0);
+
+  // 4 Montaza: crveno dok nije sve montirano
+  setLight('lightMo',allMont); setCard('cardMontaza',allMont);
+
+  // 5 Faktura: crveno dok nije fakturirano
+  setLight('lightF',!!p.isInvoiced); setCard('cardFaktura',!!p.isInvoiced);
+
+  // Slike mjerenja
   const imgs=getImgs(p,'images');idx=Math.min(idx,Math.max(0,imgs.length-1));
   const main=document.getElementById('dImg');
   if(imgs.length){main.src=imgs[idx];main.style.display='block';document.getElementById('dPage').innerText=(idx+1)+'/'+imgs.length}
@@ -476,24 +538,23 @@ function drawDetails(){
     if(oi.length){document.getElementById('oEmpty').style.display='none';document.getElementById('oGal').style.display='block';document.getElementById('oImg').src=oi[0];
       document.getElementById('oThumbs').innerHTML=oi.map((s,i)=>'<div class="thumb '+(i===0?'on':'')+'" onclick="selT(\'offerImages\','+i+')"><img src="'+s+'"><button class="xd" onclick="delImg(\'offerImages\','+i+',event)">X</button></div>').join('')}
     else{document.getElementById('oEmpty').style.display='flex';document.getElementById('oGal').style.display='none'}
-
     const ri=getImgs(p,'rnImages');
     if(ri.length){document.getElementById('rEmpty').style.display='none';document.getElementById('rGal').style.display='block';document.getElementById('rImg').src=ri[0];
       document.getElementById('rThumbs').innerHTML=ri.map((s,i)=>'<div class="thumb '+(i===0?'on':'')+'" onclick="selT(\'rnImages\','+i+')"><img src="'+s+'"><button class="xd" onclick="delImg(\'rnImages\','+i+',event)">X</button></div>').join('')}
     else{document.getElementById('rEmpty').style.display='flex';document.getElementById('rGal').style.display='none'}
   }
 
-  drawPos();document.getElementById('mNotes').value=p.montazaNotes||'';drawMonteri();
+  drawPos();drawSkladiste();
+  document.getElementById('mNotes').value=p.montazaNotes||'';drawMonteri();
   const done=getImgs(p,'doneImages');
   document.getElementById('dDone').innerHTML=done.length?done.map((s,i)=>'<div class="thumb on" onclick="openLb(\''+s+'\')"><img src="'+s+'"><button class="xd" onclick="delImg(\'doneImages\','+i+',event)">X</button></div>').join(''):'<span style="font-size:11px;color:var(--muted);padding:6px">Nema slika</span>';
 
   if(canSeeOffice()){
     document.getElementById('invNum').value=p.invoiceNum||'';
-    const pos=p.positions||[],all=pos.length>0&&pos.every(x=>x.status==='montirano');
-    const al=document.getElementById('fAlert'),pill=document.getElementById('fPill'),btn=document.getElementById('fBtn'),card=document.getElementById('fCard');
-    if(p.isInvoiced){al.style.display='none';pill.style.background='#10b981';pill.style.color='#fff';pill.innerText='FAKTURIRANO';btn.innerText='PONISTI';btn.style.background='rgba(239,68,68,.2)';btn.style.color='#f87171'}
-    else if(all){al.style.display='block';pill.style.background='#10b981';pill.style.color='#fff';pill.innerText='SPREMNO';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='#10b981';btn.style.color='#fff'}
-    else{al.style.display='none';pill.style.background='rgba(255,255,255,.1)';pill.style.color='var(--muted)';pill.innerText='CEKA';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='var(--ok)';btn.style.color='#fff'}
+    const al=document.getElementById('fAlert'),btn=document.getElementById('fBtn');
+    if(p.isInvoiced){al.style.display='none';btn.innerText='PONISTI';btn.style.background='rgba(239,68,68,.2)';btn.style.color='#f87171'}
+    else if(allMont){al.style.display='block';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='#10b981';btn.style.color='#fff'}
+    else{al.style.display='none';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='var(--ok)';btn.style.color='#fff'}
     document.getElementById('invPrev').innerHTML=p.invoiceDoc?'<div style="display:flex;justify-content:space-between;background:rgba(0,0,0,.3);padding:6px;border-radius:6px"><a href="#" onclick="openLb(\''+p.invoiceDoc+'\');return false" style="color:#38bdf8;font-weight:bold">Pogledaj</a><button onclick="delInv()" style="background:none;border:none;color:#f87171;font-weight:bold;cursor:pointer">X</button></div>':'';
   }
 }
@@ -506,7 +567,7 @@ function closeLb(e){if(e&&e.target&&e.target.tagName==='IMG')return;document.get
 window.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb()});
 
 async function delCur(){if(!isAdmin())return;const p=projects.find(x=>x.id===sel);if(!p||!confirm('Izbrisati '+p.name+'?'))return;await db.collection('nalozi').doc(sel).delete();goBack()}
-function showMonter(){if(!canMeasure()){alert('Nemate dozvolu za novo mjerenje');return}document.getElementById('monter-view').classList.add('active');document.getElementById('admin-view').classList.remove('active');document.getElementById('t1').classList.add('active');document.getElementById('t2').classList.remove('active')}
+function showMonter(){if(!canMeasure()){alert('Nemate dozvolu');return}document.getElementById('monter-view').classList.add('active');document.getElementById('admin-view').classList.remove('active');document.getElementById('t1').classList.add('active');document.getElementById('t2').classList.remove('active')}
 function showAdmin(){document.getElementById('monter-view').classList.remove('active');document.getElementById('admin-view').classList.add('active');document.getElementById('t1').classList.remove('active');document.getElementById('t2').classList.add('active');goBack()}
 
 async function selImgs(e){const files=Array.from(e.target.files),st=document.getElementById('ust');
