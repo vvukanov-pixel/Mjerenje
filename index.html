@@ -23,8 +23,8 @@ header{background:var(--panel);border-bottom:1px solid var(--border);padding:10p
 .main{flex:1;display:flex;width:100%}
 #monter-view{width:100%;max-width:650px;margin:0 auto;padding:16px;display:none}#monter-view.active{display:block}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;transition:border-color .3s,box-shadow .3s}
-.card.red{border-color:#ef4444;box-shadow:0 0 0 1px rgba(239,68,68,.3)}
-.card.green{border-color:#10b981;box-shadow:0 0 0 1px rgba(16,185,129,.3)}
+.card.red{border-color:#ef4444!important;box-shadow:0 0 0 1px rgba(239,68,68,.35)}
+.card.green{border-color:#10b981!important;box-shadow:0 0 0 1px rgba(16,185,129,.35)}
 .form-group{margin-bottom:12px}label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
 input,textarea,select{width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:10px 12px;border-radius:8px;font-size:14px;outline:none}
 select option{background:var(--panel);color:#fff}
@@ -52,21 +52,23 @@ select option{background:var(--panel);color:#fff}
 .bact{padding:7px 12px;font-size:12px;font-weight:bold;border-radius:6px;border:none;cursor:pointer}
 .bprint{background:var(--accent);color:#fff}.bdel{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.4)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-.sketch{background:#000;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;min-height:200px;max-height:320px;overflow:hidden;margin-bottom:8px;cursor:pointer}
-.sketch img{width:100%;height:100%;max-height:320px;object-fit:contain}
+.sketch{background:#000;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;min-height:180px;max-height:300px;overflow:hidden;margin-bottom:8px;cursor:pointer}
+.sketch img{width:100%;height:100%;max-height:300px;object-fit:contain}
 .thumbs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
 .thumb{width:55px;height:55px;flex-shrink:0;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;opacity:.5;position:relative}
 .thumb.on{border-color:#38bdf8;opacity:1}
 .thumb img{width:100%;height:100%;object-fit:cover}
 .xd{position:absolute;top:1px;right:1px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:bold;cursor:pointer;z-index:2}
-.docbox{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;background:rgba(0,0,0,.2);min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.docbox{border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;background:rgba(0,0,0,.2);min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .posbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px}
-.pos{display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:8px 10px;border-radius:6px;margin-bottom:6px;gap:6px}
-.posname{font-size:13px;font-weight:bold;flex:1}
+.pos{display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:8px 10px;border-radius:6px;margin-bottom:6px;gap:6px;flex-wrap:wrap}
+.posname{font-size:13px;font-weight:bold;flex:1;min-width:80px}
 .chip{font-size:11px;padding:4px 8px;border-radius:5px;font-weight:bold;cursor:pointer;border:none}
 .c1{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.4)}
 .c2{background:rgba(56,189,248,.2);color:#38bdf8;border:1px solid rgba(56,189,248,.4)}
 .c3{background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(16,185,129,.4)}
+.c4{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.4)}
+.btns{display:flex;gap:4px;flex-wrap:wrap}
 .mlist{display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:10px}
 .mrow{display:flex;align-items:center;justify-content:space-between;background:var(--panel);padding:6px 10px;border-radius:6px}
 .mlab{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;cursor:pointer;margin:0;text-transform:none;color:#fff;flex:1}
@@ -82,6 +84,7 @@ select option{background:var(--panel);color:#fff}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .dot.red{background:#ef4444;box-shadow:0 0 6px #ef4444}
 .dot.green{background:#10b981;box-shadow:0 0 6px #10b981}
+.rek-note{font-size:11px;color:#f87171;width:100%;margin-top:4px;font-style:italic}
 @media(max-width:900px){.main{display:block}.sidebar{width:100%;height:auto;min-height:calc(100vh - 52px);border-right:none}.sidebar.hide{display:none}.detail{width:100%;height:auto;min-height:calc(100vh - 52px);display:none;padding:12px}.detail.show{display:flex}.back{display:block}}
 </style>
 </head>
@@ -143,6 +146,7 @@ select option{background:var(--panel);color:#fff}
           <button class="fbtn" data-f="proizvodnja" onclick="setF('proizvodnja')">U proizvodnji</button>
           <button class="fbtn" data-f="skladiste" onclick="setF('skladiste')">U skladistu</button>
           <button class="fbtn" data-f="montirano" onclick="setF('montirano')">Montirano</button>
+          <button class="fbtn" data-f="reklamacija" onclick="setF('reklamacija')">Reklamacija</button>
           <button class="fbtn" data-f="fakturirano" onclick="setF('fakturirano')">Fakturirano</button>
         </div>
       </div>
@@ -167,7 +171,7 @@ select option{background:var(--panel);color:#fff}
             <div style="display:flex;gap:6px;align-items:center">
               <span id="lightM" class="light red"><span class="dot red"></span> CEKA</span>
               <span id="dPage" style="font-size:11px;color:var(--muted)">0</span>
-              <button id="btnAddM" onclick="document.getElementById('addM').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
+              <button onclick="document.getElementById('addM').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
               <input type="file" id="addM" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'images')">
             </div>
           </div>
@@ -180,14 +184,14 @@ select option{background:var(--panel);color:#fff}
             <h4 style="color:#34d399;font-size:13px">2. PONUDA</h4>
             <div style="display:flex;gap:6px;align-items:center">
               <span id="lightP" class="light red"><span class="dot red"></span> CEKA</span>
-              <button id="btnAddO" onclick="document.getElementById('addO').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
+              <button onclick="document.getElementById('addO').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">+ Slike</button>
               <input type="file" id="addO" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(event,'offerImages')">
             </div>
           </div>
           <div id="oEmpty" class="docbox"><p style="font-size:12px;color:var(--muted)">Nema ponude</p></div>
           <div id="oGal" style="display:none"><div class="sketch" onclick="openG('offerImages')"><img id="oImg"></div><div class="thumbs" id="oThumbs"></div></div>
         </div>
-        <div class="card" id="cardRN" style="border-left:4px solid #fbbf24">
+        <div class="card" id="cardRN">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#fbbf24;font-size:13px">3. RADNI NALOG / PROIZVODNJA</h4>
             <div style="display:flex;gap:6px;align-items:center">
@@ -199,20 +203,20 @@ select option{background:var(--panel);color:#fff}
           <div id="rEmpty" class="docbox"><p style="font-size:12px;color:var(--muted)">Nema RN</p></div>
           <div id="rGal" style="display:none;margin-bottom:12px"><div class="sketch" onclick="openG('rnImages')"><img id="rImg"></div><div class="thumbs" id="rThumbs"></div></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-top:1px solid var(--border);padding-top:8px">
-            <label style="margin:0;color:#fbbf24">POZICIJE / STANJE:</label>
+            <label style="margin:0;color:#fbbf24">POZICIJE:</label>
             <button id="btnAddPos" onclick="addPos()" style="background:none;border:none;color:#38bdf8;font-size:11px;font-weight:bold;cursor:pointer">+ Dodaj</button>
           </div>
           <div class="posbox" id="posList"><span style="font-size:11px;color:var(--muted)">Nema pozicija</span></div>
         </div>
-        <div class="card" id="cardSkladiste" style="border-left:4px solid #38bdf8">
+        <div class="card" id="cardSkladiste">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h4 style="color:#38bdf8;font-size:13px">🏠 SKLADISTE (zaprimanje)</h4>
+            <h4 style="color:#38bdf8;font-size:13px">🏠 SKLADISTE</h4>
             <span id="lightS" class="light red"><span class="dot red"></span> CEKA</span>
           </div>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Samo Branislav moze zaprimiti robu (proizvodnja → skladiste)</p>
-          <div id="skladisteList" class="posbox"><span style="font-size:11px;color:var(--muted)">Nema pozicija za zaprimanje</span></div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Zaprimanje robe iz proizvodnje (Branislav / Admin)</p>
+          <div id="skladisteList" class="posbox"><span style="font-size:11px;color:var(--muted)">Nema pozicija</span></div>
         </div>
-        <div class="card" id="cardMontaza" style="border-left:4px solid #a855f7">
+        <div class="card" id="cardMontaza">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#c084fc;font-size:13px">4. MONTAZA</h4>
             <div style="display:flex;gap:6px;align-items:center">
@@ -226,16 +230,21 @@ select option{background:var(--panel);color:#fff}
             <button id="btnAddMonter" onclick="addWorker()" style="background:none;border:none;color:#38bdf8;font-size:11px;font-weight:bold;cursor:pointer">+ Dodaj</button>
           </div>
           <div class="mlist" id="mCheck"></div>
-          <div class="form-group"><label>Napomene:</label><textarea id="mNotes" rows="2" onchange="saveNotes()"></textarea></div>
+          <div class="form-group"><label>Napomene montaze:</label><textarea id="mNotes" rows="2" onchange="saveNotes()"></textarea></div>
           <label>Slike montaze:</label>
           <div class="thumbs" id="dDone"></div>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+            <label style="color:#c084fc">POZICIJE ZA MONTAZU:</label>
+            <div id="montazaList" class="posbox"><span style="font-size:11px;color:var(--muted)">Nema pozicija u skladistu</span></div>
+          </div>
         </div>
-        <div class="card" id="cardFaktura" style="border-left:4px solid var(--ok)">
+        <div class="card" id="cardFaktura">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h4 style="color:#34d399;font-size:13px">5. FAKTURIRANJE</h4>
             <span id="lightF" class="light red"><span class="dot red"></span> CEKA</span>
           </div>
           <div id="fAlert" style="display:none;background:rgba(16,185,129,.25);border:1px solid #10b981;color:#a7f3d0;padding:8px;border-radius:6px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center">SVE MONTIRANO - MOZE SE FAKTURIRATI</div>
+          <div id="fReklama" style="display:none;background:rgba(239,68,68,.2);border:1px solid #ef4444;color:#fca5a5;padding:8px;border-radius:6px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center">IMA REKLAMACIJA - NE MOZE SE FAKTURIRATI</div>
           <div class="form-group"><label>Broj racuna:</label><input id="invNum" onchange="saveInv()"></div>
           <div class="form-group">
             <label>Prilozi racun:</label>
@@ -278,6 +287,7 @@ function isAdmin(){return getRole()==='admin'}
 function canMeasure(){return getRole()==='admin'||getRole()==='measure'}
 function canWarehouse(){return getRole()==='admin'||getRole()==='warehouse'}
 function canSeeOffice(){return getRole()==='admin'}
+function canMontage(){return getRole()==='admin'||getRole()==='measure'||getRole()==='montage'}
 
 function setLight(id,ok){
   const el=document.getElementById(id);if(!el)return;
@@ -291,17 +301,14 @@ function setCard(id,ok){
 }
 
 function applyPermissions(){
-  const showNovo=canMeasure();
-  document.getElementById('t1').style.display=showNovo?'':'none';
-  document.getElementById('btnNovoSide').style.display=showNovo?'':'none';
+  document.getElementById('t1').style.display=canMeasure()?'':'none';
+  document.getElementById('btnNovoSide').style.display=canMeasure()?'':'none';
   document.getElementById('cardPonuda').classList.toggle('hidden',!canSeeOffice());
   document.getElementById('cardFaktura').classList.toggle('hidden',!canSeeOffice());
   document.getElementById('btnAddR').style.display=canSeeOffice()?'':'none';
   document.getElementById('btnDel').style.display=isAdmin()?'':'none';
   document.getElementById('btnAddPos').style.display=(isAdmin()||canWarehouse())?'':'none';
   document.getElementById('btnAddMonter').style.display=isAdmin()?'':'none';
-  // Skladiste kartica - vidljiva svima, ali akcije samo Branislav/admin
-  document.getElementById('cardSkladiste').classList.toggle('hidden',false);
 }
 
 async function compress(file){
@@ -380,70 +387,97 @@ function checkAuth(){
 }
 function saveWorker(){
   const v=document.getElementById('wSelect').value;if(!v)return alert('Odaberite ime');
-  worker=v;localStorage.setItem('tw',worker);checkAuth();
-  if(sel)drawDetails();
+  worker=v;localStorage.setItem('tw',worker);checkAuth();if(sel)drawDetails();
 }
 function changeWorker(){worker='';localStorage.removeItem('tw');checkAuth()}
 function setF(f){filt=f;document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.dataset.f===f));drawList()}
 
-async function addPos(){if(!sel)return;const n=prompt('Naziv pozicije:');if(!n||!n.trim())return;const p=projects.find(x=>x.id===sel),pos=p.positions||[];pos.push({name:n.trim(),status:'proizvodnja'});await db.collection('nalozi').doc(sel).update({positions:pos})}
+async function addPos(){if(!sel)return;const n=prompt('Naziv pozicije:');if(!n||!n.trim())return;const p=projects.find(x=>x.id===sel),pos=p.positions||[];pos.push({name:n.trim(),status:'proizvodnja',rekNote:''});await db.collection('nalozi').doc(sel).update({positions:pos})}
 
-async function cycle(i){
+/* STATUSI: proizvodnja → skladiste → montirano | reklamacija */
+async function setStatus(i,next){
   if(!sel)return;
   const p=projects.find(x=>x.id===sel),pos=p.positions||[];if(!pos[i])return;
-  const s=pos[i].status||'proizvodnja';
-  let next=null;
-  if(s==='proizvodnja'){
-    if(!canWarehouse()){alert('Samo Branislav (skladiste) moze zaprimiti robu.');return}
-    next='skladiste';
-  } else if(s==='skladiste'){
-    if(!(canMeasure()||getRole()==='montage'||isAdmin())){alert('Nemate dozvolu.');return}
-    next='montirano';
-  } else {
-    if(!isAdmin()){alert('Samo administrator.');return}
-    next='proizvodnja';
+  const cur=pos[i].status||'proizvodnja';
+
+  if(next==='skladiste'){
+    if(cur!=='proizvodnja')return;
+    if(!canWarehouse()){alert('Samo Branislav / Admin moze zaprimiti.');return}
   }
+  if(next==='montirano'||next==='reklamacija'){
+    if(cur!=='skladiste'&&cur!=='reklamacija'&&cur!=='montirano'){alert('Prvo mora biti u skladistu.');return}
+    if(!canMontage()&&!isAdmin()){alert('Nemate dozvolu za montazu.');return}
+  }
+  if(next==='reklamacija'){
+    const note=prompt('Opis reklamacije (obavezno):');
+    if(!note||!note.trim()){alert('Napomena je obavezna za reklamaciju.');return}
+    pos[i].rekNote=note.trim();
+  }
+  if(next==='montirano'){pos[i].rekNote=''}
+  if(next==='proizvodnja'&&!isAdmin()){alert('Samo admin moze vratiti.');return}
+
   pos[i].status=next;
   await db.collection('nalozi').doc(sel).update({positions:pos});
 }
+
 async function delPos(i,e){e.stopPropagation();if(!isAdmin()){alert('Samo admin');return}if(!sel||!confirm('Obrisati?'))return;const p=projects.find(x=>x.id===sel),pos=p.positions||[];pos.splice(i,1);await db.collection('nalozi').doc(sel).update({positions:pos})}
 
 function drawPos(){
   const box=document.getElementById('posList'),p=projects.find(x=>x.id===sel),pos=(p&&p.positions)||[];
   if(!pos.length){box.innerHTML='<span style="font-size:11px;color:var(--muted)">Nema pozicija</span>';return}
   box.innerHTML=pos.map((x,i)=>{
-    const c=x.status==='proizvodnja'?'c1':x.status==='skladiste'?'c2':'c3';
-    const t=x.status==='proizvodnja'?'U Proizvodnji':x.status==='skladiste'?'U Skladistu':'Montirano';
-    const canClick=(x.status==='proizvodnja'&&canWarehouse())||(x.status==='skladiste'&&(canMeasure()||getRole()==='montage'||isAdmin()))||(x.status==='montirano'&&isAdmin());
-    const btn=canClick?'<button class="chip '+c+'" onclick="cycle('+i+')">'+t+'</button>':'<span class="chip '+c+'" style="cursor:default">'+t+'</span>';
+    const st=x.status||'proizvodnja';
+    const label=st==='proizvodnja'?'U Proizvodnji':st==='skladiste'?'U Skladistu':st==='montirano'?'Montirano':'Reklamacija';
+    const c=st==='proizvodnja'?'c1':st==='skladiste'?'c2':st==='montirano'?'c3':'c4';
     const del=isAdmin()?'<button onclick="delPos('+i+',event)" style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold">X</button>':'';
-    return '<div class="pos"><span class="posname">'+x.name+'</span><div style="display:flex;gap:6px;align-items:center">'+btn+del+'</div></div>';
+    const note=x.rekNote?'<div class="rek-note">⚠ '+x.rekNote+'</div>':'';
+    return '<div class="pos"><span class="posname">'+x.name+'</span><span class="chip '+c+'">'+label+'</span>'+del+note+'</div>';
   }).join('');
 }
 
 function drawSkladiste(){
   const box=document.getElementById('skladisteList'),p=projects.find(x=>x.id===sel),pos=(p&&p.positions)||[];
-  const waiting=pos.filter(x=>x.status==='proizvodnja');
-  const received=pos.filter(x=>x.status==='skladiste'||x.status==='montirano');
+  const waiting=pos.filter(x=>(x.status||'proizvodnja')==='proizvodnja');
+  const done=pos.filter(x=>x.status==='skladiste'||x.status==='montirano'||x.status==='reklamacija');
   if(!pos.length){box.innerHTML='<span style="font-size:11px;color:var(--muted)">Nema pozicija</span>';return}
   let html='';
   if(waiting.length){
     html+='<p style="font-size:11px;color:#fbbf24;margin-bottom:6px;font-weight:bold">CEKA ZAPRIMANJE:</p>';
-    waiting.forEach((x,i)=>{
-      const realIdx=pos.indexOf(x);
-      const btn=canWarehouse()?'<button class="chip c2" onclick="cycle('+realIdx+')">🏠 ZAPRIMI</button>':'<span class="chip c1">U Proizvodnji</span>';
+    waiting.forEach(x=>{
+      const i=pos.indexOf(x);
+      const btn=canWarehouse()?'<button class="chip c2" onclick="setStatus('+i+',\'skladiste\')">🏠 ZAPRIMI</button>':'<span class="chip c1">U Proizvodnji</span>';
       html+='<div class="pos"><span class="posname">'+x.name+'</span>'+btn+'</div>';
     });
   }
-  if(received.length){
-    html+='<p style="font-size:11px;color:#38bdf8;margin:10px 0 6px;font-weight:bold">U SKLADISTU / DALJE:</p>';
-    received.forEach(x=>{
-      const t=x.status==='skladiste'?'U Skladistu':'Montirano';
-      const c=x.status==='skladiste'?'c2':'c3';
+  if(done.length){
+    html+='<p style="font-size:11px;color:#38bdf8;margin:10px 0 6px;font-weight:bold">ZAPRIMLJENO:</p>';
+    done.forEach(x=>{
+      const t=x.status==='skladiste'?'U Skladistu':x.status==='montirano'?'Montirano':'Reklamacija';
+      const c=x.status==='skladiste'?'c2':x.status==='montirano'?'c3':'c4';
       html+='<div class="pos"><span class="posname">'+x.name+'</span><span class="chip '+c+'">'+t+'</span></div>';
     });
   }
   box.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">Nema pozicija</span>';
+}
+
+function drawMontazaPos(){
+  const box=document.getElementById('montazaList'),p=projects.find(x=>x.id===sel),pos=(p&&p.positions)||[];
+  const ready=pos.filter(x=>x.status==='skladiste'||x.status==='montirano'||x.status==='reklamacija');
+  if(!ready.length){box.innerHTML='<span style="font-size:11px;color:var(--muted)">Nema pozicija u skladistu</span>';return}
+  box.innerHTML=ready.map(x=>{
+    const i=pos.indexOf(x);
+    const canAct=canMontage()||isAdmin();
+    let btns='';
+    if(canAct){
+      btns='<div class="btns">'+
+        '<button class="chip c3" onclick="setStatus('+i+',\'montirano\')">🏠 Montirano</button>'+
+        '<button class="chip c4" onclick="setStatus('+i+',\'reklamacija\')">🏠 Reklamacija</button>'+
+        '</div>';
+    }
+    const cur=x.status==='montirano'?'<span class="chip c3">Montirano</span>':x.status==='reklamacija'?'<span class="chip c4">Reklamacija</span>':'';
+    const note=x.rekNote?'<div class="rek-note">⚠ '+x.rekNote+'</div>':'';
+    return '<div class="pos"><span class="posname">'+x.name+'</span>'+(x.status==='skladiste'?btns:cur)+note+'</div>';
+  }).join('');
 }
 
 async function addWorker(){if(!isAdmin())return;const n=prompt('Ime montera:');if(n&&n.trim()){const name=n.trim().toUpperCase();if(!workers.includes(name)){workers.push(name);await db.collection('postavke').doc('monteri').set({lista:workers})}}}
@@ -475,18 +509,28 @@ function drawList(){
   const list=document.getElementById('list'),q=(document.getElementById('q').value||'').toLowerCase().trim();
   let f=projects.filter(p=>{
     if(q&&!(p.name||'').toLowerCase().includes(q)&&!(p.loc||'').toLowerCase().includes(q))return false;
-    const pos=p.positions||[],t=pos.length,m=pos.filter(x=>x.status==='montirano').length,s=pos.filter(x=>x.status==='skladiste').length,pr=pos.filter(x=>x.status==='proizvodnja').length;
+    const pos=p.positions||[],t=pos.length;
+    const m=pos.filter(x=>x.status==='montirano').length;
+    const s=pos.filter(x=>x.status==='skladiste').length;
+    const pr=pos.filter(x=>(x.status||'proizvodnja')==='proizvodnja').length;
+    const rk=pos.filter(x=>x.status==='reklamacija').length;
     if(filt==='svi')return true;
     if(filt==='fakturirano')return!!p.isInvoiced;
     if(filt==='montirano')return t>0&&m===t;
-    if(filt==='skladiste')return t>0&&s>0&&m<t;
+    if(filt==='skladiste')return t>0&&s>0;
     if(filt==='proizvodnja')return t>0&&pr>0;
+    if(filt==='reklamacija')return rk>0;
     return true;
   });
   if(!f.length){list.innerHTML='<p style="padding:20px;font-size:12px;color:var(--muted);text-align:center">Nema naloga</p>';return}
   list.innerHTML=f.map(p=>{
-    const pos=p.positions||[],t=pos.length,m=pos.filter(x=>x.status==='montirano').length,s=pos.filter(x=>x.status==='skladiste').length,pr=pos.filter(x=>x.status==='proizvodnja').length;
-    const st=t===0?'<span style="color:#94a3b8">Nema pozicija</span>':'<span style="color:#fbbf24;font-weight:bold">'+pr+'</span> <span style="color:#38bdf8;font-weight:bold">'+s+'</span> <span style="color:#10b981;font-weight:bold">'+m+'</span>';
+    const pos=p.positions||[],t=pos.length;
+    const m=pos.filter(x=>x.status==='montirano').length;
+    const s=pos.filter(x=>x.status==='skladiste').length;
+    const pr=pos.filter(x=>(x.status||'proizvodnja')==='proizvodnja').length;
+    const rk=pos.filter(x=>x.status==='reklamacija').length;
+    let st=t===0?'<span style="color:#94a3b8">Nema pozicija</span>':'<span style="color:#fbbf24;font-weight:bold">'+pr+'</span> <span style="color:#38bdf8;font-weight:bold">'+s+'</span> <span style="color:#10b981;font-weight:bold">'+m+'</span>';
+    if(rk)st+=' <span style="color:#f87171;font-weight:bold">R'+rk+'</span>';
     const b=p.isInvoiced?'<span style="color:#10b981;font-weight:bold;background:rgba(16,185,129,.15);padding:2px 6px;border-radius:4px">FAKTURIRANO</span>':'';
     return '<div class="item '+(p.id===sel?'sel':'')+'" onclick="openDetails(\''+p.id+'\')"><div style="display:flex;justify-content:space-between"><h4>'+p.name+'</h4>'+b+'</div><p>'+(p.loc||'-')+' | '+p.date+'</p><div style="margin-top:5px;font-size:12px">'+st+'</div></div>';
   }).join('');
@@ -502,31 +546,20 @@ function drawDetails(){
   document.getElementById('dSub').innerText='Mjernik: '+(p.worker||'-')+' | '+(p.loc||'-')+' | '+(p.phone||'-')+' | '+p.date;
   document.getElementById('dNotes').innerText=p.notes?'Napomena: '+p.notes:'';
 
-  // SEMAFOR LOGIKA
   const hasRN=getImgs(p,'rnImages').length>0||!!p.rnDoc;
   const pos=p.positions||[];
   const total=pos.length;
-  const allOutOfProd=total>0&&pos.every(x=>x.status!=='proizvodnja');
+  const allOut=total>0&&pos.every(x=>(x.status||'proizvodnja')!=='proizvodnja');
   const allMont=total>0&&pos.every(x=>x.status==='montirano');
-  const hasSklad=pos.some(x=>x.status==='skladiste'||x.status==='montirano');
+  const hasRek=pos.some(x=>x.status==='reklamacija');
 
-  // 1+2 Mjerenje i Ponuda: crveno dok nema RN, onda zeleno
-  setLight('lightM',hasRN); setCard('cardMjerenje',hasRN);
-  setLight('lightP',hasRN); setCard('cardPonuda',hasRN);
+  setLight('lightM',hasRN);setCard('cardMjerenje',hasRN);
+  setLight('lightP',hasRN);setCard('cardPonuda',hasRN);
+  setLight('lightR',allOut);setCard('cardRN',allOut);
+  setLight('lightS',allOut&&total>0);setCard('cardSkladiste',allOut&&total>0);
+  setLight('lightMo',allMont);setCard('cardMontaza',allMont);
+  setLight('lightF',!!p.isInvoiced);setCard('cardFaktura',!!p.isInvoiced);
 
-  // 3 RN/Proizvodnja: crveno dok sve ne izadje iz proizvodnje, onda zeleno
-  setLight('lightR',allOutOfProd); setCard('cardRN',allOutOfProd);
-
-  // Skladiste: crveno dok ima nesto u proizvodnji ili nista nije zaprimljeno; zeleno kad je sve zaprimljeno (nista vise u proizvodnji)
-  setLight('lightS',allOutOfProd&&total>0); setCard('cardSkladiste',allOutOfProd&&total>0);
-
-  // 4 Montaza: crveno dok nije sve montirano
-  setLight('lightMo',allMont); setCard('cardMontaza',allMont);
-
-  // 5 Faktura: crveno dok nije fakturirano
-  setLight('lightF',!!p.isInvoiced); setCard('cardFaktura',!!p.isInvoiced);
-
-  // Slike mjerenja
   const imgs=getImgs(p,'images');idx=Math.min(idx,Math.max(0,imgs.length-1));
   const main=document.getElementById('dImg');
   if(imgs.length){main.src=imgs[idx];main.style.display='block';document.getElementById('dPage').innerText=(idx+1)+'/'+imgs.length}
@@ -544,17 +577,18 @@ function drawDetails(){
     else{document.getElementById('rEmpty').style.display='flex';document.getElementById('rGal').style.display='none'}
   }
 
-  drawPos();drawSkladiste();
+  drawPos();drawSkladiste();drawMontazaPos();
   document.getElementById('mNotes').value=p.montazaNotes||'';drawMonteri();
   const done=getImgs(p,'doneImages');
   document.getElementById('dDone').innerHTML=done.length?done.map((s,i)=>'<div class="thumb on" onclick="openLb(\''+s+'\')"><img src="'+s+'"><button class="xd" onclick="delImg(\'doneImages\','+i+',event)">X</button></div>').join(''):'<span style="font-size:11px;color:var(--muted);padding:6px">Nema slika</span>';
 
   if(canSeeOffice()){
     document.getElementById('invNum').value=p.invoiceNum||'';
-    const al=document.getElementById('fAlert'),btn=document.getElementById('fBtn');
-    if(p.isInvoiced){al.style.display='none';btn.innerText='PONISTI';btn.style.background='rgba(239,68,68,.2)';btn.style.color='#f87171'}
-    else if(allMont){al.style.display='block';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='#10b981';btn.style.color='#fff'}
-    else{al.style.display='none';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='var(--ok)';btn.style.color='#fff'}
+    const al=document.getElementById('fAlert'),rek=document.getElementById('fReklama'),btn=document.getElementById('fBtn');
+    if(p.isInvoiced){al.style.display='none';rek.style.display='none';btn.innerText='PONISTI';btn.style.background='rgba(239,68,68,.2)';btn.style.color='#f87171'}
+    else if(hasRek){al.style.display='none';rek.style.display='block';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='#666';btn.style.color='#aaa';btn.disabled=true}
+    else if(allMont){al.style.display='block';rek.style.display='none';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='#10b981';btn.style.color='#fff';btn.disabled=false}
+    else{al.style.display='none';rek.style.display='none';btn.innerText='OZNAČI KAO FAKTURIRANO';btn.style.background='var(--ok)';btn.style.color='#fff';btn.disabled=false}
     document.getElementById('invPrev').innerHTML=p.invoiceDoc?'<div style="display:flex;justify-content:space-between;background:rgba(0,0,0,.3);padding:6px;border-radius:6px"><a href="#" onclick="openLb(\''+p.invoiceDoc+'\');return false" style="color:#38bdf8;font-weight:bold">Pogledaj</a><button onclick="delInv()" style="background:none;border:none;color:#f87171;font-weight:bold;cursor:pointer">X</button></div>':'';
   }
 }
