@@ -155,7 +155,6 @@
           </div>
         </div>
         <div class="grid-five-col">
-          <!-- 1. MJERENJE -->
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
               <h4 style="color:#38bdf8;font-size:13px">📐 1. MJERENJE</h4>
@@ -169,7 +168,6 @@
             <div class="gallery-thumbs" id="d-thumbs"></div>
             <p id="d-notes" style="font-size:12px;color:#f59e0b;margin-top:8px"></p>
           </div>
-          <!-- 2. PONUDA -->
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
               <h4 style="color:#34d399;font-size:13px">📄 2. PONUDA</h4>
@@ -182,7 +180,6 @@
               <div class="gallery-thumbs" id="offer-thumbs"></div>
             </div>
           </div>
-          <!-- 3. RADNI NALOG -->
           <div class="card" style="border-left:4px solid #fbbf24">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
               <h4 style="color:#fbbf24;font-size:13px">📋 3. RADNI NALOG & POZICIJE</h4>
@@ -200,7 +197,6 @@
             </div>
             <div class="positions-box" id="positionsList"><span style="font-size:11px;color:var(--text-muted)">Nema pozicija.</span></div>
           </div>
-          <!-- 4. MONTAŽA -->
           <div class="card" style="border-left:4px solid #a855f7">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
               <h4 style="color:#c084fc;font-size:13px">🛠️ 4. MONTAŽA</h4>
@@ -216,7 +212,6 @@
             <label>Fotografije montaže:</label>
             <div class="gallery-thumbs" id="d-done-thumbs"></div>
           </div>
-          <!-- 5. FAKTURIRANJE -->
           <div class="card" id="fakturaCard" style="border-left:4px solid var(--success)">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
               <h4 style="color:#34d399;font-size:13px">💰 5. FAKTURIRANJE</h4>
@@ -242,21 +237,92 @@
     const db=firebase.firestore(),storage=firebase.storage();
     const DEFAULT_WORKERS=["ZLATKO RADIŠ","SINIŠA PRAVICA","SLAVEN PUHALO","NIKOLA MRDIĆ","LJUBIŠA DOŠLO","BRANISLAV BEGENUŠIĆ","RANKO JANJIĆ","MIODRAG ĆERANIĆ"];
     let currentWorker=localStorage.getItem('teren_worker_name')||'',projects=[],selectedId=null,currentImageIndex=0,uploadedImages=[],globalWorkersList=[],currentFilter='svi';
-    let galleryType='images',galleryIndex=0;
 
     async function compressToBlobs(file){
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
         const buf=await file.arrayBuffer(),pdf=await pdfjsLib.getDocument(buf).promise,blobs=[];
-        for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),vp=page.getViewport({scale:1}),scale=Math.min(1,900/Math.max(vp.width,vp.height)),scaled=page.getViewport({scale});
-          const c=document.createElement('canvas');c.width=scaled.width;c.height=scaled.height;await page.render({canvasContext:c.getContext('2d'),viewport:scaled}).promise;
-          blobs.push(await new Promise(r=>c.toBlob(r,'image/jpeg',0.42)));}
-        return blobs;}
-      return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{const c=document.createElement('canvas'),MAX=900;let w=img.width,h=img.height;
-        if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX}}
-        c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);c.toBlob(b=>{URL.revokeObjectURL(url);res([b])},'image/jpeg',0.42)};img.onerror=rej;img.src=url;});}
-    async function uploadBlobs(blobs,folder){const urls=[];for(let i=0;i<blobs.length;i++){const path=`${folder}/${Date.now()}_${i}.jpg`;await storage.ref(path).put(blobs[i],{contentType:'image/jpeg'});urls.push(await storage.ref(path).getDownloadURL());}return urls;}
+        for(let i=1;i<=pdf.numPages;i++){
+          const page=await pdf.getPage(i),vp=page.getViewport({scale:1}),scale=Math.min(1,900/Math.max(vp.width,vp.height)),scaled=page.getViewport({scale});
+          const canvas=document.createElement('canvas');canvas.width=scaled.width;canvas.height=scaled.height;
+          await page.render({canvasContext:canvas.getContext('2d'),viewport:scaled}).promise;
+          const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.42));
+          if(blob)blobs.push(blob);
+        }
+        return blobs;
+      }
+      return new Promise((resolve,reject)=>{
+        const img=new Image(),url=URL.createObjectURL(file);
+        img.onload=()=>{
+          try{
+            const canvas=document.createElement('canvas'),MAX=900;let w=img.width,h=img.height;
+            if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX}}
+            canvas.width=w;canvas.height=h;
+            const ctx=canvas.getContext('2d');ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+            canvas.toBlob(blob=>{URL.revokeObjectURL(url);if(blob)resolve([blob]);else reject(new Error('Ne mogu pretvoriti sliku'))},'image/jpeg',0.42);
+          }catch(err){URL.revokeObjectURL(url);reject(err)}
+        };
+        img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Format slike nije podržan (pokušaj JPG ili PNG)'))};
+        img.src=url;
+      });
+    }
 
-    db.collection("postavke").doc("monteri").onSnapshot(doc=>{globalWorkersList=(doc.exists&&doc.data().lista)?doc.data().lista:[...DEFAULT_WORKERS];if(!doc.exists)db.collection("postavke").doc("monteri").set({lista:globalWorkersList});renderMonteriCheckboxes();});
+    async function uploadBlobs(blobs,folder){
+      const urls=[];
+      for(let i=0;i<blobs.length;i++){
+        const path=`${folder}/${Date.now()}_${i}.jpg`;
+        await storage.ref(path).put(blobs[i],{contentType:'image/jpeg'});
+        urls.push(await storage.ref(path).getDownloadURL());
+      }
+      return urls;
+    }
+
+    async function addImages(e,field){
+      const files=Array.from(e.target.files);
+      if(!selectedId||!files.length)return;
+      const p=projects.find(x=>x.id===selectedId);
+      let existing=getImages(p,field);
+      try{
+        for(let i=0;i<files.length;i++){
+          const f=files[i];
+          try{
+            const blobs=await compressToBlobs(f);
+            const urls=await uploadBlobs(blobs,`nalozi/${selectedId}/${field}`);
+            existing.push(...urls);
+          }catch(err){alert(`Slika "${f.name}" nije prošla:\n${err.message}`)}
+        }
+        const update={};update[field]=existing;
+        if(field==='offerImages')update.offerDoc=null;
+        if(field==='rnImages')update.rnDoc=null;
+        await db.collection("nalozi").doc(selectedId).update(update);
+      }catch(err){alert('Greška: '+err.message)}
+      e.target.value='';
+    }
+
+    function getImages(p,field){
+      if(field==='images')return p.images||[];
+      if(field==='offerImages')return p.offerImages||(p.offerDoc?[p.offerDoc]:[]);
+      if(field==='rnImages')return p.rnImages||(p.rnDoc?[p.rnDoc]:[]);
+      if(field==='doneImages')return p.doneImages||[];
+      return [];
+    }
+
+    async function deleteImage(field,i,e){
+      e.stopPropagation();
+      if(!selectedId||!confirm('Obrisati sliku?'))return;
+      const p=projects.find(x=>x.id===selectedId);
+      let imgs=[...getImages(p,field)];
+      imgs.splice(i,1);
+      const update={};update[field]=imgs;
+      await db.collection("nalozi").doc(selectedId).update(update);
+      if(field==='images'&&currentImageIndex>=imgs.length)currentImageIndex=Math.max(0,imgs.length-1);
+    }
+
+    db.collection("postavke").doc("monteri").onSnapshot(doc=>{
+      globalWorkersList=(doc.exists&&doc.data().lista)?doc.data().lista:[...DEFAULT_WORKERS];
+      if(!doc.exists)db.collection("postavke").doc("monteri").set({lista:globalWorkersList});
+      renderMonteriCheckboxes();
+    });
+
     function checkWorkerAuth(){if(!currentWorker)document.getElementById('loginModal').style.display='flex';else{document.getElementById('loginModal').style.display='none';document.getElementById('userBadge').innerText=`👷 ${currentWorker}`}}
     function saveWorkerName(){const v=document.getElementById('modalWorkerInput').value.trim();if(!v)return alert('Unesite ime.');currentWorker=v;localStorage.setItem('teren_worker_name',currentWorker);checkWorkerAuth()}
     function promptChangeWorker(){const n=prompt('Ime:',currentWorker);if(n&&n.trim()){currentWorker=n.trim();localStorage.setItem('teren_worker_name',currentWorker);checkWorkerAuth()}}
@@ -293,16 +359,8 @@
         const badge=p.isInvoiced?'<span style="color:#10b981;font-weight:bold;background:rgba(16,185,129,.15);padding:2px 6px;border-radius:4px">🏁 FAKTURIRANO</span>':'';
         return`<div class="project-item ${p.id===selectedId?'selected':''}" onclick="openDetails('${p.id}')"><div style="display:flex;justify-content:space-between"><h4>${p.name}</h4>${badge}</div><p>${p.loc||'-'} • 📅 ${p.date}</p><div style="margin-top:5px;font-size:11px">${st}</div></div>`}).join('')}
 
-    function openDetails(id){selectedId=id;currentImageIndex=0;galleryIndex=0;renderSidebar();renderDetails();if(window.innerWidth<=900){document.getElementById('sidebar').classList.add('mobile-hide');document.getElementById('detailPanel').classList.add('mobile-show')}}
+    function openDetails(id){selectedId=id;currentImageIndex=0;renderSidebar();renderDetails();if(window.innerWidth<=900){document.getElementById('sidebar').classList.add('mobile-hide');document.getElementById('detailPanel').classList.add('mobile-show')}}
     function backToSidebar(){document.getElementById('sidebar').classList.remove('mobile-hide');document.getElementById('detailPanel').classList.remove('mobile-show')}
-
-    function getImages(p,field){
-      if(field==='images')return p.images||[];
-      if(field==='offerImages')return p.offerImages||(p.offerDoc?[p.offerDoc]:[]);
-      if(field==='rnImages')return p.rnImages||(p.rnDoc?[p.rnDoc]:[]);
-      if(field==='doneImages')return p.doneImages||[];
-      return [];
-    }
 
     function renderDetails(){
       const p=projects.find(x=>x.id===selectedId);if(!p)return;
@@ -310,21 +368,18 @@
       document.getElementById('d-sub').innerText=`Mjernik: ${p.worker||'-'} | Lokacija: ${p.loc||'-'} | Tel: ${p.phone||'-'} | Datum: ${p.date}`;
       document.getElementById('d-notes').innerText=p.notes?'Napomena: '+p.notes:'';
 
-      // Mjerenje
       const images=getImages(p,'images');currentImageIndex=Math.min(currentImageIndex,Math.max(0,images.length-1));
       const mainImg=document.getElementById('d-img');
       if(images.length){mainImg.src=images[currentImageIndex];mainImg.style.display='block';document.getElementById('d-page').innerText=`${currentImageIndex+1}/${images.length}`}
       else{mainImg.style.display='none';document.getElementById('d-page').innerText='0'}
       document.getElementById('d-thumbs').innerHTML=images.map((src,i)=>`<div class="gallery-thumb ${i===currentImageIndex?'active':''}" onclick="selectThumb('images',${i})"><img src="${src}"><button class="btn-del-thumb" onclick="deleteImage('images',${i},event)">✕</button></div>`).join('');
 
-      // Ponuda
       const offerImgs=getImages(p,'offerImages');
       if(offerImgs.length){document.getElementById('offerEmpty').style.display='none';document.getElementById('offerGallery').style.display='block';
         document.getElementById('offer-img').src=offerImgs[0];
         document.getElementById('offer-thumbs').innerHTML=offerImgs.map((src,i)=>`<div class="gallery-thumb ${i===0?'active':''}" onclick="selectThumb('offerImages',${i})"><img src="${src}"><button class="btn-del-thumb" onclick="deleteImage('offerImages',${i},event)">✕</button></div>`).join('');}
       else{document.getElementById('offerEmpty').style.display='flex';document.getElementById('offerGallery').style.display='none'}
 
-      // RN
       const rnImgs=getImages(p,'rnImages');
       if(rnImgs.length){document.getElementById('rnEmpty').style.display='none';document.getElementById('rnGallery').style.display='block';
         document.getElementById('rn-img').src=rnImgs[0];
@@ -350,13 +405,6 @@
     function openLightbox(src){if(!src)return;document.getElementById('lightboxContent').innerHTML=`<img class="lightbox-img" src="${src}">`;document.getElementById('lightbox').style.display='flex'}
     function closeLightbox(e){if(e&&e.target&&e.target.tagName==='IMG')return;document.getElementById('lightbox').style.display='none'}
     window.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
-
-    async function addImages(e,field){const files=Array.from(e.target.files);if(!selectedId||!files.length)return;const p=projects.find(x=>x.id===selectedId);let existing=getImages(p,field);
-      try{for(const f of files){const blobs=await compressToBlobs(f),urls=await uploadBlobs(blobs,`nalozi/${selectedId}/${field}`);existing.push(...urls)}
-        const update={};update[field]=existing;if(field==='offerImages')update.offerDoc=null;if(field==='rnImages')update.rnDoc=null;
-        await db.collection("nalozi").doc(selectedId).update(update)}catch(err){alert('Greška: '+err.message)}e.target.value=''}
-    async function deleteImage(field,i,e){e.stopPropagation();if(!selectedId||!confirm('Obrisati sliku?'))return;const p=projects.find(x=>x.id===selectedId);let imgs=[...getImages(p,field)];imgs.splice(i,1);
-      const update={};update[field]=imgs;await db.collection("nalozi").doc(selectedId).update(update);if(field==='images'&&currentImageIndex>=imgs.length)currentImageIndex=Math.max(0,imgs.length-1)}
 
     async function deleteCurrent(){const p=projects.find(x=>x.id===selectedId);if(!p||!confirm(`Izbrisati ${p.name}?`))return;await db.collection("nalozi").doc(selectedId).delete();backToSidebar()}
     function showMonterView(){document.getElementById('monter-view').classList.add('active');document.getElementById('admin-view').classList.remove('active');document.getElementById('tab-monter').classList.add('active');document.getElementById('tab-admin').classList.remove('active')}
