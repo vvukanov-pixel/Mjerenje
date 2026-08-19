@@ -61,7 +61,7 @@
     .gallery-thumb{width:55px;height:55px;flex-shrink:0;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;opacity:.5;position:relative}
     .gallery-thumb.active{border-color:#38bdf8;opacity:1}
     .gallery-thumb img{width:100%;height:100%;object-fit:cover}
-    .btn-del-thumb{position:absolute;top:1px;right:1px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:bold;cursor:pointer}
+    .btn-del-thumb{position:absolute;top:1px;right:1px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:bold;cursor:pointer;z-index:2}
     .doc-box{border:2px dashed var(--border-color);border-radius:8px;padding:18px;text-align:center;background:rgba(0,0,0,.2);min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center}
     .doc-preview{width:100%;min-height:220px;max-height:360px;border-radius:6px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;margin-bottom:10px;cursor:pointer;border:1px solid var(--border-color)}
     .doc-preview img{width:100%;max-height:360px;object-fit:contain}
@@ -152,4 +152,107 @@
             <button class="filter-btn" data-filter="fakturirano" onclick="setFilter('fakturirano')">Fakturirano</button>
           </div>
         </div>
-        <div class="sidebar-list" id="projectList"><p style="padding:20px;
+        <div class="sidebar-list" id="projectList"><p style="padding:20px;font-size:12px;color:var(--text-muted);text-align:center">Učitavanje...</p></div>
+      </div>
+
+      <div class="detail-panel" id="detailPanel">
+        <div class="full-width">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
+            <div><h2 id="d-name" style="font-size:19px">-</h2><p id="d-sub" style="font-size:12px;color:var(--text-muted);margin-top:3px">-</p></div>
+          </div>
+          <div class="btn-action-group">
+            <button onclick="deleteCurrent()" class="btn-action btn-delete">🗑️ Izbriši</button>
+            <button onclick="window.print()" class="btn-action btn-print">🖨️ Ispiši</button>
+          </div>
+        </div>
+
+        <div class="grid-five-col">
+          <!-- 1. MJERENJE - ovdje možeš dodavati i brisati slike -->
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h4 style="color:#38bdf8;font-size:13px">📐 1. MJERENJE</h4>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span id="d-page" style="font-size:11px;color:var(--text-muted)">1 / 1</span>
+                <button onclick="document.getElementById('addMeasureInput').click()" style="background:#0284c7;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">📷 + Slike</button>
+                <input type="file" id="addMeasureInput" accept="image/*,.pdf" multiple style="display:none" onchange="addMeasureImages(event)">
+              </div>
+            </div>
+            <div class="main-sketch" onclick="openSketchFull()"><img id="d-img" src="" alt="Skica"></div>
+            <div class="gallery-thumbs" id="d-thumbs"></div>
+            <p id="d-notes" style="font-size:12px;color:#f59e0b;margin-top:8px"></p>
+          </div>
+
+          <!-- 2. PONUDA -->
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h4 style="color:#34d399;font-size:13px">📄 2. PONUDA</h4>
+              <button id="btnDelOffer" onclick="removeOffer()" style="display:none;background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.4);padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer">🗑️</button>
+            </div>
+            <div id="offerUploadZone" class="doc-box">
+              <p id="txtOfferStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Nema ponude</p>
+              <button onclick="document.getElementById('offerFileInput').click()" style="background:#0284c7;color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:12px;font-weight:bold;cursor:pointer">📤 Učitaj Ponudu</button>
+              <input type="file" id="offerFileInput" accept="image/*,.pdf" style="display:none" onchange="handleOfferUpload(event)">
+            </div>
+            <div id="offerDisplayZone" style="display:none">
+              <div class="doc-preview" id="offerPreviewBox" onclick="openOfferFull()"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;color:#34d399;font-weight:bold">✅ Učitano</span>
+                <button onclick="document.getElementById('offerFileInput').click()" style="background:var(--card-dark);color:#fff;border:1px solid var(--border-color);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer">🔄 Zamijeni</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. RADNI NALOG -->
+          <div class="card" style="border-left:4px solid #fbbf24">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h4 style="color:#fbbf24;font-size:13px">📋 3. RADNI NALOG & POZICIJE</h4>
+              <button id="btnDelRn" onclick="removeRn()" style="display:none;background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.4);padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer">🗑️</button>
+            </div>
+            <div id="rnUploadZone" class="doc-box">
+              <p id="txtRnStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Nema radnog naloga</p>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background:#0284c7;color:#fff;border:none;padding:6px 12px;border-radius:5px;font-size:12px;font-weight:bold;cursor:pointer">📤 Učitaj RN</button>
+              <input type="file" id="rnFileInput" accept="image/*,.pdf" style="display:none" onchange="handleRnUpload(event)">
+            </div>
+            <div id="rnDisplayZone" style="display:none;margin-bottom:12px">
+              <div class="doc-preview" id="rnPreviewBox" onclick="openRnFull()"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;color:#fbbf24;font-weight:bold">✅ RN Učitan</span>
+                <button onclick="document.getElementById('rnFileInput').click()" style="background:var(--card-dark);color:#fff;border:1px solid var(--border-color);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer">🔄 Zamijeni</button>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-top:1px solid var(--border-color);padding-top:8px">
+              <label style="margin:0;color:#fbbf24">📦 STANJE POZICIJA (klik za promjenu):</label>
+              <button onclick="promptAddPosition()" style="background:none;border:none;color:#38bdf8;font-size:11px;font-weight:bold;cursor:pointer">➕ Dodaj</button>
+            </div>
+            <div class="positions-box" id="positionsList"><span style="font-size:11px;color:var(--text-muted)">Nema pozicija.</span></div>
+          </div>
+
+          <!-- 4. MONTAŽA -->
+          <div class="card" style="border-left:4px solid #a855f7">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h4 style="color:#c084fc;font-size:13px">🛠️ 4. MONTAŽA</h4>
+              <button onclick="document.getElementById('doneFileInput').click()" style="background:#7e22ce;color:#fff;border:none;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">📷 + Slike</button>
+              <input type="file" id="doneFileInput" accept="image/*,.pdf" multiple style="display:none" onchange="uploadDoneImages(event)">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <label style="margin:0">MONTERI:</label>
+              <button onclick="addNewWorkerPrompt()" style="background:none;border:none;color:#38bdf8;font-size:11px;font-weight:bold;cursor:pointer">➕ Dodaj</button>
+            </div>
+            <div class="monteri-container" id="monteriCheckboxList"></div>
+            <div class="form-group"><label>Napomene montaže:</label><textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1..." onchange="saveMontazaNotes()"></textarea></div>
+            <label>Fotografije montaže:</label>
+            <div class="gallery-thumbs" id="d-done-thumbs"></div>
+          </div>
+
+          <!-- 5. FAKTURIRANJE -->
+          <div class="card" id="fakturaCard" style="border-left:4px solid var(--success)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h4 style="color:#34d399;font-size:13px">💰 5. FAKTURIRANJE</h4>
+              <span id="fakturaPill" style="font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.1)">ČEKA RAČUN</span>
+            </div>
+            <div id="readyForInvoiceAlert" style="display:none;background:rgba(16,185,129,.25);border:1px solid #10b981;color:#a7f3d0;padding:8px;border-radius:6px;font-size:11px;font-weight:bold;margin-bottom:10px;text-align:center">📢 SVE JE MONTIRANO – MOŽE SE FAKTURIRATI!</div>
+            <div class="form-group"><label>Broj Računa:</label><input type="text" id="inpInvoiceNum" placeholder="npr. R1 142/2026" onchange="saveInvoiceData()"></div>
+            <div class="form-group">
+              <label>Priloži Račun:</label>
+              <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%;background:#065f46;color:#a7f3d0;border:1px dashed #10b981;padding:8px
