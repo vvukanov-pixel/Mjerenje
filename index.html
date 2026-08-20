@@ -32,7 +32,7 @@
     .logo span { color: #38bdf8; }
 
     .header-right { display: flex; align-items: center; gap: 8px; }
-    .user-tag { background: #0284c7; color: white; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+    .user-tag { background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
     
     .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); }
     .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; }
@@ -45,8 +45,8 @@
     .card { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
     .form-group { margin-bottom: 12px; }
     label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
-    input, textarea { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
-    input:focus, textarea:focus { border-color: #38bdf8; }
+    input, textarea, select { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
 
     .upload-zone { border: 2px dashed #0284c7; border-radius: 10px; padding: 18px; text-align: center; cursor: pointer; background: rgba(2, 132, 199, 0.08); margin-bottom: 12px; }
     
@@ -109,9 +109,8 @@
     .btn-del-worker { background: none; border: none; color: #f87171; cursor: pointer; font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
-    .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; width: 100%; max-width: 360px; text-align: center; }
+    .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; width: 100%; max-width: 380px; text-align: center; }
 
-    /* LIGHTBOX SA ZUMIRANJEM */
     .lightbox-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 300; display: none; flex-direction: column; overflow: hidden; }
     .lightbox-header { position: absolute; top: 12px; right: 16px; display: flex; align-items: center; gap: 8px; z-index: 310; }
     .lightbox-header button { background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
@@ -135,8 +134,8 @@
   <!-- LIGHTBOX SA ZUMIRANJEM -->
   <div id="lightbox" class="lightbox-overlay">
     <div class="lightbox-header">
-      <button onclick="zoomIn(event)">➕ Povećaj</button>
-      <button onclick="zoomOut(event)">➖ Smanji</button>
+      <button onclick="zoomIn(event)">➕</button>
+      <button onclick="zoomOut(event)">➖</button>
       <button onclick="resetZoom(event)">↺ Reset</button>
       <button class="btn-close-lightbox" onclick="closeLightbox()">✕ Zatvori</button>
     </div>
@@ -145,19 +144,40 @@
     </div>
   </div>
 
+  <!-- MODAL PRIJAVE S IZBORNIKOM IMENA -->
   <div id="loginModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
-      <h3 style="margin-bottom: 8px; font-size: 17px;">Prijava Korisnika</h3>
-      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Unesite svoje ime:</p>
-      <input type="text" id="modalWorkerInput" placeholder="npr. Administrator, Skladište, Monter..." style="margin-bottom: 14px; text-align: center; font-weight: bold;">
-      <button onclick="saveWorkerName()" class="btn-submit">POTVRDI</button>
+      <h3 style="margin-bottom: 6px; font-size: 18px;">Odabir Korisnika</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Tko trenutno koristi ovaj uređaj?</p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label>Odaberite svoje ime:</label>
+        <select id="userSelectDropdown" style="margin-bottom: 12px; font-weight: bold;">
+          <option value="ADMINISTRATOR">👑 ADMINISTRATOR (Puni pristup)</option>
+          <option value="ZLATKO RADIŠ">ZLATKO RADIŠ</option>
+          <option value="SINIŠA PRAVICA">SINIŠA PRAVICA</option>
+          <option value="SLAVEN PUHALO">SLAVEN PUHALO</option>
+          <option value="NIKOLA MRDIĆ">NIKOLA MRDIĆ</option>
+          <option value="LJUBIŠA DOŠLO">LJUBIŠA DOŠLO</option>
+          <option value="BRANISLAV BEGENUŠIĆ">BRANISLAV BEGENUŠIĆ</option>
+          <option value="RANKO JANJIĆ">RANKO JANJIĆ</option>
+          <option value="MIODRAG ĆERANIĆ">MIODRAG ĆERANIĆ</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="text-align: left; margin-bottom: 16px;">
+        <label>Ili upišite novo ime:</label>
+        <input type="text" id="customUserInput" placeholder="npr. Novo Ime..." style="font-size: 13px;">
+      </div>
+
+      <button onclick="confirmUserLogin()" class="btn-submit">POTVRDI PRIJAVU</button>
     </div>
   </div>
 
   <header>
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="header-right">
-      <div class="user-tag" id="userBadge" onclick="promptChangeWorker()">👷 Prijava...</div>
+      <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
       <div class="view-toggle">
         <button id="tab-monter" onclick="showMonterView()">➕ Novo</button>
         <button id="tab-admin" class="active" onclick="showAdminView()">📋 Nalozi</button>
@@ -167,6 +187,7 @@
 
   <div class="main-container">
     
+    <!-- MONTER UNOS -->
     <div id="monter-view">
       <div class="card">
         <h3 style="font-size: 15px; margin-bottom: 12px;">Novo Terensko Mjerenje</h3>
@@ -206,6 +227,7 @@
       </div>
     </div>
 
+    <!-- PREGLED NALOGA -->
     <div id="admin-view" class="active">
       <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -379,9 +401,15 @@
     const db = firebase.firestore();
 
     const DEFAULT_WORKERS = [
-      "ZLATKO RADIŠ", "SINIŠA PRAVICA", "SLAVEN PUHALO",
-      "NIKOLA MRDIĆ", "LJUBIŠA DOŠLO", "BRANISLAV BEGENUŠIĆ",
-      "RANKO JANJIĆ", "MIODRAG ĆERANIĆ"
+      "ADMINISTRATOR",
+      "ZLATKO RADIŠ", 
+      "SINIŠA PRAVICA", 
+      "SLAVEN PUHALO",
+      "NIKOLA MRDIĆ", 
+      "LJUBIŠA DOŠLO", 
+      "BRANISLAV BEGENUŠIĆ",
+      "RANKO JANJIĆ", 
+      "MIODRAG ĆERANIĆ"
     ];
 
     let currentWorker = localStorage.getItem('teren_worker_name') || '';
@@ -403,39 +431,51 @@
       if (doc.exists && doc.data().lista) {
         globalWorkersList = doc.data().lista;
       } else {
-        globalWorkersList = [...DEFAULT_WORKERS];
+        globalWorkersList = DEFAULT_WORKERS.filter(w => w !== "ADMINISTRATOR");
         db.collection("postavke").doc("monteri").set({ lista: globalWorkersList });
       }
+      populateDropdown();
       renderMonteriCheckboxes();
     });
 
+    function populateDropdown() {
+      const drop = document.getElementById('userSelectDropdown');
+      if (!drop) return;
+      let opts = `<option value="ADMINISTRATOR">👑 ADMINISTRATOR (Puni pristup)</option>`;
+      globalWorkersList.forEach(w => {
+        if (w !== "ADMINISTRATOR") {
+          opts += `<option value="${w}">${w}</option>`;
+        }
+      });
+      drop.innerHTML = opts;
+      if (currentWorker) drop.value = currentWorker;
+    }
+
     function checkWorkerAuth() {
       if (!currentWorker) {
-        document.getElementById('loginModal').style.display = 'flex';
+        openLoginModal();
       } else {
         document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('userBadge').innerText = `👷 ${currentWorker}`;
+        const isAdm = currentWorker.toUpperCase().includes('ADMIN');
+        document.getElementById('userBadge').innerText = isAdm ? `👑 ${currentWorker}` : `👷 ${currentWorker}`;
       }
     }
 
-    function saveWorkerName() {
-      const val = document.getElementById('modalWorkerInput').value.trim();
-      if (!val) return alert('Unesite ime.');
-      currentWorker = val;
+    function openLoginModal() {
+      populateDropdown();
+      document.getElementById('customUserInput').value = '';
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+
+    function confirmUserLogin() {
+      const custom = document.getElementById('customUserInput').value.trim();
+      const selected = document.getElementById('userSelectDropdown').value;
+      
+      currentWorker = custom ? custom.toUpperCase() : selected;
       localStorage.setItem('teren_worker_name', currentWorker);
       checkWorkerAuth();
     }
 
-    function promptChangeWorker() {
-      const novoIme = prompt('Ime korisnika na ovom uređaju:', currentWorker);
-      if (novoIme && novoIme.trim()) {
-        currentWorker = novoIme.trim();
-        localStorage.setItem('teren_worker_name', currentWorker);
-        checkWorkerAuth();
-      }
-    }
-
-    // VISOKO-KVALITETNA OPTIMIZACIJA SLIKA (Čuva oštrinu skica, ali stane u bazu)
     function processImageFile(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -443,7 +483,7 @@
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX = 1200; // Dovoljno veliko za zumiranje i čitanje brojeva
+            const MAX = 1200;
             let w = img.width;
             let h = img.height;
             if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
@@ -945,7 +985,6 @@
 
     window.addEventListener('mouseup', () => { isDragging = false; });
 
-    // TOUCH ZA MOBITELE I TABLETE
     viewport.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1 && zoomLevel > 1) {
         isDragging = true;
