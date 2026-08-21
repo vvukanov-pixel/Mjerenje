@@ -33,7 +33,8 @@
 
     .header-right { display: flex; align-items: center; gap: 8px; }
     .user-tag { background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-    .btn-admin-panel { background: #475569; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: none; }
+    .btn-pin-nav { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-pin-nav:hover { background: #334155; }
 
     .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); }
     .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; }
@@ -132,7 +133,7 @@
 </head>
 <body>
 
-  <!-- LIGHTBOX SA ZUMIRANJEM -->
+  <!-- LIGHTBOX -->
   <div id="lightbox" class="lightbox-overlay">
     <div class="lightbox-header">
       <button onclick="zoomIn(event)">➕</button>
@@ -165,7 +166,7 @@
     </div>
   </div>
 
-  <!-- UPRAVLJANJE PIN-OVIMA (SAMO ADMINISTRATOR) -->
+  <!-- UPRAVLJANJE PIN-OVIMA -->
   <div id="pinModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
       <button onclick="document.getElementById('pinModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 16px; font-weight: bold; cursor: pointer;">✕</button>
@@ -199,7 +200,7 @@
   <header>
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="header-right">
-      <button id="btnPinSettings" class="btn-admin-panel" onclick="openPinModal()">⚙️ PIN-ovi</button>
+      <button class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
       <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
       <div class="view-toggle">
         <button id="tab-monter" onclick="showMonterView()">➕ Novo</button>
@@ -421,6 +422,7 @@
 
     const DEFAULT_PINS = {
       "VEDRAN VUKANOVIĆ": "0000",
+      "ANKICA BAČIĆ PRKAČIN": "1234",
       "ZLATKO RADIŠ": "1234",
       "SINIŠA PRAVICA": "1234",
       "SLAVEN PUHALO": "1234",
@@ -432,7 +434,7 @@
     };
 
     let userPins = { ...DEFAULT_PINS };
-    let currentWorker = localStorage.getItem('teren_worker_name') || '';
+    let currentWorker = localStorage.getItem('teren_worker_name') || 'VEDRAN VUKANOVIĆ';
     let projects = [];
     let selectedId = null;
     let currentImageIndex = 0;
@@ -444,7 +446,7 @@
     let isDragging = false;
     let startX = 0, startY = 0;
 
-    // Učitaj PIN-ove iz baze
+    // Učitavanje PIN-ova iz baze
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
       if (doc.exists && doc.data().pins) {
         userPins = { ...DEFAULT_PINS, ...doc.data().pins };
@@ -452,6 +454,7 @@
         db.collection("postavke").doc("pinovi").set({ pins: DEFAULT_PINS });
       }
       populateUserDropdowns();
+      renderMonteriCheckboxes();
     });
 
     function populateUserDropdowns() {
@@ -461,7 +464,11 @@
       let opts = '';
       Object.keys(userPins).forEach(name => {
         const isAdm = name.includes('VEDRAN');
-        opts += `<option value="${name}">${isAdm ? '👑 ' + name + ' (ADMIN)' : name}</option>`;
+        const isUred = name.includes('ANKICA');
+        let icon = '👷 ';
+        if (isAdm) icon = '👑 ';
+        else if (isUred) icon = '💼 ';
+        opts += `<option value="${name}">${icon}${name}</option>`;
       });
 
       if (loginDrop) {
@@ -478,12 +485,12 @@
         openLoginModal();
       } else {
         document.getElementById('loginModal').style.display = 'none';
-        const isAdm = currentWorker.toUpperCase().includes('VEDRAN') || currentWorker.toUpperCase().includes('ADMIN');
-        document.getElementById('userBadge').innerText = isAdm ? `👑 ${currentWorker}` : `👷 ${currentWorker}`;
-        
-        // Pokaži gumb za upravljanje PIN-ovima samo Administratoru
-        const btnPin = document.getElementById('btnPinSettings');
-        if (btnPin) btnPin.style.display = isAdm ? 'block' : 'none';
+        const isAdm = currentWorker.toUpperCase().includes('VEDRAN');
+        const isUred = currentWorker.toUpperCase().includes('ANKICA');
+        let icon = '👷 ';
+        if (isAdm) icon = '👑 ';
+        else if (isUred) icon = '💼 ';
+        document.getElementById('userBadge').innerText = `${icon}${currentWorker}`;
       }
     }
 
@@ -531,6 +538,7 @@
       userPins[target] = newPin;
       await db.collection("postavke").doc("pinovi").set({ pins: userPins });
       alert(`✅ Uspješno postavljen novi PIN za: ${target}`);
+      document.getElementById('pinModal').style.display = 'none';
     }
 
     async function addNewWorkerWithPin() {
@@ -538,7 +546,7 @@
       const pin = document.getElementById('newWorkerPin').value.trim() || '1234';
 
       if (!name) {
-        alert('Unesite ime radnika.');
+        alert('Unesite ime.');
         return;
       }
 
@@ -549,7 +557,7 @@
       document.getElementById('newWorkerPin').value = '';
       populateUserDropdowns();
       renderMonteriCheckboxes();
-      alert(`✅ Dodan novi radnik: ${name} (PIN: ${pin})`);
+      alert(`✅ Dodan: ${name} (PIN: ${pin})`);
     }
 
     function processImageFile(file) {
@@ -641,7 +649,8 @@
       const p = projects.find(item => item.id === selectedId);
       const selectedWorkers = (p && p.assignedMonteri) ? p.assignedMonteri : [];
 
-      const workers = Object.keys(userPins).filter(w => !w.includes("VEDRAN"));
+      // Na popisu montera na montaži ne prikazujemo administratore i ured
+      const workers = Object.keys(userPins).filter(w => !w.includes("VEDRAN") && !w.includes("ANKICA"));
 
       cont.innerHTML = workers.map(name => {
         const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
@@ -943,7 +952,7 @@
       renderDetails();
     }
 
-    // --- ZUMIRANJE I LIGHTBOX LOGIKA ---
+    // LIGHTBOX ZOOM/PAN LOGIKA
     function updateTransform() {
       const img = document.getElementById('lightboxImg');
       img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
@@ -996,7 +1005,6 @@
       if (p && p.images && p.images[currentImageIndex]) openLightbox(p.images[currentImageIndex]);
     }
 
-    // MOUSE & TOUCH ZOOM
     const viewport = document.getElementById('zoomViewport');
 
     viewport.addEventListener('wheel', (e) => {
