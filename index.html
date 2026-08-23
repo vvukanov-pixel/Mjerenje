@@ -498,8 +498,9 @@
 
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
       if (doc.exists && doc.data().pins) {
-        userPins = { ...DEFAULT_PINS, ...doc.data().pins };
+        userPins = { ...doc.data().pins };
       } else {
+        userPins = { ...DEFAULT_PINS };
         db.collection("postavke").doc("pinovi").set({ pins: DEFAULT_PINS });
       }
       populateUserDropdowns();
