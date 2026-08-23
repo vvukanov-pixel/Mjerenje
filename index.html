@@ -802,6 +802,16 @@
       await db.collection("nalozi").doc(selectedId).update({ positions: positions });
     }
 
+    async function deletePosition(index) {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      let positions = p.positions || [];
+      if (index < 0 || index >= positions.length) return;
+      if (!confirm(`Obrisati poziciju: ${positions[index].name}?`)) return;
+      positions.splice(index, 1);
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
     function renderPositions() {
       const boxRn = document.getElementById('positionsListRn');
       const boxSkl = document.getElementById('positionsListSkladiste');
@@ -826,10 +836,11 @@
           chip = `<button class="status-chip chip-reklamacija" onclick="cyclePositionStatus(${idx}, false)">⚠️ Reklamacija / Fali</button>`;
         }
 
+        const delBtn = isDefault ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
         return `
           <div class="pos-item">
             <span class="pos-name">${pos.name}</span>
-            <div>${chip}</div>
+            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtn}</div>
           </div>
         `;
       }).join('');
@@ -850,10 +861,11 @@
           chip = `<button class="status-chip chip-reklamacija ${disabledClass}" ${clickAction}>⚠️ Reklamacija / Fali</button>`;
         }
 
+        const delBtnSkl = (isDefault || !canEditSkl) ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
         return `
           <div class="pos-item">
             <span class="pos-name">${pos.name}</span>
-            <div>${chip}</div>
+            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtnSkl}</div>
           </div>
         `;
       }).join('');
