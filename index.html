@@ -1240,9 +1240,9 @@
       const hasMeasure = (p.images && p.images.length > 0);
       const hasOffer = !!p.offerDoc;
       const hasRn = !!p.rnDoc;
-      const positions = p.positions || [];
-      const hasSkladiste = positions.some(x => x.status === 'skladiste' || x.status === 'montirano' || x.status === 'reklamacija') || !!p.skladisteNotes;
-      const hasMontaza = positions.some(x => x.status === 'montirano') || (p.doneImages && p.doneImages.length > 0);
+      const posList = p.positions || [];
+      const hasSkladiste = posList.some(x => x.status === 'skladiste' || x.status === 'montirano' || x.status === 'reklamacija') || !!p.skladisteNotes;
+      const hasMontaza = posList.some(x => x.status === 'montirano') || (p.doneImages && p.doneImages.length > 0);
       const isInvoiced = !!p.isInvoiced;
 
       function setBadge(id, done, isCurrent) {
