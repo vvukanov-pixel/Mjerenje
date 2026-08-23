@@ -1057,10 +1057,23 @@
 
     function openDocumentView(docUrl) {
       if (!docUrl) return;
-      const win = window.open();
-      if (win) {
-        win.document.write(`<iframe src="${docUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+      // Ako je slika – koristi lightbox s zoomom
+      if (docUrl.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(docUrl)) {
+        openLightbox(docUrl);
+        return;
       }
+      // PDF ili drugi dokument – otvori u novom tabu (preglednik ima svoj zoom)
+      window.open(docUrl, '_blank');
+    }
+
+    function openOfferFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.offerDoc) openDocumentView(p.offerDoc);
+    }
+
+    function openRnFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.rnDoc) openDocumentView(p.rnDoc);
     }
 
     function renderDetails() {
