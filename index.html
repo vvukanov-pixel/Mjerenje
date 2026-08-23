@@ -591,8 +591,9 @@
     }
 
     function canViewFinancialDocs() {
+      if (!currentWorker) return false;
       const u = currentWorker.toUpperCase().trim();
-      return u.includes('VEDRAN') || u.includes('ANKICA');
+      return u.includes('VEDRAN') || u.includes('ANKICA') || u.includes('VUKANOVIĆ');
     }
 
     function checkWorkerAuth() {
@@ -1149,16 +1150,25 @@
               <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
             </div>
           `;
-        } else if (p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf')) {
-          offBox.innerHTML = `
-            <div style="text-align:center; padding: 20px;">
-              <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
-              <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
-              <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori i Pregledaj PDF</button>
-            </div>
-          `;
         } else {
-          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
+          // Za admina uvijek pokaži gumb + pokušaj thumbnail ako je slika
+          const isPdf = p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf') || p.offerDoc.includes('application%2Fpdf');
+          if (isPdf) {
+            offBox.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
+                <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
+                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
+              </div>
+            `;
+          } else {
+            offBox.innerHTML = `
+              <img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display:none; text-align:center; padding:20px;">
+                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
+              </div>
+            `;
+          }
         }
       } else {
         offUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
@@ -1186,16 +1196,24 @@
               <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
             </div>
           `;
-        } else if (p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf')) {
-          rnBox.innerHTML = `
-            <div style="text-align:center; padding: 20px;">
-              <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
-              <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
-              <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori i Pregledaj PDF</button>
-            </div>
-          `;
         } else {
-          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
+          const isPdf = p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf') || p.rnDoc.includes('application%2Fpdf');
+          if (isPdf) {
+            rnBox.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+                <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
+                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
+              </div>
+            `;
+          } else {
+            rnBox.innerHTML = `
+              <img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display:none; text-align:center; padding:20px;">
+                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
+              </div>
+            `;
+          }
         }
       } else {
         rnUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
