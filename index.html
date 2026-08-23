@@ -232,9 +232,17 @@
 
         <form onsubmit="saveNewProject(event)">
           <label>Fotografije Skica / Mjerenja</label>
+          <div style="display:flex; gap:12px; margin-bottom:8px; font-size:12px;">
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
+              <input type="radio" name="imgMode" value="color" checked style="width:auto; margin:0;"> 🎨 Boja
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
+              <input type="radio" name="imgMode" value="bw" style="width:auto; margin:0;"> ⚫ Crno-bijelo
+            </label>
+          </div>
           <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
             <span id="upload-status">📷 Dodaj fotografije bilježnice</span>
-            <input type="file" id="fileInput" multiple style="display:none" onchange="handleImageSelection(event)">
+            <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleImageSelection(event)">
           </div>
 
           <div class="preview-grid" id="previewGrid"></div>
@@ -707,7 +715,7 @@
       });
     }
 
-    function processImageFile(file) {
+    function processImageFile(file, mode = 'color') {
       return new Promise(async (resolve) => {
         const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
         const rawBase64 = await readFileAsDataURL(file);
@@ -727,6 +735,17 @@
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
+
+          if (mode === 'bw') {
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+              const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+              data[i] = data[i+1] = data[i+2] = avg;
+            }
+            ctx.putImageData(imageData, 0, 0);
+          }
+
           resolve(canvas.toDataURL('image/jpeg', 0.65));
         };
         img.onerror = () => resolve(rawBase64);
@@ -1547,10 +1566,12 @@
     async function handleImageSelection(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
+      const modeEl = document.querySelector('input[name="imgMode"]:checked');
+      const mode = modeEl ? modeEl.value : 'color';
       
       for (let i = 0; i < files.length; i++) {
         status.innerText = `⏳ Učitavam sliku ${i+1}/${files.length}...`;
-        const base64 = await processImageFile(files[i]);
+        const base64 = await processImageFile(files[i], mode);
         if (base64) uploadedImages.push(base64);
       }
       renderPreviews();
