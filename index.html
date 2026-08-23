@@ -93,8 +93,8 @@
     .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
     .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 18px; text-align: center; background: rgba(0,0,0,0.2); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
-    .doc-preview img { width: 100%; max-height: 360px; object-fit: contain; }
+    .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); padding: 8px; }
+    .doc-preview img { width: 100%; max-height: 340px; object-fit: contain; }
 
     .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
     .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
@@ -322,7 +322,7 @@
             <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
           </div>
 
-          <!-- 2. MAPA: PONUDA (OTVARA I PDF I SLIKE) -->
+          <!-- 2. MAPA: PONUDA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #34d399; font-size: 13px;">📄 2. PONUDA</h4>
@@ -331,21 +331,20 @@
 
             <div id="offerUploadZone" class="doc-box">
               <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
-              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu</button>
-              <!-- Uklonjen filter tako da Windows i mobitel odmah vide sve datoteke -->
+              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu (PDF / Slika)</button>
               <input type="file" id="offerFileInput" style="display:none" onchange="handleOfferUpload(event)">
             </div>
 
             <div id="offerDisplayZone" style="display:none;">
-              <div class="doc-preview" id="offerPreviewBox" onclick="openOfferFull()"></div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="doc-preview" id="offerPreviewBox"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
                 <span style="font-size: 11px; color: #34d399; font-weight: bold;">✅ Učitano</span>
                 <button onclick="document.getElementById('offerFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
               </div>
             </div>
           </div>
 
-          <!-- 3. MAPA: RADNI NALOG (OTVARA I PDF I SLIKE) -->
+          <!-- 3. MAPA: RADNI NALOG -->
           <div class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG</h4>
@@ -354,13 +353,13 @@
 
             <div id="rnUploadZone" class="doc-box">
               <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
-              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN</button>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN (PDF / Slika)</button>
               <input type="file" id="rnFileInput" style="display:none" onchange="handleRnUpload(event)">
             </div>
 
             <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
-              <div class="doc-preview" id="rnPreviewBox" onclick="openRnFull()"></div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="doc-preview" id="rnPreviewBox"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
                 <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">✅ RN Učitan</span>
                 <button onclick="document.getElementById('rnFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
               </div>
@@ -433,7 +432,7 @@
             </div>
 
             <div class="form-group">
-              <label>Priloži Račun (Slika/Dokument):</label>
+              <label>Priloži Račun (PDF / Slika):</label>
               <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
               <input type="file" id="invoiceFileInput" style="display:none" onchange="handleInvoiceUpload(event)">
               <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
@@ -684,10 +683,19 @@
       alert(`✅ Dodan: ${name} (PIN: ${pin})`);
     }
 
+    // PROCESOR DATOTEKA (PODRŽAVA I SLIKE I PDF-OVE)
     function processImageFile(file) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
+          const res = e.target.result;
+          // Ako je PDF dokument, sprema se direktno
+          if (file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'))) {
+            resolve(res);
+            return;
+          }
+
+          // Ako je slika, optimizira se
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
@@ -701,10 +709,10 @@
             resolve(canvas.toDataURL('image/jpeg', 0.65));
           };
           img.onerror = () => {
-            // Ako je PDF ili drugi format koji Image ne može pročitati kao sliku, sprema se raw base64
-            resolve(e.target.result);
+            // Ako nije prepoznat kao slika, sprema raw datoteku
+            resolve(res);
           };
-          img.src = e.target.result;
+          img.src = res;
         };
         reader.readAsDataURL(file);
       });
@@ -905,7 +913,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: base64 });
       } catch (err) {
-        alert('Odaberite datoteku fakture.');
+        alert('Greška pri učitavanju fakture.');
       }
       e.target.value = '';
     }
@@ -1019,6 +1027,18 @@
       document.getElementById('detailPanel').classList.remove('mobile-show');
     }
 
+    // OTVARANJE DOKUMENTA (PDF U NOVOM TABU ILI SLIKA U ZOOMU)
+    function openDocumentView(docUrl) {
+      if (!docUrl) return;
+      if (docUrl.startsWith('data:application/pdf') || docUrl.includes('.pdf')) {
+        // Otvara PDF u novom prozoru/tabu preglednika
+        const win = window.open();
+        win.document.write(`<iframe src="${docUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+      } else {
+        openLightbox(docUrl);
+      }
+    }
+
     function renderDetails() {
       const p = projects.find(item => item.id === selectedId);
       if (!p) return;
@@ -1056,7 +1076,7 @@
         thumbs.innerHTML = '';
       }
 
-      // 2. Ponuda
+      // 2. Ponuda (Prikaz PDF-a ili slike)
       const offUpload = document.getElementById('offerUploadZone');
       const offDisplay = document.getElementById('offerDisplayZone');
       const btnDelOff = document.getElementById('btnDelOffer');
@@ -1066,10 +1086,17 @@
         offUpload.style.display = 'none';
         offDisplay.style.display = 'block';
         btnDelOff.style.display = 'inline-block';
+        
         if (p.offerDoc.startsWith('data:application/pdf')) {
-          offBox.innerHTML = `<iframe src="${p.offerDoc}" style="width:100%; height:320px; border:none;"></iframe>`;
+          offBox.innerHTML = `
+            <div style="text-align:center; padding: 20px;">
+              <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
+              <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
+              <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori i Pregledaj PDF</button>
+            </div>
+          `;
         } else {
-          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:360px; object-fit:contain;">`;
+          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
         }
       } else {
         offUpload.style.display = 'flex';
@@ -1078,7 +1105,7 @@
         offBox.innerHTML = '';
       }
 
-      // 3. Radni Nalog
+      // 3. Radni Nalog (Prikaz PDF-a ili slike)
       const rnUpload = document.getElementById('rnUploadZone');
       const rnDisplay = document.getElementById('rnDisplayZone');
       const btnDelRn = document.getElementById('btnDelRn');
@@ -1088,10 +1115,17 @@
         rnUpload.style.display = 'none';
         rnDisplay.style.display = 'block';
         btnDelRn.style.display = 'inline-block';
+        
         if (p.rnDoc.startsWith('data:application/pdf')) {
-          rnBox.innerHTML = `<iframe src="${p.rnDoc}" style="width:100%; height:320px; border:none;"></iframe>`;
+          rnBox.innerHTML = `
+            <div style="text-align:center; padding: 20px;">
+              <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+              <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
+              <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori i Pregledaj PDF</button>
+            </div>
+          `;
         } else {
-          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:360px; object-fit:contain;">`;
+          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
         }
       } else {
         rnUpload.style.display = 'flex';
@@ -1157,7 +1191,7 @@
       if (p.invoiceDoc) {
         invoicePrev.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
-            <a href="#" onclick="openLightbox('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
+            <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
             <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
           </div>
         `;
@@ -1207,16 +1241,6 @@
     function closeLightbox() {
       document.getElementById('lightbox').style.display = 'none';
       resetZoom();
-    }
-
-    function openOfferFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.offerDoc) openLightbox(p.offerDoc);
-    }
-
-    function openRnFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.rnDoc) openLightbox(p.rnDoc);
     }
 
     function openSketchFull() {
@@ -1287,7 +1311,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
       } catch (err) {
-        alert('Odaberite datoteku ponude.');
+        alert('Greška pri učitavanju.');
       } finally {
         txt.innerText = 'Nema ponude';
         e.target.value = '';
@@ -1309,7 +1333,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
       } catch (err) {
-        alert('Odaberite datoteku radnog naloga.');
+        alert('Greška pri učitavanju.');
       } finally {
         txt.innerText = 'Nema radnog naloga';
         e.target.value = '';
