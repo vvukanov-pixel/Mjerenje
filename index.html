@@ -83,7 +83,6 @@
     .btn-print { background: var(--accent); color: white; }
     .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
 
-    /* 6 MAPA */
     .grid-six-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
 
     .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 360px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
@@ -97,7 +96,6 @@
     .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); }
     .doc-preview img { width: 100%; max-height: 360px; object-fit: contain; }
 
-    /* STATUSI POZICIJA */
     .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
     .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
     .pos-name { font-size: 13px; font-weight: bold; flex: 1; color: white; }
@@ -114,7 +112,6 @@
     .monter-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
     .monter-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #c084fc; }
 
-    /* TABLICA PINOVA */
     .pin-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
     .pin-table th { background: #0f172a; color: var(--text-muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color); font-size: 11px; text-transform: uppercase; }
     .pin-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -184,7 +181,6 @@
       <h3 style="margin-bottom: 4px; font-size: 18px; color: #38bdf8;">⚙️ Pregled i Postavke PIN-ova</h3>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Administratorski pregled svih aktivnih korisnika i lozinki:</p>
       
-      <!-- TABLICA PINOVA -->
       <div style="max-height: 220px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
         <table class="pin-table">
           <thead>
@@ -198,7 +194,6 @@
         </table>
       </div>
 
-      <!-- IZMJENA PIN-A -->
       <div style="background: var(--card-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 14px; text-align: left;">
         <label style="color:#38bdf8;">✏️ Promjena PIN-a radniku:</label>
         <div style="display: flex; gap: 8px; margin-top: 6px;">
@@ -208,7 +203,6 @@
         <button onclick="saveUserPinChange()" class="btn-submit" style="background: var(--success); margin-top: 8px; padding: 9px; font-size: 12px;">💾 SPREMI NOVI PIN</button>
       </div>
 
-      <!-- DODAVANJE NOVOG RADNIKA -->
       <div style="background: rgba(2, 132, 199, 0.1); border: 1px dashed #0284c7; border-radius: 8px; padding: 12px; text-align: left;">
         <label style="color:#38bdf8;">➕ Dodaj novog radnika:</label>
         <div style="display: flex; gap: 8px; margin-top: 6px;">
@@ -234,7 +228,7 @@
 
   <div class="main-container">
     
-    <!-- 1. MONTER UNOS (KOD OTVARANJA NOVOG NALOGA) -->
+    <!-- 1. MONTER UNOS -->
     <div id="monter-view">
       <div class="card">
         <h3 style="font-size: 15px; margin-bottom: 12px;">Novo Terensko Mjerenje</h3>
@@ -243,7 +237,7 @@
           <label>Fotografije Skica / Mjerenja</label>
           <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
             <span id="upload-status">📷 Dodaj fotografije bilježnice</span>
-            <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleImageSelection(event)">
+            <input type="file" id="fileInput" multiple style="display:none" onchange="handleImageSelection(event)">
           </div>
 
           <div class="preview-grid" id="previewGrid"></div>
@@ -307,12 +301,12 @@
 
         <div class="grid-six-col">
           
-          <!-- 1. MAPA: SLIKE MJERENJA (S GUMBOM ZA NAKNADNO DODAVANJE) -->
+          <!-- 1. MAPA: SLIKE MJERENJA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE</h4>
-              <button onclick="document.getElementById('addSketchFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Dodaj skicu</button>
-              <input type="file" id="addSketchFileInput" accept="image/*" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
+              <button onclick="document.getElementById('addSketchFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Dodaj skicu</button>
+              <input type="file" id="addSketchFileInput" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
             </div>
 
             <div class="main-sketch" onclick="openSketchFull()">
@@ -328,7 +322,7 @@
             <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
           </div>
 
-          <!-- 2. MAPA: PONUDA -->
+          <!-- 2. MAPA: PONUDA (OTVARA I PDF I SLIKE) -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #34d399; font-size: 13px;">📄 2. PONUDA</h4>
@@ -338,7 +332,8 @@
             <div id="offerUploadZone" class="doc-box">
               <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
               <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu</button>
-              <input type="file" id="offerFileInput" accept="image/*" style="display:none" onchange="handleOfferUpload(event)">
+              <!-- Uklonjen filter tako da Windows i mobitel odmah vide sve datoteke -->
+              <input type="file" id="offerFileInput" style="display:none" onchange="handleOfferUpload(event)">
             </div>
 
             <div id="offerDisplayZone" style="display:none;">
@@ -350,7 +345,7 @@
             </div>
           </div>
 
-          <!-- 3. MAPA: RADNI NALOG -->
+          <!-- 3. MAPA: RADNI NALOG (OTVARA I PDF I SLIKE) -->
           <div class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG</h4>
@@ -360,7 +355,7 @@
             <div id="rnUploadZone" class="doc-box">
               <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
               <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN</button>
-              <input type="file" id="rnFileInput" accept="image/*" style="display:none" onchange="handleRnUpload(event)">
+              <input type="file" id="rnFileInput" style="display:none" onchange="handleRnUpload(event)">
             </div>
 
             <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
@@ -400,10 +395,9 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 style="color: #c084fc; font-size: 13px;">🛠️ 5. MONTAŽA</h4>
               <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike</button>
-              <input type="file" id="doneFileInput" accept="image/*" multiple style="display:none" onchange="uploadDoneImages(event)">
+              <input type="file" id="doneFileInput" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
 
-            <!-- STATUSI POZICIJA NA MONTAŽI -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
               <label style="margin:0; color:#c084fc;">📦 STANJE ROBE (KLIK ZA PROMJENU):</label>
               <button onclick="promptAddPosition()" style="background:none; border:none; color:#c084fc; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
@@ -439,9 +433,9 @@
             </div>
 
             <div class="form-group">
-              <label>Priloži Račun (Slika):</label>
+              <label>Priloži Račun (Slika/Dokument):</label>
               <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
-              <input type="file" id="invoiceFileInput" accept="image/*" style="display:none" onchange="handleInvoiceUpload(event)">
+              <input type="file" id="invoiceFileInput" style="display:none" onchange="handleInvoiceUpload(event)">
               <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
             </div>
 
@@ -496,7 +490,6 @@
     let isDragging = false;
     let startX = 0, startY = 0;
 
-    // Učitavanje PIN-ova iz baze
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
       if (doc.exists && doc.data().pins) {
         userPins = { ...DEFAULT_PINS, ...doc.data().pins };
@@ -534,7 +527,6 @@
       }
     }
 
-    // ISCRTAVANJE TABLICE PINOVA
     function renderPinTable() {
       const tbody = document.getElementById('pinTableBody');
       if (!tbody) return;
@@ -708,14 +700,16 @@
             ctx.drawImage(img, 0, 0, w, h);
             resolve(canvas.toDataURL('image/jpeg', 0.65));
           };
-          img.onerror = () => reject('Neispravna slika');
+          img.onerror = () => {
+            // Ako je PDF ili drugi format koji Image ne može pročitati kao sliku, sprema se raw base64
+            resolve(e.target.result);
+          };
           img.src = e.target.result;
         };
         reader.readAsDataURL(file);
       });
     }
 
-    // NAKNADNO DODAVANJE SLIKA U 1. MJERENJE
     async function uploadAdditionalSketches(e) {
       const files = Array.from(e.target.files);
       if (!selectedId || files.length === 0) return;
@@ -731,7 +725,6 @@
       e.target.value = '';
     }
 
-    // BRISANJE TRENUTNO PRIKAZANE SLIKE IZ MJERENJA
     async function deleteCurrentSketch() {
       if (!selectedId) return;
       const p = projects.find(item => item.id === selectedId);
@@ -745,7 +738,6 @@
       }
     }
 
-    // POZICIJE
     async function promptAddPosition() {
       if (!selectedId) return;
       const naziv = prompt('Unesite naziv pozicije (npr. Pozicija 1 - Garažna vrata):');
@@ -856,7 +848,6 @@
       });
     }
 
-    // MONTERI
     function renderMonteriCheckboxes() {
       const cont = document.getElementById('monteriCheckboxList');
       if (!cont) return;
@@ -900,7 +891,6 @@
       });
     }
 
-    // FAKTURIRANJE
     async function saveInvoiceData() {
       if (!selectedId) return;
       await db.collection("nalozi").doc(selectedId).update({
@@ -915,7 +905,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: base64 });
       } catch (err) {
-        alert('Odaberite sliku fakture (JPG/PNG).');
+        alert('Odaberite datoteku fakture.');
       }
       e.target.value = '';
     }
@@ -937,7 +927,6 @@
       });
     }
 
-    // UČITAVANJE IZ BAZE
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
       projects = [];
       snapshot.forEach(doc => {
@@ -1077,7 +1066,11 @@
         offUpload.style.display = 'none';
         offDisplay.style.display = 'block';
         btnDelOff.style.display = 'inline-block';
-        offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:360px; object-fit:contain;">`;
+        if (p.offerDoc.startsWith('data:application/pdf')) {
+          offBox.innerHTML = `<iframe src="${p.offerDoc}" style="width:100%; height:320px; border:none;"></iframe>`;
+        } else {
+          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" style="width:100%; max-height:360px; object-fit:contain;">`;
+        }
       } else {
         offUpload.style.display = 'flex';
         offDisplay.style.display = 'none';
@@ -1095,7 +1088,11 @@
         rnUpload.style.display = 'none';
         rnDisplay.style.display = 'block';
         btnDelRn.style.display = 'inline-block';
-        rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:360px; object-fit:contain;">`;
+        if (p.rnDoc.startsWith('data:application/pdf')) {
+          rnBox.innerHTML = `<iframe src="${p.rnDoc}" style="width:100%; height:320px; border:none;"></iframe>`;
+        } else {
+          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" style="width:100%; max-height:360px; object-fit:contain;">`;
+        }
       } else {
         rnUpload.style.display = 'flex';
         rnDisplay.style.display = 'none';
@@ -1105,8 +1102,6 @@
 
       // 4. Skladište
       document.getElementById('mSkladisteNotes').value = p.skladisteNotes || '';
-
-      // Renderiraj pozicije
       renderPositions();
 
       // 5. Montaža
@@ -1176,7 +1171,7 @@
       renderDetails();
     }
 
-    // --- ZUMIRANJE I LIGHTBOX LOGIKA ---
+    // ZOOM & LIGHTBOX
     function updateTransform() {
       const img = document.getElementById('lightboxImg');
       img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
@@ -1292,7 +1287,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
       } catch (err) {
-        alert('Odaberite sliku ponude (JPG/PNG).');
+        alert('Odaberite datoteku ponude.');
       } finally {
         txt.innerText = 'Nema ponude';
         e.target.value = '';
@@ -1314,7 +1309,7 @@
         const base64 = await processImageFile(file);
         await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
       } catch (err) {
-        alert('Odaberite sliku radnog naloga (JPG/PNG).');
+        alert('Odaberite datoteku radnog naloga.');
       } finally {
         txt.innerText = 'Nema radnog naloga';
         e.target.value = '';
