@@ -7,6 +7,7 @@
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
   <style>
     :root {
@@ -457,6 +458,18 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Upload u Storage i vrati download URL
+    async function uploadToStorage(dataUrlOrFile, path) {
+      const ref = storage.ref(path);
+      if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
+        await ref.putString(dataUrlOrFile, 'data_url');
+      } else {
+        await ref.put(dataUrlOrFile);
+      }
+      return await ref.getDownloadURL();
+    }
 
     const DEFAULT_PINS = {
       "VEDRAN VUKANOVIĆ": "7020",
@@ -718,14 +731,22 @@
       const files = Array.from(e.target.files);
       if (!selectedId || files.length === 0) return;
       const p = projects.find(item => item.id === selectedId);
-      const existing = p.images || [];
-
-      for (let f of files) {
-        const b64 = await processImageFile(f);
-        if (b64) existing.push(b64);
+      let existing = [...(p.images || [])];
+      try {
+        for (let f of files) {
+          const dataUrl = await processImageFile(f);
+          if (!dataUrl) continue;
+          const path = `nalozi/${selectedId}/mjerenje_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
+          const url = await uploadToStorage(dataUrl, path);
+          existing.push(url);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ images: existing });
+        currentImageIndex = existing.length - 1;
+        alert('✅ Slike dodane');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
       }
-      await db.collection("nalozi").doc(selectedId).update({ images: existing });
-      currentImageIndex = existing.length - 1;
       e.target.value = '';
     }
 
@@ -905,9 +926,21 @@
     async function handleInvoiceUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
-      const base64 = await processImageFile(file);
-      if (base64) {
-        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: base64 });
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          url = await uploadToStorage(file, `nalozi/${selectedId}/faktura_${Date.now()}.pdf`);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje');
+          url = await uploadToStorage(dataUrl, `nalozi/${selectedId}/faktura_${Date.now()}.jpg`);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: url });
+        alert('✅ Faktura učitana');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
       }
       e.target.value = '';
     }
@@ -1077,7 +1110,7 @@
         offDisplay.style.display = 'block';
         btnDelOff.style.display = 'inline-block';
         
-        if (p.offerDoc.startsWith('data:application/pdf')) {
+        if (p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf')) {
           offBox.innerHTML = `
             <div style="text-align:center; padding: 20px;">
               <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
@@ -1106,7 +1139,7 @@
         rnDisplay.style.display = 'block';
         btnDelRn.style.display = 'inline-block';
         
-        if (p.rnDoc.startsWith('data:application/pdf')) {
+        if (p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf')) {
           rnBox.innerHTML = `
             <div style="text-align:center; padding: 20px;">
               <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
@@ -1297,9 +1330,18 @@
       txt.innerText = '⏳ Spremam ponudu...';
 
       try {
-        const base64 = await processImageFile(file);
-        if (!base64) throw new Error('Neuspješno čitanje datoteke');
-        await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.pdf`;
+          url = await uploadToStorage(file, path);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
+          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.jpg`;
+          url = await uploadToStorage(dataUrl, path);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ offerDoc: url });
         alert('✅ Ponuda uspješno učitana');
       } catch (err) {
         console.error(err);
@@ -1321,9 +1363,18 @@
       txt.innerText = '⏳ Spremam RN...';
 
       try {
-        const base64 = await processImageFile(file);
-        if (!base64) throw new Error('Neuspješno čitanje datoteke');
-        await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          const path = `nalozi/${selectedId}/rn_${Date.now()}.pdf`;
+          url = await uploadToStorage(file, path);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
+          const path = `nalozi/${selectedId}/rn_${Date.now()}.jpg`;
+          url = await uploadToStorage(dataUrl, path);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ rnDoc: url });
         alert('✅ Radni nalog uspješno učitan');
       } catch (err) {
         console.error(err);
@@ -1340,15 +1391,23 @@
 
     async function uploadDoneImages(e) {
       const files = Array.from(e.target.files);
-      if (!selectedId) return;
+      if (!selectedId || files.length === 0) return;
       const p = projects.find(item => item.id === selectedId);
-      const existing = p.doneImages || [];
-
-      for (let f of files) {
-        const b64 = await processImageFile(f);
-        if (b64) existing.push(b64);
+      let existing = [...(p.doneImages || [])];
+      try {
+        for (let f of files) {
+          const dataUrl = await processImageFile(f);
+          if (!dataUrl) continue;
+          const path = `nalozi/${selectedId}/montaza_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
+          const url = await uploadToStorage(dataUrl, path);
+          existing.push(url);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
+        alert('✅ Slike montaže učitane');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
       }
-      await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
       e.target.value = '';
     }
 
@@ -1428,7 +1487,7 @@
         date: formattedDate,
         timestamp: Date.now(),
         notes: document.getElementById('cNotes').value,
-        images: [...uploadedImages],
+        images: [],
         offerDoc: null,
         rnDoc: null,
         positions: [],
@@ -1443,13 +1502,25 @@
 
       try {
         const docRef = await db.collection("nalozi").add(newProj);
+        const nalogId = docRef.id;
+        const imageUrls = [];
+        for (let i = 0; i < uploadedImages.length; i++) {
+          btn.innerText = `Upload slike ${i+1}/${uploadedImages.length}...`;
+          const path = `nalozi/${nalogId}/mjerenje_${i}_${Date.now()}.jpg`;
+          const url = await uploadToStorage(uploadedImages[i], path);
+          imageUrls.push(url);
+        }
+        if (imageUrls.length > 0) {
+          await db.collection("nalozi").doc(nalogId).update({ images: imageUrls });
+        }
         uploadedImages = [];
         renderPreviews();
         document.querySelector('form').reset();
         showAdminView();
-        openDetails(docRef.id);
+        openDetails(nalogId);
       } catch (err) {
-        alert('Greška: ' + err.message);
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
       } finally {
         btn.disabled = false;
         btn.innerText = '💾 SPREMI MJERENJE';
