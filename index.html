@@ -327,7 +327,7 @@
             <div id="offerUploadZone" class="doc-box">
               <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
               <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu (PDF / Slika)</button>
-              <input type="file" id="offerFileInput" style="display:none" onchange="handleOfferUpload(event)">
+              <input type="file" id="offerFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleOfferUpload(event)">
             </div>
 
             <div id="offerDisplayZone" style="display:none;">
@@ -349,7 +349,7 @@
             <div id="rnUploadZone" class="doc-box">
               <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
               <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN (PDF / Slika)</button>
-              <input type="file" id="rnFileInput" style="display:none" onchange="handleRnUpload(event)">
+              <input type="file" id="rnFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleRnUpload(event)">
             </div>
 
             <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
@@ -1296,9 +1296,14 @@
       const txt = document.getElementById('txtOfferStatus');
       txt.innerText = '⏳ Spremam ponudu...';
 
-      const base64 = await processImageFile(file);
-      if (base64) {
+      try {
+        const base64 = await processImageFile(file);
+        if (!base64) throw new Error('Neuspješno čitanje datoteke');
         await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
+        alert('✅ Ponuda uspješno učitana');
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju ponude: ' + (err.message || err));
       }
       txt.innerText = 'Nema ponude';
       e.target.value = '';
@@ -1315,9 +1320,14 @@
       const txt = document.getElementById('txtRnStatus');
       txt.innerText = '⏳ Spremam RN...';
 
-      const base64 = await processImageFile(file);
-      if (base64) {
+      try {
+        const base64 = await processImageFile(file);
+        if (!base64) throw new Error('Neuspješno čitanje datoteke');
         await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
+        alert('✅ Radni nalog uspješno učitan');
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju RN: ' + (err.message || err));
       }
       txt.innerText = 'Nema radnog naloga';
       e.target.value = '';
