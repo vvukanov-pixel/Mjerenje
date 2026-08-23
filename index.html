@@ -590,6 +590,11 @@
       return u.includes('VEDRAN') || u.includes('BRANISLAV');
     }
 
+    function canViewFinancialDocs() {
+      const u = currentWorker.toUpperCase().trim();
+      return u.includes('VEDRAN') || u.includes('ANKICA');
+    }
+
     function checkWorkerAuth() {
       if (!currentWorker) {
         openLoginModal();
@@ -1134,9 +1139,17 @@
       if (p.offerDoc) {
         offUpload.style.display = 'none';
         offDisplay.style.display = 'block';
-        btnDelOff.style.display = 'inline-block';
+        btnDelOff.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
         
-        if (p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf')) {
+        if (!canViewFinancialDocs()) {
+          offBox.innerHTML = `
+            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
+              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            </div>
+          `;
+        } else if (p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf')) {
           offBox.innerHTML = `
             <div style="text-align:center; padding: 20px;">
               <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
@@ -1148,7 +1161,7 @@
           offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
         }
       } else {
-        offUpload.style.display = 'flex';
+        offUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
         offDisplay.style.display = 'none';
         btnDelOff.style.display = 'none';
         offBox.innerHTML = '';
@@ -1163,9 +1176,17 @@
       if (p.rnDoc) {
         rnUpload.style.display = 'none';
         rnDisplay.style.display = 'block';
-        btnDelRn.style.display = 'inline-block';
+        btnDelRn.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
         
-        if (p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf')) {
+        if (!canViewFinancialDocs()) {
+          rnBox.innerHTML = `
+            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
+              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            </div>
+          `;
+        } else if (p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf')) {
           rnBox.innerHTML = `
             <div style="text-align:center; padding: 20px;">
               <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
@@ -1177,7 +1198,7 @@
           rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
         }
       } else {
-        rnUpload.style.display = 'flex';
+        rnUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
         rnDisplay.style.display = 'none';
         btnDelRn.style.display = 'none';
         rnBox.innerHTML = '';
@@ -1238,12 +1259,20 @@
 
       const invoicePrev = document.getElementById('invoiceDocPreview');
       if (p.invoiceDoc) {
-        invoicePrev.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
-            <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
-            <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
-          </div>
-        `;
+        if (canViewFinancialDocs()) {
+          invoicePrev.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
+              <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
+              <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
+            </div>
+          `;
+        } else {
+          invoicePrev.innerHTML = `
+            <div style="text-align:center; padding:10px; filter:blur(3px); opacity:0.5;">
+              <span style="font-size:12px; color:#94a3b8;">🔒 Financijski dokument – samo za ured</span>
+            </div>
+          `;
+        }
       } else {
         invoicePrev.innerHTML = '';
       }
