@@ -973,22 +973,37 @@
 
       const p = projects.find(item => item.id === selectedId);
       const selectedWorkers = (p && p.assignedMonteri) ? p.assignedMonteri : [];
-
-      const workers = Object.keys(userPins).filter(w => !w.includes("VEDRAN") && !w.includes("ANKICA"));
-
       const canAssign = canAssignMonteri();
-      cont.innerHTML = workers.map(name => {
-        const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
-        const dis = canAssign ? '' : 'disabled';
-        return `
-          <div class="monter-row">
-            <label class="monter-label" style="${canAssign ? '' : 'opacity:0.7;'}">
-              <input type="checkbox" value="${name}" ${isChecked} ${dis} onchange="toggleMonter('${name}', this.checked)">
-              <span>${name}</span>
-            </label>
-          </div>
-        `;
-      }).join('');
+
+      if (canAssign) {
+        // Vedran / Zlatko – mogu birati
+        const workers = Object.keys(userPins).filter(w => {
+          const u = w.toUpperCase();
+          return !u.includes('VEDRAN') && !u.includes('ANKICA');
+        });
+        cont.innerHTML = workers.map(name => {
+          const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
+          return `
+            <div class="monter-row">
+              <label class="monter-label">
+                <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
+                <span>${name}</span>
+              </label>
+            </div>
+          `;
+        }).join('');
+      } else {
+        // Ostali – samo vide tko montira (bez kvačica)
+        if (selectedWorkers.length === 0) {
+          cont.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px;">Nitko nije dodijeljen.</div>';
+        } else {
+          cont.innerHTML = selectedWorkers.map(name => `
+            <div class="monter-row">
+              <span style="font-size:12px;font-weight:600;color:#fff;">👷 ${name}</span>
+            </div>
+          `).join('');
+        }
+      }
     }
 
     function canAssignMonteri() {
