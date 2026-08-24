@@ -1009,7 +1009,10 @@
     function canAssignMonteri() {
       if (!currentWorker) return false;
       const u = currentWorker.toUpperCase().trim();
-      return u.includes('VEDRAN') || u.includes('ZLATKO');
+      // Samo Vedran i Zlatko Radiš
+      if (u.indexOf('VEDRAN') !== -1) return true;
+      if (u.indexOf('ZLATKO') !== -1) return true;
+      return false;
     }
 
     async function toggleMonter(name, isChecked) {
