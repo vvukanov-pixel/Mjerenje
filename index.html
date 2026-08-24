@@ -215,6 +215,7 @@
   <header>
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="header-right">
+      <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
       <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
       <div class="view-toggle">
@@ -1821,6 +1822,37 @@
         btn.disabled = false;
         btn.innerText = '💾 SPREMI MJERENJE';
       }
+    }
+
+    function exportNalozi() {
+      if (!canViewFinancialDocs()) {
+        alert('❌ Samo admin može exportati podatke.');
+        return;
+      }
+      // Mjerenja + slike montaže
+      const data = projects.map(p => ({
+        klijent: p.name,
+        mjernik: p.worker || '',
+        telefon: p.phone || '',
+        lokacija: p.loc || '',
+        datumMjerenja: p.date || '',
+        datumMontaze: p.dateMontaza || '',
+        napomene: p.notes || '',
+        napomeneMontaze: p.montazaNotes || '',
+        monteri: p.assignedMonteri || [],
+        brojSlikaMjerenja: (p.images || []).length,
+        linkoviSlikaMjerenja: p.images || [],
+        brojSlikaMontaze: (p.doneImages || []).length,
+        linkoviSlikaMontaze: p.doneImages || []
+      }));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mjerenja_backup_' + formatToday().replace(/\./g, '-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('✅ Export spreman – ' + data.length + ' zapisa (mjerenja + montaža). Spremi na svoj cloud.');
     }
 
     populateUserDropdowns();
