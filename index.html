@@ -604,6 +604,16 @@
       return u.includes('VEDRAN') || u.includes('BRANISLAV');
     }
 
+    function canEditMontaza() {
+      if (!currentWorker) return false;
+      const u = currentWorker.toUpperCase().trim();
+      if (u.includes('VEDRAN') || u.includes('ANKICA')) return true;
+      if (!selectedId) return false;
+      const p = projects.find(item => item.id === selectedId);
+      if (!p || !p.assignedMonteri) return false;
+      return p.assignedMonteri.some(m => m.toUpperCase().trim() === u || u.includes(m.toUpperCase().trim()) || m.toUpperCase().includes(u));
+    }
+
     function canViewFinancialDocs() {
       if (!currentWorker) return false;
       const u = currentWorker.toUpperCase().trim();
@@ -811,11 +821,20 @@
       if (!selectedId) return;
       
       if (fromSkladiste && !canEditSkladiste()) {
-        alert('❌ Samo Branislav, Ankica i Vedran mogu mijenjati status u skladištu.');
+        alert('❌ Samo Branislav i Vedran mogu mijenjati status u skladištu.');
         return;
       }
 
       const p = projects.find(item => item.id === selectedId);
+      // Montaža: samo dodijeljeni monteri + admin
+      if (!fromSkladiste && p) {
+        const pos0 = (p.positions && p.positions[index]) ? p.positions[index] : null;
+        const cur = pos0 ? (pos0.status || 'proizvodnja') : 'proizvodnja';
+        if ((cur === 'skladiste' || cur === 'montirano' || cur === 'reklamacija') && !canEditMontaza() && !canEditSkladiste()) {
+          alert('❌ Samo dodijeljeni monteri mogu označiti Montirano / Reklamacija.');
+          return;
+        }
+      }
       let positions = p.positions || [];
       
       if (positions.length === 0) {
@@ -908,8 +927,31 @@
         `;
       }).join('');
 
+      // Montaža - samo dodijeljeni monteri + admin
+      const canMont = canEditMontaza();
+      const htmlMontaza = displayPositions.map((pos, idx) => {
+        let chip = '';
+        const clickMont = canMont ? `onclick="cyclePositionStatus(${idx}, false)"` : '';
+        const disMont = canMont ? '' : 'disabled-btn';
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja ${disMont}" ${clickMont}>🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste ${disMont}" ${clickMont}>📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano ${disMont}" ${clickMont}>✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija ${disMont}" ${clickMont}>⚠️ Reklamacija / Fali</button>`;
+        }
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div>${chip}</div>
+          </div>
+        `;
+      }).join('');
+
       boxRn.innerHTML = htmlNormal;
-      boxMontaza.innerHTML = htmlNormal;
+      boxMontaza.innerHTML = htmlMontaza;
       boxSkl.innerHTML = htmlSkl;
     }
 
