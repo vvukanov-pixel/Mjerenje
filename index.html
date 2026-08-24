@@ -1370,7 +1370,6 @@
       function showDate(id, val, field) {
         let el = document.getElementById(id);
         if (!el) {
-          // create under the title if missing
           const title = document.getElementById(id.replace('Date','Title'));
           if (title) {
             el = document.createElement('div');
@@ -1381,11 +1380,16 @@
         }
         if (!el) return;
         if (isAdmin) {
-          el.innerHTML = val
-            ? `📅 <input type="text" value="${val}" style="width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:3px;" onchange="updateStageDate('${field}', this.value)">`
-            : `📅 <input type="text" placeholder="dd.mm.gggg." style="width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#64748b;border-radius:3px;" onchange="updateStageDate('${field}', this.value)">`;
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.value = val || '';
+          inp.placeholder = 'dd.mm.gggg.';
+          inp.style.cssText = 'width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:3px;';
+          inp.onchange = function() { updateStageDate(field, this.value); };
+          el.innerHTML = '📅 ';
+          el.appendChild(inp);
         } else {
-          el.innerHTML = val ? `📅 ${val}` : '';
+          el.innerHTML = val ? ('📅 ' + val) : '';
         }
       }
       showDate('stage1Date', p.date || '', 'date');
@@ -1398,7 +1402,9 @@
 
     async function updateStageDate(field, value) {
       if (!selectedId || !canViewFinancialDocs()) return;
-      await db.collection("nalozi").doc(selectedId).update({ [field]: value.trim() });
+      var obj = {};
+      obj[field] = value.trim();
+      await db.collection("nalozi").doc(selectedId).update(obj);
     }
 
     function selectThumb(idx) {
