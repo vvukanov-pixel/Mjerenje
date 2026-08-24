@@ -479,6 +479,11 @@
       return await ref.getDownloadURL();
     }
 
+    function formatToday() {
+      const d = new Date();
+      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
+    }
+
     const DEFAULT_PINS = {
       "VEDRAN VUKANOVIĆ": "7020",
       "ANKICA BAČIĆ PRKAČIN": "1234",
@@ -824,7 +829,15 @@
       else if (current === 'montirano') positions[index].status = 'reklamacija';
       else positions[index].status = 'proizvodnja';
 
-      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+      const updates = { positions: positions };
+      const p = projects.find(item => item.id === selectedId);
+      if (positions[index].status === 'skladiste' && (!p || !p.dateSkladiste)) {
+        updates.dateSkladiste = formatToday();
+      }
+      if (positions[index].status === 'montirano' && (!p || !p.dateMontaza)) {
+        updates.dateMontaza = formatToday();
+      }
+      await db.collection("nalozi").doc(selectedId).update(updates);
     }
 
     async function deletePosition(index) {
@@ -994,10 +1007,12 @@
       const num = document.getElementById('inpInvoiceNum').value.trim();
       const isAlreadyInvoiced = p.isInvoiced;
 
-      await db.collection("nalozi").doc(selectedId).update({
+      const updates = {
         invoiceNum: num,
         isInvoiced: !isAlreadyInvoiced
-      });
+      };
+      if (!isAlreadyInvoiced) updates.dateInvoice = formatToday();
+      await db.collection("nalozi").doc(selectedId).update(updates);
     }
 
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
@@ -1349,6 +1364,41 @@
       setBadge('stage4Badge', hasSkladiste, currentStage === 4);
       setBadge('stage5Badge', hasMontaza, currentStage === 5);
       setBadge('stage6Badge', isInvoiced, currentStage === 6);
+
+      // Prikaz datuma faza
+      const isAdmin = canViewFinancialDocs();
+      function showDate(id, val, field) {
+        let el = document.getElementById(id);
+        if (!el) {
+          // create under the title if missing
+          const title = document.getElementById(id.replace('Date','Title'));
+          if (title) {
+            el = document.createElement('div');
+            el.id = id;
+            el.style.cssText = 'font-size:10px;color:#94a3b8;margin-top:2px;';
+            title.parentNode.insertBefore(el, title.nextSibling);
+          }
+        }
+        if (!el) return;
+        if (isAdmin) {
+          el.innerHTML = val
+            ? `📅 <input type="text" value="${val}" style="width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:3px;" onchange="updateStageDate('${field}', this.value)">`
+            : `📅 <input type="text" placeholder="dd.mm.gggg." style="width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#64748b;border-radius:3px;" onchange="updateStageDate('${field}', this.value)">`;
+        } else {
+          el.innerHTML = val ? `📅 ${val}` : '';
+        }
+      }
+      showDate('stage1Date', p.date || '', 'date');
+      showDate('stage2Date', p.dateOffer || '', 'dateOffer');
+      showDate('stage3Date', p.dateRn || '', 'dateRn');
+      showDate('stage4Date', p.dateSkladiste || '', 'dateSkladiste');
+      showDate('stage5Date', p.dateMontaza || '', 'dateMontaza');
+      showDate('stage6Date', p.dateInvoice || '', 'dateInvoice');
+    }
+
+    async function updateStageDate(field, value) {
+      if (!selectedId || !canViewFinancialDocs()) return;
+      await db.collection("nalozi").doc(selectedId).update({ [field]: value.trim() });
     }
 
     function selectThumb(idx) {
@@ -1469,7 +1519,10 @@
           const path = `nalozi/${selectedId}/ponuda_${Date.now()}.jpg`;
           url = await uploadToStorage(dataUrl, path);
         }
-        await db.collection("nalozi").doc(selectedId).update({ offerDoc: url });
+        const updates = { offerDoc: url };
+        const p = projects.find(item => item.id === selectedId);
+        if (!p || !p.dateOffer) updates.dateOffer = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
         alert('✅ Ponuda uspješno učitana');
       } catch (err) {
         console.error(err);
@@ -1502,7 +1555,10 @@
           const path = `nalozi/${selectedId}/rn_${Date.now()}.jpg`;
           url = await uploadToStorage(dataUrl, path);
         }
-        await db.collection("nalozi").doc(selectedId).update({ rnDoc: url });
+        const updates = { rnDoc: url };
+        const p = projects.find(item => item.id === selectedId);
+        if (!p || !p.dateRn) updates.dateRn = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
         alert('✅ Radni nalog uspješno učitan');
       } catch (err) {
         console.error(err);
@@ -1530,7 +1586,9 @@
           const url = await uploadToStorage(dataUrl, path);
           existing.push(url);
         }
-        await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
+        const updates = { doneImages: existing };
+        if (!p.dateMontaza) updates.dateMontaza = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
         alert('✅ Slike montaže učitane');
       } catch (err) {
         console.error(err);
