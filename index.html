@@ -830,11 +830,10 @@
       else positions[index].status = 'proizvodnja';
 
       const updates = { positions: positions };
-      const p = projects.find(item => item.id === selectedId);
-      if (positions[index].status === 'skladiste' && (!p || !p.dateSkladiste)) {
+      if (positions[index].status === 'skladiste' && !p.dateSkladiste) {
         updates.dateSkladiste = formatToday();
       }
-      if (positions[index].status === 'montirano' && (!p || !p.dateMontaza)) {
+      if (positions[index].status === 'montirano' && !p.dateMontaza) {
         updates.dateMontaza = formatToday();
       }
       await db.collection("nalozi").doc(selectedId).update(updates);
