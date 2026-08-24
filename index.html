@@ -281,6 +281,7 @@
             <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
           </div>
           <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži klijenta ili lokaciju..." oninput="renderSidebar()">
+          <div id="statusFilters" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
         </div>
         <div class="sidebar-list" id="projectList">
           <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje...</p>
@@ -1035,11 +1036,59 @@
       }
     });
 
+    let currentStatusFilter = 'sve';
+
+    function getProjectStage(p) {
+      if (p.isInvoiced) return 'fakturirano';
+      const positions = p.positions || [];
+      const total = positions.length;
+      const montirano = positions.filter(x => x.status === 'montirano').length;
+      const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
+      const skladiste = positions.filter(x => x.status === 'skladiste').length;
+      if (reklamacija > 0) return 'reklamacija';
+      if (total > 0 && montirano === total) return 'montirano';
+      if (skladiste > 0 || p.dateSkladiste) return 'skladiste';
+      if (p.rnDoc) return 'proizvodnja';
+      if (p.offerDoc) return 'ponuda';
+      return 'mjerenje';
+    }
+
+    function setStatusFilter(f) {
+      currentStatusFilter = f;
+      renderSidebar();
+    }
+
     function renderSidebar() {
       const list = document.getElementById('projectList');
       const query = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
+      const filtersEl = document.getElementById('statusFilters');
+
+      const counts = { sve: 0, mjerenje: 0, ponuda: 0, proizvodnja: 0, skladiste: 0, montirano: 0, reklamacija: 0, fakturirano: 0 };
+      projects.forEach(p => {
+        const st = getProjectStage(p);
+        counts[st]++;
+        counts.sve++;
+      });
+
+      if (filtersEl) {
+        const btns = [
+          ['sve', 'Sve', counts.sve, '#94a3b8'],
+          ['mjerenje', 'Mjerenje', counts.mjerenje, '#38bdf8'],
+          ['ponuda', 'Ponuda', counts.ponuda, '#34d399'],
+          ['proizvodnja', 'U radu', counts.proizvodnja, '#fbbf24'],
+          ['skladiste', 'Skladište', counts.skladiste, '#06b6d4'],
+          ['montirano', 'Montirano', counts.montirano, '#10b981'],
+          ['reklamacija', 'Reklamacija', counts.reklamacija, '#ef4444'],
+          ['fakturirano', 'Fakturirano', counts.fakturirano, '#a855f7']
+        ];
+        filtersEl.innerHTML = btns.map(([key, label, cnt, color]) => {
+          const active = currentStatusFilter === key;
+          return `<button onclick="setStatusFilter('${key}')" style="font-size:10px;padding:3px 7px;border-radius:4px;border:1px solid ${color};cursor:pointer;font-weight:bold;background:${active ? color : 'transparent'};color:${active ? '#0b1120' : color};">${label} (${cnt})</button>`;
+        }).join('');
+      }
 
       const filtered = projects.filter(p => {
+        if (currentStatusFilter !== 'sve' && getProjectStage(p) !== currentStatusFilter) return false;
         if (!query) return true;
         const nameMatch = (p.name || '').toLowerCase().includes(query);
         const locMatch = (p.loc || '').toLowerCase().includes(query);
