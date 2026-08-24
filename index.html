@@ -975,12 +975,14 @@
 
       const workers = Object.keys(userPins).filter(w => !w.includes("VEDRAN") && !w.includes("ANKICA"));
 
+      const canAssign = canAssignMonteri();
       cont.innerHTML = workers.map(name => {
         const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
+        const dis = canAssign ? '' : 'disabled';
         return `
           <div class="monter-row">
-            <label class="monter-label">
-              <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
+            <label class="monter-label" style="${canAssign ? '' : 'opacity:0.7;'}">
+              <input type="checkbox" value="${name}" ${isChecked} ${dis} onchange="toggleMonter('${name}', this.checked)">
               <span>${name}</span>
             </label>
           </div>
@@ -988,8 +990,18 @@
       }).join('');
     }
 
+    function canAssignMonteri() {
+      if (!currentWorker) return false;
+      const u = currentWorker.toUpperCase().trim();
+      return u.includes('VEDRAN') || u.includes('ZLATKO');
+    }
+
     async function toggleMonter(name, isChecked) {
       if (!selectedId) return;
+      if (!canAssignMonteri()) {
+        alert('❌ Samo Vedran i Zlatko mogu dodjeljivati montere.');
+        return;
+      }
       const p = projects.find(item => item.id === selectedId);
       let currentAssigned = p.assignedMonteri || [];
 
