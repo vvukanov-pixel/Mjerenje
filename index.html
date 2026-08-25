@@ -7,7 +7,6 @@
   
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
   <style>
     :root {
@@ -215,7 +214,6 @@
   <header>
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="header-right">
-      <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
       <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
       <div class="view-toggle">
@@ -233,17 +231,9 @@
 
         <form onsubmit="saveNewProject(event)">
           <label>Fotografije Skica / Mjerenja</label>
-          <div style="display:flex; gap:12px; margin-bottom:8px; font-size:12px;">
-            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
-              <input type="radio" name="imgMode" value="color" checked style="width:auto; margin:0;"> 🎨 Boja
-            </label>
-            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
-              <input type="radio" name="imgMode" value="bw" style="width:auto; margin:0;"> ⚫ Crno-bijelo
-            </label>
-          </div>
           <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
             <span id="upload-status">📷 Dodaj fotografije bilježnice</span>
-            <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleImageSelection(event)">
+            <input type="file" id="fileInput" multiple style="display:none" onchange="handleImageSelection(event)">
           </div>
 
           <div class="preview-grid" id="previewGrid"></div>
@@ -282,7 +272,6 @@
             <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
           </div>
           <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži klijenta ili lokaciju..." oninput="renderSidebar()">
-          <div id="statusFilters" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
         </div>
         <div class="sidebar-list" id="projectList">
           <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje...</p>
@@ -310,7 +299,7 @@
           <!-- 1. MAPA: SLIKE MJERENJA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 id="stage1Title" style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE <span id="stage1Badge"></span></h4>
+              <h4 style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE</h4>
               <button onclick="document.getElementById('addSketchFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Dodaj skicu</button>
               <input type="file" id="addSketchFileInput" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
             </div>
@@ -331,14 +320,14 @@
           <!-- 2. MAPA: PONUDA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 id="stage2Title" style="color: #34d399; font-size: 13px;">📄 2. PONUDA <span id="stage2Badge"></span></h4>
+              <h4 style="color: #34d399; font-size: 13px;">📄 2. PONUDA</h4>
               <button id="btnDelOffer" onclick="removeOffer()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
             </div>
 
             <div id="offerUploadZone" class="doc-box">
               <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
               <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu (PDF / Slika)</button>
-              <input type="file" id="offerFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleOfferUpload(event)">
+              <input type="file" id="offerFileInput" style="display:none" onchange="handleOfferUpload(event)">
             </div>
 
             <div id="offerDisplayZone" style="display:none;">
@@ -353,14 +342,14 @@
           <!-- 3. MAPA: RADNI NALOG -->
           <div class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 id="stage3Title" style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG <span id="stage3Badge"></span></h4>
+              <h4 style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG</h4>
               <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
             </div>
 
             <div id="rnUploadZone" class="doc-box">
               <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
               <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN (PDF / Slika)</button>
-              <input type="file" id="rnFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleRnUpload(event)">
+              <input type="file" id="rnFileInput" style="display:none" onchange="handleRnUpload(event)">
             </div>
 
             <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
@@ -382,7 +371,7 @@
           <!-- 4. MAPA: SKLADIŠTE -->
           <div class="card" style="border-left: 4px solid var(--cyan);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 id="stage4Title" style="color: var(--cyan); font-size: 13px;">📦 4. SKLADIŠTE <span id="stage4Badge"></span></h4>
+              <h4 style="color: var(--cyan); font-size: 13px;">📦 4. SKLADIŠTE</h4>
               <span id="skladisteStatusBadge" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(6,182,212,0.15); color:var(--cyan);">ROBA U SKLADIŠTU</span>
             </div>
 
@@ -398,7 +387,7 @@
           <!-- 5. MAPA: MONTAŽA -->
           <div class="card" style="border-left: 4px solid #a855f7;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 id="stage5Title" style="color: #c084fc; font-size: 13px;">🛠️ 5. MONTAŽA <span id="stage5Badge"></span></h4>
+              <h4 style="color: #c084fc; font-size: 13px;">🛠️ 5. MONTAŽA</h4>
               <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike</button>
               <input type="file" id="doneFileInput" multiple style="display:none" onchange="uploadDoneImages(event)">
             </div>
@@ -424,7 +413,7 @@
           <!-- 6. MAPA: FAKTURIRANJE -->
           <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-              <h4 id="stage6Title" style="color: #34d399; font-size: 13px;">💰 6. FAKTURIRANJE <span id="stage6Badge"></span></h4>
+              <h4 style="color: #34d399; font-size: 13px;">💰 6. FAKTURIRANJE</h4>
               <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
             </div>
 
@@ -468,34 +457,18 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const storage = firebase.storage();
 
-    // Upload u Storage i vrati download URL
-    async function uploadToStorage(dataUrlOrFile, path) {
-      const ref = storage.ref(path);
-      if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
-        await ref.putString(dataUrlOrFile, 'data_url');
-      } else {
-        await ref.put(dataUrlOrFile);
-      }
-      return await ref.getDownloadURL();
-    }
-
-    function formatToday() {
-      const d = new Date();
-      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
-    }
-
+    // TOČNI TRAJNI PINOVI
     const DEFAULT_PINS = {
       "VEDRAN VUKANOVIĆ": "7020",
-      "ANKICA BAČIĆ PRKAČIN": "1234",
-      "BRANISLAV BEGENUŠIĆ": "1234",
-      "ZLATKO RADIŠ": "1234",
-      "SINIŠA PRAVICA": "1234",
-      "SLAVEN PUHALO": "1234",
-      "NIKOLA MRDIĆ": "1234",
-      "LJUBIŠA DOŠLO": "1234",
-      "RANKO JANJIĆ": "1234",
+      "ANKICA BAČIĆ PRKAČIN": "2205",
+      "BRANISLAV BEGENUŠIĆ": "2203",
+      "SINIŠA PRAVICA": "2703",
+      "ZLATKO RADIŠ": "0208",
+      "SLAVEN PUHALO": "4444",
+      "NIKOLA MRDIĆ": "3333",
+      "LJUBIŠA DOŠLO": "5555",
+      "RANKO JANJIĆ": "2222",
       "MIODRAG ĆERANIĆ": "1234"
     };
 
@@ -513,9 +486,8 @@
 
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
       if (doc.exists && doc.data().pins) {
-        userPins = { ...doc.data().pins };
+        userPins = { ...DEFAULT_PINS, ...doc.data().pins };
       } else {
-        userPins = { ...DEFAULT_PINS };
         db.collection("postavke").doc("pinovi").set({ pins: DEFAULT_PINS });
       }
       populateUserDropdowns();
@@ -602,23 +574,7 @@
 
     function canEditSkladiste() {
       const u = currentWorker.toUpperCase().trim();
-      return u.includes('VEDRAN') || u.includes('BRANISLAV');
-    }
-
-    function canEditMontaza() {
-      if (!currentWorker) return false;
-      const u = currentWorker.toUpperCase().trim();
-      if (u.includes('VEDRAN') || u.includes('ANKICA')) return true;
-      if (!selectedId) return false;
-      const p = projects.find(item => item.id === selectedId);
-      if (!p || !p.assignedMonteri) return false;
-      return p.assignedMonteri.some(m => m.toUpperCase().trim() === u || u.includes(m.toUpperCase().trim()) || m.toUpperCase().includes(u));
-    }
-
-    function canViewFinancialDocs() {
-      if (!currentWorker) return false;
-      const u = currentWorker.toUpperCase().trim();
-      return u.includes('VEDRAN') || u.includes('ANKICA') || u.includes('VUKANOVIĆ');
+      return u.includes('VEDRAN') || u.includes('ANKICA') || u.includes('BRANISLAV');
     }
 
     function checkWorkerAuth() {
@@ -722,7 +678,6 @@
       alert(`✅ Dodan: ${name} (PIN: ${pin})`);
     }
 
-    // BRZO I POUZDANO ČITANJE DATOTEKA
     function readFileAsDataURL(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -732,7 +687,7 @@
       });
     }
 
-    function processImageFile(file, mode = 'color') {
+    function processImageFile(file) {
       return new Promise(async (resolve) => {
         const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
         const rawBase64 = await readFileAsDataURL(file);
@@ -752,17 +707,6 @@
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-
-          if (mode === 'bw') {
-            const imageData = ctx.getImageData(0, 0, w, h);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-              const avg = (data[i] + data[i+1] + data[i+2]) / 3;
-              data[i] = data[i+1] = data[i+2] = avg;
-            }
-            ctx.putImageData(imageData, 0, 0);
-          }
-
           resolve(canvas.toDataURL('image/jpeg', 0.65));
         };
         img.onerror = () => resolve(rawBase64);
@@ -774,22 +718,14 @@
       const files = Array.from(e.target.files);
       if (!selectedId || files.length === 0) return;
       const p = projects.find(item => item.id === selectedId);
-      let existing = [...(p.images || [])];
-      try {
-        for (let f of files) {
-          const dataUrl = await processImageFile(f);
-          if (!dataUrl) continue;
-          const path = `nalozi/${selectedId}/mjerenje_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
-          const url = await uploadToStorage(dataUrl, path);
-          existing.push(url);
-        }
-        await db.collection("nalozi").doc(selectedId).update({ images: existing });
-        currentImageIndex = existing.length - 1;
-        alert('✅ Slike dodane');
-      } catch (err) {
-        console.error(err);
-        alert('Greška: ' + (err.message || err));
+      const existing = p.images || [];
+
+      for (let f of files) {
+        const b64 = await processImageFile(f);
+        if (b64) existing.push(b64);
       }
+      await db.collection("nalozi").doc(selectedId).update({ images: existing });
+      currentImageIndex = existing.length - 1;
       e.target.value = '';
     }
 
@@ -822,20 +758,11 @@
       if (!selectedId) return;
       
       if (fromSkladiste && !canEditSkladiste()) {
-        alert('❌ Samo Branislav i Vedran mogu mijenjati status u skladištu.');
+        alert('❌ Samo Branislav, Ankica i Vedran mogu mijenjati status u skladištu.');
         return;
       }
 
       const p = projects.find(item => item.id === selectedId);
-      // Montaža: samo dodijeljeni monteri + admin
-      if (!fromSkladiste && p) {
-        const pos0 = (p.positions && p.positions[index]) ? p.positions[index] : null;
-        const cur = pos0 ? (pos0.status || 'proizvodnja') : 'proizvodnja';
-        if ((cur === 'skladiste' || cur === 'montirano' || cur === 'reklamacija') && !canEditMontaza() && !canEditSkladiste()) {
-          alert('❌ Samo dodijeljeni monteri mogu označiti Montirano / Reklamacija.');
-          return;
-        }
-      }
       let positions = p.positions || [];
       
       if (positions.length === 0) {
@@ -850,23 +777,6 @@
       else if (current === 'montirano') positions[index].status = 'reklamacija';
       else positions[index].status = 'proizvodnja';
 
-      const updates = { positions: positions };
-      if (positions[index].status === 'skladiste' && !p.dateSkladiste) {
-        updates.dateSkladiste = formatToday();
-      }
-      if (positions[index].status === 'montirano' && !p.dateMontaza) {
-        updates.dateMontaza = formatToday();
-      }
-      await db.collection("nalozi").doc(selectedId).update(updates);
-    }
-
-    async function deletePosition(index) {
-      if (!selectedId) return;
-      const p = projects.find(item => item.id === selectedId);
-      let positions = p.positions || [];
-      if (index < 0 || index >= positions.length) return;
-      if (!confirm(`Obrisati poziciju: ${positions[index].name}?`)) return;
-      positions.splice(index, 1);
       await db.collection("nalozi").doc(selectedId).update({ positions: positions });
     }
 
@@ -894,11 +804,10 @@
           chip = `<button class="status-chip chip-reklamacija" onclick="cyclePositionStatus(${idx}, false)">⚠️ Reklamacija / Fali</button>`;
         }
 
-        const delBtn = isDefault ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
         return `
           <div class="pos-item">
             <span class="pos-name">${pos.name}</span>
-            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtn}</div>
+            <div>${chip}</div>
           </div>
         `;
       }).join('');
@@ -919,30 +828,6 @@
           chip = `<button class="status-chip chip-reklamacija ${disabledClass}" ${clickAction}>⚠️ Reklamacija / Fali</button>`;
         }
 
-        const delBtnSkl = (isDefault || !canEditSkl) ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
-        return `
-          <div class="pos-item">
-            <span class="pos-name">${pos.name}</span>
-            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtnSkl}</div>
-          </div>
-        `;
-      }).join('');
-
-      // Montaža - samo dodijeljeni monteri + admin
-      const canMont = canEditMontaza();
-      const htmlMontaza = displayPositions.map((pos, idx) => {
-        let chip = '';
-        const clickMont = canMont ? `onclick="cyclePositionStatus(${idx}, false)"` : '';
-        const disMont = canMont ? '' : 'disabled-btn';
-        if (pos.status === 'proizvodnja') {
-          chip = `<button class="status-chip chip-proizvodnja ${disMont}" ${clickMont}>🏭 U Proizvodnji</button>`;
-        } else if (pos.status === 'skladiste') {
-          chip = `<button class="status-chip chip-skladiste ${disMont}" ${clickMont}>📦 U Skladištu</button>`;
-        } else if (pos.status === 'montirano') {
-          chip = `<button class="status-chip chip-montirano ${disMont}" ${clickMont}>✅ Montirano</button>`;
-        } else if (pos.status === 'reklamacija') {
-          chip = `<button class="status-chip chip-reklamacija ${disMont}" ${clickMont}>⚠️ Reklamacija / Fali</button>`;
-        }
         return `
           <div class="pos-item">
             <span class="pos-name">${pos.name}</span>
@@ -952,7 +837,7 @@
       }).join('');
 
       boxRn.innerHTML = htmlNormal;
-      boxMontaza.innerHTML = htmlMontaza;
+      boxMontaza.innerHTML = htmlNormal;
       boxSkl.innerHTML = htmlSkl;
     }
 
@@ -973,54 +858,24 @@
 
       const p = projects.find(item => item.id === selectedId);
       const selectedWorkers = (p && p.assignedMonteri) ? p.assignedMonteri : [];
-      const canAssign = canAssignMonteri();
 
-      if (canAssign) {
-        // Vedran / Zlatko – mogu birati
-        const workers = Object.keys(userPins).filter(w => {
-          const u = w.toUpperCase();
-          return !u.includes('VEDRAN') && !u.includes('ANKICA');
-        });
-        cont.innerHTML = workers.map(name => {
-          const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
-          return `
-            <div class="monter-row">
-              <label class="monter-label">
-                <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
-                <span>${name}</span>
-              </label>
-            </div>
-          `;
-        }).join('');
-      } else {
-        // Ostali – samo vide tko montira (bez kvačica)
-        if (selectedWorkers.length === 0) {
-          cont.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px;">Nitko nije dodijeljen.</div>';
-        } else {
-          cont.innerHTML = selectedWorkers.map(name => `
-            <div class="monter-row">
-              <span style="font-size:12px;font-weight:600;color:#fff;">👷 ${name}</span>
-            </div>
-          `).join('');
-        }
-      }
-    }
+      const workers = Object.keys(userPins).filter(w => !w.includes("VEDRAN") && !w.includes("ANKICA"));
 
-    function canAssignMonteri() {
-      if (!currentWorker) return false;
-      const u = currentWorker.toUpperCase().trim();
-      // Samo Vedran i Zlatko Radiš
-      if (u.indexOf('VEDRAN') !== -1) return true;
-      if (u.indexOf('ZLATKO') !== -1) return true;
-      return false;
+      cont.innerHTML = workers.map(name => {
+        const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
+        return `
+          <div class="monter-row">
+            <label class="monter-label">
+              <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
+              <span>${name}</span>
+            </label>
+          </div>
+        `;
+      }).join('');
     }
 
     async function toggleMonter(name, isChecked) {
       if (!selectedId) return;
-      if (!canAssignMonteri()) {
-        alert('❌ Samo Vedran i Zlatko mogu dodjeljivati montere.');
-        return;
-      }
       const p = projects.find(item => item.id === selectedId);
       let currentAssigned = p.assignedMonteri || [];
 
@@ -1050,21 +905,9 @@
     async function handleInvoiceUpload(e) {
       const file = e.target.files[0];
       if (!file || !selectedId) return;
-      try {
-        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
-        let url;
-        if (isPdf) {
-          url = await uploadToStorage(file, `nalozi/${selectedId}/faktura_${Date.now()}.pdf`);
-        } else {
-          const dataUrl = await processImageFile(file);
-          if (!dataUrl) throw new Error('Neuspješno čitanje');
-          url = await uploadToStorage(dataUrl, `nalozi/${selectedId}/faktura_${Date.now()}.jpg`);
-        }
-        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: url });
-        alert('✅ Faktura učitana');
-      } catch (err) {
-        console.error(err);
-        alert('Greška: ' + (err.message || err));
+      const base64 = await processImageFile(file);
+      if (base64) {
+        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: base64 });
       }
       e.target.value = '';
     }
@@ -1080,12 +923,10 @@
       const num = document.getElementById('inpInvoiceNum').value.trim();
       const isAlreadyInvoiced = p.isInvoiced;
 
-      const updates = {
+      await db.collection("nalozi").doc(selectedId).update({
         invoiceNum: num,
         isInvoiced: !isAlreadyInvoiced
-      };
-      if (!isAlreadyInvoiced) updates.dateInvoice = formatToday();
-      await db.collection("nalozi").doc(selectedId).update(updates);
+      });
     }
 
     db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
@@ -1109,59 +950,11 @@
       }
     });
 
-    let currentStatusFilter = 'sve';
-
-    function getProjectStage(p) {
-      if (p.isInvoiced) return 'fakturirano';
-      const positions = p.positions || [];
-      const total = positions.length;
-      const montirano = positions.filter(x => x.status === 'montirano').length;
-      const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
-      const skladiste = positions.filter(x => x.status === 'skladiste').length;
-      if (reklamacija > 0) return 'reklamacija';
-      if (total > 0 && montirano === total) return 'montirano';
-      if (skladiste > 0 || p.dateSkladiste) return 'skladiste';
-      if (p.rnDoc) return 'proizvodnja';
-      if (p.offerDoc) return 'ponuda';
-      return 'mjerenje';
-    }
-
-    function setStatusFilter(f) {
-      currentStatusFilter = f;
-      renderSidebar();
-    }
-
     function renderSidebar() {
       const list = document.getElementById('projectList');
       const query = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
-      const filtersEl = document.getElementById('statusFilters');
-
-      const counts = { sve: 0, mjerenje: 0, ponuda: 0, proizvodnja: 0, skladiste: 0, montirano: 0, reklamacija: 0, fakturirano: 0 };
-      projects.forEach(p => {
-        const st = getProjectStage(p);
-        counts[st]++;
-        counts.sve++;
-      });
-
-      if (filtersEl) {
-        const btns = [
-          ['sve', 'Sve', counts.sve, '#94a3b8'],
-          ['mjerenje', 'Mjerenje', counts.mjerenje, '#38bdf8'],
-          ['ponuda', 'Ponuda', counts.ponuda, '#34d399'],
-          ['proizvodnja', 'U radu', counts.proizvodnja, '#fbbf24'],
-          ['skladiste', 'Skladište', counts.skladiste, '#06b6d4'],
-          ['montirano', 'Montirano', counts.montirano, '#10b981'],
-          ['reklamacija', 'Reklamacija', counts.reklamacija, '#ef4444'],
-          ['fakturirano', 'Fakturirano', counts.fakturirano, '#a855f7']
-        ];
-        filtersEl.innerHTML = btns.map(([key, label, cnt, color]) => {
-          const active = currentStatusFilter === key;
-          return `<button onclick="setStatusFilter('${key}')" style="font-size:10px;padding:3px 7px;border-radius:4px;border:1px solid ${color};cursor:pointer;font-weight:bold;background:${active ? color : 'transparent'};color:${active ? '#0b1120' : color};">${label} (${cnt})</button>`;
-        }).join('');
-      }
 
       const filtered = projects.filter(p => {
-        if (currentStatusFilter !== 'sve' && getProjectStage(p) !== currentStatusFilter) return false;
         if (!query) return true;
         const nameMatch = (p.name || '').toLowerCase().includes(query);
         const locMatch = (p.loc || '').toLowerCase().includes(query);
@@ -1230,23 +1023,10 @@
 
     function openDocumentView(docUrl) {
       if (!docUrl) return;
-      // Ako je slika – koristi lightbox s zoomom
-      if (docUrl.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(docUrl)) {
-        openLightbox(docUrl);
-        return;
+      const win = window.open();
+      if (win) {
+        win.document.write(`<iframe src="${docUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
       }
-      // PDF ili drugi dokument – otvori u novom tabu (preglednik ima svoj zoom)
-      window.open(docUrl, '_blank');
-    }
-
-    function openOfferFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.offerDoc) openDocumentView(p.offerDoc);
-    }
-
-    function openRnFull() {
-      const p = projects.find(item => item.id === selectedId);
-      if (p && p.rnDoc) openDocumentView(p.rnDoc);
     }
 
     function renderDetails() {
@@ -1295,38 +1075,21 @@
       if (p.offerDoc) {
         offUpload.style.display = 'none';
         offDisplay.style.display = 'block';
-        btnDelOff.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
+        btnDelOff.style.display = 'inline-block';
         
-        if (!canViewFinancialDocs()) {
+        if (p.offerDoc.startsWith('data:application/pdf')) {
           offBox.innerHTML = `
-            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
-              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
-              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
-              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            <div style="text-align:center; padding: 20px;">
+              <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
+              <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
+              <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori i Pregledaj PDF</button>
             </div>
           `;
         } else {
-          // Za admina uvijek pokaži gumb + pokušaj thumbnail ako je slika
-          const isPdf = p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf') || p.offerDoc.includes('application%2Fpdf');
-          if (isPdf) {
-            offBox.innerHTML = `
-              <div style="text-align:center; padding: 20px;">
-                <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
-                <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
-                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
-              </div>
-            `;
-          } else {
-            offBox.innerHTML = `
-              <img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-              <div style="display:none; text-align:center; padding:20px;">
-                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
-              </div>
-            `;
-          }
+          offBox.innerHTML = `<img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
         }
       } else {
-        offUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
+        offUpload.style.display = 'flex';
         offDisplay.style.display = 'none';
         btnDelOff.style.display = 'none';
         offBox.innerHTML = '';
@@ -1341,37 +1104,21 @@
       if (p.rnDoc) {
         rnUpload.style.display = 'none';
         rnDisplay.style.display = 'block';
-        btnDelRn.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
+        btnDelRn.style.display = 'inline-block';
         
-        if (!canViewFinancialDocs()) {
+        if (p.rnDoc.startsWith('data:application/pdf')) {
           rnBox.innerHTML = `
-            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
-              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
-              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
-              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            <div style="text-align:center; padding: 20px;">
+              <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+              <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
+              <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori i Pregledaj PDF</button>
             </div>
           `;
         } else {
-          const isPdf = p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf') || p.rnDoc.includes('application%2Fpdf');
-          if (isPdf) {
-            rnBox.innerHTML = `
-              <div style="text-align:center; padding: 20px;">
-                <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
-                <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
-                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
-              </div>
-            `;
-          } else {
-            rnBox.innerHTML = `
-              <img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-              <div style="display:none; text-align:center; padding:20px;">
-                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
-              </div>
-            `;
-          }
+          rnBox.innerHTML = `<img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;">`;
         }
       } else {
-        rnUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
+        rnUpload.style.display = 'flex';
         rnDisplay.style.display = 'none';
         btnDelRn.style.display = 'none';
         rnBox.innerHTML = '';
@@ -1432,100 +1179,15 @@
 
       const invoicePrev = document.getElementById('invoiceDocPreview');
       if (p.invoiceDoc) {
-        if (canViewFinancialDocs()) {
-          invoicePrev.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
-              <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
-              <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
-            </div>
-          `;
-        } else {
-          invoicePrev.innerHTML = `
-            <div style="text-align:center; padding:10px; filter:blur(3px); opacity:0.5;">
-              <span style="font-size:12px; color:#94a3b8;">🔒 Financijski dokument – samo za ured</span>
-            </div>
-          `;
-        }
+        invoicePrev.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
+            <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
+            <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
+          </div>
+        `;
       } else {
         invoicePrev.innerHTML = '';
       }
-
-      // === SEMAFOR SUSTAV ===
-      const hasMeasure = (p.images && p.images.length > 0);
-      const hasOffer = !!p.offerDoc;
-      const hasRn = !!p.rnDoc;
-      const posList = p.positions || [];
-      const hasSkladiste = posList.some(x => x.status === 'skladiste' || x.status === 'montirano' || x.status === 'reklamacija') || !!p.skladisteNotes;
-      const hasMontaza = posList.some(x => x.status === 'montirano') || (p.doneImages && p.doneImages.length > 0);
-      const isInvoiced = !!p.isInvoiced;
-
-      function setBadge(id, done, isCurrent) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (done) {
-          el.innerHTML = '<span style="background:#10b981;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">✓</span>';
-        } else if (isCurrent) {
-          el.innerHTML = '<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">●</span>';
-        } else {
-          el.innerHTML = '';
-        }
-      }
-
-      // Trenutna faza (prva koja nije gotova)
-      let currentStage = 1;
-      if (hasMeasure && hasOffer) currentStage = 3;
-      if (hasRn) currentStage = 4;
-      if (hasSkladiste) currentStage = 5;
-      if (hasMontaza) currentStage = 6;
-      if (isInvoiced) currentStage = 7;
-
-      setBadge('stage1Badge', hasMeasure, currentStage === 1);
-      setBadge('stage2Badge', hasOffer, currentStage === 2);
-      setBadge('stage3Badge', hasRn, currentStage === 3);
-      setBadge('stage4Badge', hasSkladiste, currentStage === 4);
-      setBadge('stage5Badge', hasMontaza, currentStage === 5);
-      setBadge('stage6Badge', isInvoiced, currentStage === 6);
-
-      // Prikaz datuma faza
-      const isAdmin = canViewFinancialDocs();
-      function showDate(id, val, field) {
-        let el = document.getElementById(id);
-        if (!el) {
-          const title = document.getElementById(id.replace('Date','Title'));
-          if (title) {
-            el = document.createElement('div');
-            el.id = id;
-            el.style.cssText = 'font-size:10px;color:#94a3b8;margin-top:2px;';
-            title.parentNode.insertBefore(el, title.nextSibling);
-          }
-        }
-        if (!el) return;
-        if (isAdmin) {
-          const inp = document.createElement('input');
-          inp.type = 'text';
-          inp.value = val || '';
-          inp.placeholder = 'dd.mm.gggg.';
-          inp.style.cssText = 'width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:3px;';
-          inp.onchange = function() { updateStageDate(field, this.value); };
-          el.innerHTML = '📅 ';
-          el.appendChild(inp);
-        } else {
-          el.innerHTML = val ? ('📅 ' + val) : '';
-        }
-      }
-      showDate('stage1Date', p.date || '', 'date');
-      showDate('stage2Date', p.dateOffer || '', 'dateOffer');
-      showDate('stage3Date', p.dateRn || '', 'dateRn');
-      showDate('stage4Date', p.dateSkladiste || '', 'dateSkladiste');
-      showDate('stage5Date', p.dateMontaza || '', 'dateMontaza');
-      showDate('stage6Date', p.dateInvoice || '', 'dateInvoice');
-    }
-
-    async function updateStageDate(field, value) {
-      if (!selectedId || !canViewFinancialDocs()) return;
-      var obj = {};
-      obj[field] = value.trim();
-      await db.collection("nalozi").doc(selectedId).update(obj);
     }
 
     function selectThumb(idx) {
@@ -1634,26 +1296,9 @@
       const txt = document.getElementById('txtOfferStatus');
       txt.innerText = '⏳ Spremam ponudu...';
 
-      try {
-        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
-        let url;
-        if (isPdf) {
-          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.pdf`;
-          url = await uploadToStorage(file, path);
-        } else {
-          const dataUrl = await processImageFile(file);
-          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
-          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.jpg`;
-          url = await uploadToStorage(dataUrl, path);
-        }
-        const updates = { offerDoc: url };
-        const p = projects.find(item => item.id === selectedId);
-        if (!p || !p.dateOffer) updates.dateOffer = formatToday();
-        await db.collection("nalozi").doc(selectedId).update(updates);
-        alert('✅ Ponuda uspješno učitana');
-      } catch (err) {
-        console.error(err);
-        alert('Greška pri učitavanju ponude: ' + (err.message || err));
+      const base64 = await processImageFile(file);
+      if (base64) {
+        await db.collection("nalozi").doc(selectedId).update({ offerDoc: base64 });
       }
       txt.innerText = 'Nema ponude';
       e.target.value = '';
@@ -1670,26 +1315,9 @@
       const txt = document.getElementById('txtRnStatus');
       txt.innerText = '⏳ Spremam RN...';
 
-      try {
-        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
-        let url;
-        if (isPdf) {
-          const path = `nalozi/${selectedId}/rn_${Date.now()}.pdf`;
-          url = await uploadToStorage(file, path);
-        } else {
-          const dataUrl = await processImageFile(file);
-          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
-          const path = `nalozi/${selectedId}/rn_${Date.now()}.jpg`;
-          url = await uploadToStorage(dataUrl, path);
-        }
-        const updates = { rnDoc: url };
-        const p = projects.find(item => item.id === selectedId);
-        if (!p || !p.dateRn) updates.dateRn = formatToday();
-        await db.collection("nalozi").doc(selectedId).update(updates);
-        alert('✅ Radni nalog uspješno učitan');
-      } catch (err) {
-        console.error(err);
-        alert('Greška pri učitavanju RN: ' + (err.message || err));
+      const base64 = await processImageFile(file);
+      if (base64) {
+        await db.collection("nalozi").doc(selectedId).update({ rnDoc: base64 });
       }
       txt.innerText = 'Nema radnog naloga';
       e.target.value = '';
@@ -1702,25 +1330,15 @@
 
     async function uploadDoneImages(e) {
       const files = Array.from(e.target.files);
-      if (!selectedId || files.length === 0) return;
+      if (!selectedId) return;
       const p = projects.find(item => item.id === selectedId);
-      let existing = [...(p.doneImages || [])];
-      try {
-        for (let f of files) {
-          const dataUrl = await processImageFile(f);
-          if (!dataUrl) continue;
-          const path = `nalozi/${selectedId}/montaza_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
-          const url = await uploadToStorage(dataUrl, path);
-          existing.push(url);
-        }
-        const updates = { doneImages: existing };
-        if (!p.dateMontaza) updates.dateMontaza = formatToday();
-        await db.collection("nalozi").doc(selectedId).update(updates);
-        alert('✅ Slike montaže učitane');
-      } catch (err) {
-        console.error(err);
-        alert('Greška: ' + (err.message || err));
+      const existing = p.doneImages || [];
+
+      for (let f of files) {
+        const b64 = await processImageFile(f);
+        if (b64) existing.push(b64);
       }
+      await db.collection("nalozi").doc(selectedId).update({ doneImages: existing });
       e.target.value = '';
     }
 
@@ -1751,12 +1369,10 @@
     async function handleImageSelection(e) {
       const files = Array.from(e.target.files);
       const status = document.getElementById('upload-status');
-      const modeEl = document.querySelector('input[name="imgMode"]:checked');
-      const mode = modeEl ? modeEl.value : 'color';
       
       for (let i = 0; i < files.length; i++) {
         status.innerText = `⏳ Učitavam sliku ${i+1}/${files.length}...`;
-        const base64 = await processImageFile(files[i], mode);
+        const base64 = await processImageFile(files[i]);
         if (base64) uploadedImages.push(base64);
       }
       renderPreviews();
@@ -1802,7 +1418,7 @@
         date: formattedDate,
         timestamp: Date.now(),
         notes: document.getElementById('cNotes').value,
-        images: [],
+        images: [...uploadedImages],
         offerDoc: null,
         rnDoc: null,
         positions: [],
@@ -1817,60 +1433,17 @@
 
       try {
         const docRef = await db.collection("nalozi").add(newProj);
-        const nalogId = docRef.id;
-        const imageUrls = [];
-        for (let i = 0; i < uploadedImages.length; i++) {
-          btn.innerText = `Upload slike ${i+1}/${uploadedImages.length}...`;
-          const path = `nalozi/${nalogId}/mjerenje_${i}_${Date.now()}.jpg`;
-          const url = await uploadToStorage(uploadedImages[i], path);
-          imageUrls.push(url);
-        }
-        if (imageUrls.length > 0) {
-          await db.collection("nalozi").doc(nalogId).update({ images: imageUrls });
-        }
         uploadedImages = [];
         renderPreviews();
         document.querySelector('form').reset();
         showAdminView();
-        openDetails(nalogId);
+        openDetails(docRef.id);
       } catch (err) {
-        console.error(err);
-        alert('Greška: ' + (err.message || err));
+        alert('Greška: ' + err.message);
       } finally {
         btn.disabled = false;
         btn.innerText = '💾 SPREMI MJERENJE';
       }
-    }
-
-    function exportNalozi() {
-      if (!canViewFinancialDocs()) {
-        alert('❌ Samo admin može exportati podatke.');
-        return;
-      }
-      // Mjerenja + slike montaže
-      const data = projects.map(p => ({
-        klijent: p.name,
-        mjernik: p.worker || '',
-        telefon: p.phone || '',
-        lokacija: p.loc || '',
-        datumMjerenja: p.date || '',
-        datumMontaze: p.dateMontaza || '',
-        napomene: p.notes || '',
-        napomeneMontaze: p.montazaNotes || '',
-        monteri: p.assignedMonteri || [],
-        brojSlikaMjerenja: (p.images || []).length,
-        linkoviSlikaMjerenja: p.images || [],
-        brojSlikaMontaze: (p.doneImages || []).length,
-        linkoviSlikaMontaze: p.doneImages || []
-      }));
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mjerenja_backup_' + formatToday().replace(/\./g, '-') + '.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      alert('✅ Export spreman – ' + data.length + ' zapisa (mjerenja + montaža). Spremi na svoj cloud.');
     }
 
     populateUserDropdowns();
