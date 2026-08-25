@@ -600,25 +600,59 @@
       }
     }
 
+    function workerName() {
+      return (currentWorker || '').toUpperCase().trim();
+    }
+    function isVedran() {
+      const u = workerName();
+      return u.indexOf('VEDRAN') !== -1;
+    }
+    function isAnkica() {
+      return workerName().indexOf('ANKICA') !== -1;
+    }
+    function isZlatko() {
+      return workerName().indexOf('ZLATKO') !== -1;
+    }
+    function isBranislav() {
+      return workerName().indexOf('BRANISLAV') !== -1;
+    }
+    function isMontazaMonter() {
+      // Siniša, Slaven, Nikola + assigned monters can set montirano/reklamacija
+      const u = workerName();
+      if (u.indexOf('SINIŠA') !== -1 || u.indexOf('SINISA') !== -1) return true;
+      if (u.indexOf('SLAVEN') !== -1) return true;
+      if (u.indexOf('NIKOLA') !== -1) return true;
+      if (u.indexOf('ZLATKO') !== -1) return true;
+      return false;
+    }
+    function isViewOnlyMonter() {
+      // Ljubo, Ranko, Miodrag - only view
+      const u = workerName();
+      return u.indexOf('LJUBO') !== -1 || u.indexOf('RANKO') !== -1 || u.indexOf('MIODRAG') !== -1;
+    }
+
     function canEditSkladiste() {
-      const u = currentWorker.toUpperCase().trim();
-      return u.includes('VEDRAN') || u.includes('BRANISLAV');
+      return isVedran() || isBranislav();
     }
 
     function canEditMontaza() {
-      if (!currentWorker) return false;
-      const u = currentWorker.toUpperCase().trim();
-      if (u.includes('VEDRAN') || u.includes('ANKICA')) return true;
+      if (isVedran()) return true;
+      if (isViewOnlyMonter()) return false;
+      if (isMontazaMonter()) return true;
+      // Dodijeljeni monteri na ovom nalogu
       if (!selectedId) return false;
       const p = projects.find(item => item.id === selectedId);
       if (!p || !p.assignedMonteri) return false;
-      return p.assignedMonteri.some(m => m.toUpperCase().trim() === u || u.includes(m.toUpperCase().trim()) || m.toUpperCase().includes(u));
+      const u = workerName();
+      return p.assignedMonteri.some(m => {
+        const mu = (m || '').toUpperCase().trim();
+        return mu === u || u.indexOf(mu) !== -1 || mu.indexOf(u) !== -1;
+      });
     }
 
     function canViewFinancialDocs() {
-      if (!currentWorker) return false;
-      const u = currentWorker.toUpperCase().trim();
-      return u.includes('VEDRAN') || u.includes('ANKICA') || u.includes('VUKANOVIĆ');
+      // Samo Vedran i Ankica vide ponudu/RN/fakturu jasno
+      return isVedran() || isAnkica();
     }
 
     function checkWorkerAuth() {
@@ -1007,12 +1041,22 @@
     }
 
     function canAssignMonteri() {
-      if (!currentWorker) return false;
-      const u = currentWorker.toUpperCase().trim();
-      // Samo Vedran i Zlatko Radiš
-      if (u.indexOf('VEDRAN') !== -1) return true;
-      if (u.indexOf('ZLATKO') !== -1) return true;
-      return false;
+      // Vedran i Zlatko mogu dodjeljivati montere
+      return isVedran() || isZlatko();
+    }
+
+    function canEditInvoice() {
+      // Ankica može fakturirati, ali nakon FAKTURIRANO samo Vedran može mijenjati
+      if (isVedran()) return true;
+      if (!isAnkica()) return false;
+      if (!selectedId) return true;
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.isInvoiced) return false; // zaključano
+      return true;
+    }
+
+    function canUploadOfferOrRn() {
+      return isVedran() || isAnkica();
     }
 
     async function toggleMonter(name, isChecked) {
@@ -1077,6 +1121,10 @@
 
     async function finalizeProjectInvoice() {
       if (!selectedId) return;
+      if (!canEditInvoice()) {
+        alert('❌ Samo Vedran može mijenjati status nakon što je nalog fakturiran. Ankica može samo prvi put označiti.');
+        return;
+      }
       const p = projects.find(item => item.id === selectedId);
       const num = document.getElementById('inpInvoiceNum').value.trim();
       const isAlreadyInvoiced = p.isInvoiced;
@@ -1422,6 +1470,7 @@
         btnFinal.innerText = '🔄 PONIŠTI STATUS FAKTURIRANO';
         btnFinal.style.background = 'rgba(239, 68, 68, 0.2)';
         btnFinal.style.color = '#f87171';
+        btnFinal.style.display = isVedran() ? 'block' : 'none';
       } else {
         pill.style.background = 'rgba(255,255,255,0.1)';
         pill.style.color = 'var(--text-muted)';
@@ -1429,6 +1478,7 @@
         btnFinal.innerText = '✅ OZNAČI KAO FAKTURIRANO';
         btnFinal.style.background = 'var(--success)';
         btnFinal.style.color = '#fff';
+        btnFinal.style.display = (isVedran() || isAnkica()) ? 'block' : 'none';
       }
 
       const invoicePrev = document.getElementById('invoiceDocPreview');
@@ -1630,6 +1680,11 @@
     });
 
     async function handleOfferUpload(e) {
+      if (!canUploadOfferOrRn()) {
+        alert('❌ Samo Vedran i Ankica mogu učitavati ponudu.');
+        e.target.value = '';
+        return;
+      }
       const file = e.target.files[0];
       if (!file || !selectedId) return;
       const txt = document.getElementById('txtOfferStatus');
@@ -1666,6 +1721,11 @@
     }
 
     async function handleRnUpload(e) {
+      if (!canUploadOfferOrRn()) {
+        alert('❌ Samo Vedran i Ankica mogu učitavati radni nalog.');
+        e.target.value = '';
+        return;
+      }
       const file = e.target.files[0];
       if (!file || !selectedId) return;
       const txt = document.getElementById('txtRnStatus');
