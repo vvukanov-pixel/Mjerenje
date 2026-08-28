@@ -514,14 +514,19 @@
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
       if (doc.exists && doc.data().pins) {
         userPins = { ...doc.data().pins };
-      } else {
+      } else if (!doc.exists) {
+        // Dokument stvarno ne postoji u bazi (prvo pokretanje) - jednokratno ga inicijaliziramo.
         userPins = { ...DEFAULT_PINS };
         db.collection("postavke").doc("pinovi").set({ pins: DEFAULT_PINS });
       }
+      // Ako dokument postoji ali (privremeno) nema 'pins' polje, NE diramo bazu -
+      // zadržavamo zadnje poznato stanje u memoriji dok ne stigne ispravan snapshot.
       populateUserDropdowns();
       renderPinTable();
       renderMonteriCheckboxes();
       checkWorkerAuth();
+    }, err => {
+      console.error("Greška pri čitanju PIN-ova:", err);
     });
 
     function populateUserDropdowns() {
@@ -595,8 +600,9 @@
 
     async function deleteWorker(name) {
       if (confirm(`Želite li obrisati radnika: ${name}?`)) {
-        delete userPins[name];
-        await db.collection("postavke").doc("pinovi").set({ pins: userPins });
+        await db.collection("postavke").doc("pinovi").update({
+          [`pins.${name}`]: firebase.firestore.FieldValue.delete()
+        });
       }
     }
 
@@ -730,8 +736,9 @@
         return;
       }
 
-      userPins[target] = newPin;
-      await db.collection("postavke").doc("pinovi").set({ pins: userPins });
+      await db.collection("postavke").doc("pinovi").update({
+        [`pins.${target}`]: newPin
+      });
       alert(`✅ Uspješno postavljen novi PIN za: ${target} (${newPin})`);
       document.getElementById('newPinVal').value = '';
     }
@@ -745,14 +752,12 @@
         return;
       }
 
-      userPins[name] = pin;
-      await db.collection("postavke").doc("pinovi").set({ pins: userPins });
+      await db.collection("postavke").doc("pinovi").update({
+        [`pins.${name}`]: pin
+      });
       
       document.getElementById('newWorkerName').value = '';
       document.getElementById('newWorkerPin').value = '';
-      populateUserDropdowns();
-      renderPinTable();
-      renderMonteriCheckboxes();
       alert(`✅ Dodan: ${name} (PIN: ${pin})`);
     }
 
