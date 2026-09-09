@@ -1234,8 +1234,9 @@
         const skladiste = positions.filter(x => x.status === 'skladiste').length;
         const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
 
+        const stage = getProjectStage(p);
         let statusText = '';
-        if (total > 0) {
+        if (total > 0 && (stage === 'skladiste' || stage === 'montirano' || stage === 'reklamacija')) {
           if (montirano === total) {
             statusText = `<span style="color:#10b981; font-weight:bold;">✅ Sve montirano (${montirano}/${total})</span>`;
           } else {
@@ -1243,7 +1244,14 @@
             statusText = `<span style="color:#38bdf8;">📦 Skladište: ${skladiste}</span> • <span style="color:#10b981;">🛠️ Montirano: ${montirano}</span>${extra}`;
           }
         } else {
-          statusText = '<span style="color:#fbbf24;">🏭 U Proizvodnji</span>';
+          const STAGE_LABELS = {
+            mjerenje: { text: '📐 Mjerenje', color: '#38bdf8' },
+            ponuda: { text: '📄 Ponuda', color: '#34d399' },
+            proizvodnja: { text: '🏭 U Proizvodnji', color: '#fbbf24' },
+            fakturirano: { text: '🏁 Fakturirano', color: '#a855f7' }
+          };
+          const label = STAGE_LABELS[stage] || STAGE_LABELS.mjerenje;
+          statusText = `<span style="color:${label.color}; font-weight:bold;">${label.text}</span>`;
         }
 
         let fakturaBadge = p.isInvoiced 
