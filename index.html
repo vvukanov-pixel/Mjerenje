@@ -1,419 +1,1954 @@
 <!DOCTYPE html>
 <html lang="hr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PORTON ponude</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TerenRad - Sustav Radnih Naloga</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #e8e6e1; font-family: Arial, Helvetica, sans-serif; color: #111; }
-    .app { display: grid; grid-template-columns: 400px 1fr; min-height: 100vh; }
-    .panel { background: #1a1a2e; color: #fff; padding: 18px 16px 36px; overflow-y: auto; max-height: 100vh; }
-    .panel h1 { font-size: 18px; }
-    .sub { color: #c9c9d4; font-size: 12px; margin: 4px 0 14px; }
-    label { display: block; font-size: 10px; color: #c9c9d4; margin: 8px 0 3px; text-transform: uppercase; letter-spacing: .4px; }
-    input, select, textarea { width: 100%; padding: 7px 8px; border: 1px solid #3a3a55; background: #121225; color: #fff; border-radius: 4px; font-size: 13px; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-    .item { background: #121225; border: 1px solid #3a3a55; border-radius: 6px; padding: 8px; margin-top: 8px; }
-    .item .hd { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #c9c9d4; margin-bottom: 4px; }
-    .ok { color: #9fdfb3; font-size: 11px; margin-top: 4px; }
-    .warn { color: #ffb4b4; font-size: 11px; margin-top: 4px; }
-    .btn { border: 0; cursor: pointer; border-radius: 5px; padding: 9px 12px; font-weight: 700; font-size: 13px; }
-    .btn-red { background: #c41e3a; color: #fff; width: 100%; margin-top: 10px; }
-    .btn-g { background: #2d6a4f; color: #fff; width: 100%; margin-top: 8px; }
-    .btn-x { background: transparent; color: #fff; border: 1px solid #555; padding: 4px 8px; font-size: 11px; }
-    .btn-del { background: #7a1f2e; color: #fff; border: 0; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; }
-    .extras { margin-top: 6px; max-height: 120px; overflow: auto; border: 1px solid #3a3a55; padding: 4px 6px; border-radius: 4px; }
-    .extras label { display: flex; align-items: center; gap: 6px; text-transform: none; font-size: 11px; color: #ddd; margin: 3px 0; letter-spacing: 0; }
-    .extras input { width: auto; }
-    .preview { padding: 16px; display: flex; justify-content: center; }
-    .sheet {
-      width: 210mm; min-height: 297mm; background: #fff;
-      padding: 10mm 14mm 12mm; box-shadow: 0 8px 30px rgba(0,0,0,.18);
-      color: #111;
+    :root {
+      --bg-dark: #0b1120;
+      --panel-dark: #151f38;
+      --card-dark: #1e294b;
+      --border-color: #2e3d66;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --purple: #a855f7;
+      --cyan: #06b6d4;
     }
-    .memo { height: auto; margin-bottom: 40mm; }
-    .memo img { width: 100%; height: auto; display: block; }
-    .top { display: grid; grid-template-columns: 1fr 77mm; gap: 8mm; align-items: start; }
-    .sheet h2 { font-size: 22px; font-weight: 700; letter-spacing: .3px; }
-    .tl { font-size: 11px; margin-top: 5px; }
-    .tl b { color: #c41e3a; }
-    .kupac { margin-top: 10px; font-size: 11px; }
-    .kupac b { display: block; font-size: 11px; margin-bottom: 2px; }
-    .meta { border: 0.5px solid #aaa; font-size: 8.5px; }
-    .meta div { display: grid; grid-template-columns: 28mm 1fr; border-bottom: 0.5px solid #aaa; padding: 4.2px 6px; min-height: 6.8mm; align-items: center; }
-    .meta div:last-child { border-bottom: 0; }
-    table.stavke { width: 100%; border-collapse: collapse; margin-top: 8mm; font-size: 8.5px; }
-    table.stavke th { background: #1a1a2e; color: #fff; text-align: left; padding: 5px 4px; font-weight: 700; font-size: 7.5px; letter-spacing: .2px; }
-    table.stavke td { padding: 6px 4px; vertical-align: top; border-bottom: 1px solid #e6e6e6; }
-    table.stavke tr:nth-child(even) td { background: #f5f5f5; }
-    table.stavke .opis { line-height: 1.35; }
-    .r { text-align: right; } .c { text-align: center; }
-    .totals { width: 88mm; margin: 5mm 0 0 auto; border: 0.5px solid #888; font-size: 10px; overflow: hidden; }
-    .totals div { display: flex; justify-content: space-between; padding: 3.5px 8px; }
-    .grand { background: #c41e3a; color: #fff; font-weight: 700; }
-    .nap { margin-top: 7mm; font-size: 9px; line-height: 1.45; }
-    .nap b { color: #c41e3a; display: block; margin-bottom: 2px; }
-    .foot { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-top: 6mm; }
-    .box { border: 0.5px solid #aaa; padding: 7px 10px; min-height: 22mm; font-size: 9px; }
-    .big { color: #c41e3a; font-size: 16px; font-weight: 700; margin: 4px 0 3px; }
-    .iban { color: #c41e3a; font-size: 12px; font-weight: 700; margin: 4px 0; }
-    .sign { margin-top: 8mm; font-size: 9px; }
-    @page { size: A4; margin: 8mm 8mm 10mm; }
-    @media print {
-      html, body { background: #fff !important; }
-      .panel { display: none !important; }
-      .app { display: block; }
-      .preview { padding: 0; }
-      .sheet { box-shadow: none; width: auto; min-height: auto; padding: 0; }
-      .memo { height: auto; margin-bottom: 40mm; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 17px; font-weight: bold; }
+    .logo span { color: #38bdf8; }
+
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .user-tag { background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+    
+    .btn-pin-nav { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: none; align-items: center; gap: 4px; }
+    .btn-pin-nav:hover { background: #334155; }
+
+    .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; }
+    .view-toggle button.active { background: var(--accent); color: white; }
+
+    .main-container { flex: 1; display: flex; width: 100%; position: relative; }
+
+    #monter-view { width: 100%; max-width: 650px; margin: 0 auto; padding: 16px; display: none; }
+    #monter-view.active { display: block; }
+    .card { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
+    input, textarea, select { width: 100%; background: #0f172a; border: 1px solid var(--border-color); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
+
+    .upload-zone { border: 2px dashed #0284c7; border-radius: 10px; padding: 18px; text-align: center; cursor: pointer; background: rgba(2, 132, 199, 0.08); margin-bottom: 12px; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .preview-thumb { position: relative; width: 100%; height: 75px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); background: #000; }
+    .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .btn-remove { position: absolute; top: 2px; right: 2px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; font-weight: bold; cursor: pointer; }
+
+    .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 13px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-submit:disabled { opacity: 0.5; }
+
+    #admin-view { width: 100%; display: none; }
+    #admin-view.active { display: flex; }
+    
+    .sidebar { width: 340px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; height: calc(100vh - 52px); }
+    .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
+    .search-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 7px 10px; border-radius: 6px; font-size: 12px; outline: none; }
+    .sidebar-list { flex: 1; overflow-y: auto; }
+    .project-item { padding: 12px 14px; border-bottom: 1px solid var(--border-color); cursor: pointer; border-left: 4px solid #38bdf8; }
+    .project-item:hover { background: var(--card-dark); }
+    .project-item.selected { background: rgba(37,99,235,0.2); }
+    .project-item h4 { font-size: 14px; margin-bottom: 3px; }
+    .project-item p { font-size: 11px; color: var(--text-muted); }
+
+    .detail-panel { flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; height: calc(100vh - 52px); }
+    .full-width { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+
+    .btn-mobile-back { display: none; background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .btn-action-group { display: flex; gap: 8px; }
+    .btn-action { padding: 7px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; }
+    .btn-print { background: var(--accent); color: white; }
+    .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+    .grid-six-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+
+    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 360px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
+    .main-sketch img { width: 100%; height: 100%; max-height: 360px; object-fit: contain; }
+    .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+    .gallery-thumb { width: 55px; height: 55px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; }
+    .gallery-thumb.active { border-color: #38bdf8; opacity: 1; }
+    .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 18px; text-align: center; background: rgba(0,0,0,0.2); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); padding: 8px; }
+    .doc-preview img { width: 100%; max-height: 340px; object-fit: contain; }
+
+    .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
+    .pos-name { font-size: 13px; font-weight: bold; flex: 1; color: white; }
+    
+    .status-chip { font-size: 11px; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; }
+    .status-chip.disabled-btn { cursor: default; opacity: 0.85; }
+    .chip-proizvodnja { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .chip-skladiste { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .chip-montirano { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .chip-reklamacija { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.6); }
+
+    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+    .monter-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+    .monter-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
+    .monter-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #c084fc; }
+
+    .pin-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+    .pin-table th { background: #0f172a; color: var(--text-muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color); font-size: 11px; text-transform: uppercase; }
+    .pin-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .pin-table tr:hover { background: rgba(255,255,255,0.02); }
+    .pin-code-badge { background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 13px; font-weight: bold; padding: 3px 8px; border-radius: 4px; border: 1px solid #334155; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+    .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; width: 100%; max-width: 480px; text-align: center; position: relative; max-height: 90vh; overflow-y: auto; }
+
+    .lightbox-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 300; display: none; flex-direction: column; overflow: hidden; }
+    .lightbox-header { position: absolute; top: 12px; right: 16px; display: flex; align-items: center; gap: 8px; z-index: 310; }
+    .lightbox-header button { background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .btn-close-lightbox { background: var(--danger) !important; border: none !important; }
+    .lightbox-viewport { flex: 1; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+    .lightbox-viewport:active { cursor: grabbing; }
+    .lightbox-img { max-width: 90vw; max-height: 85vh; object-fit: contain; transform-origin: center center; transition: transform 0.05s ease-out; user-select: none; }
+
+    @media (max-width: 900px) {
+      .main-container { display: block; }
+      .sidebar { width: 100%; height: auto; min-height: calc(100vh - 52px); border-right: none; display: block; }
+      .sidebar.mobile-hide { display: none; }
+      .detail-panel { width: 100%; height: auto; min-height: calc(100vh - 52px); display: none; padding: 12px; }
+      .detail-panel.mobile-show { display: flex; }
+      .btn-mobile-back { display: block; }
     }
-    @media (max-width: 980px) { .app { grid-template-columns: 1fr; } .panel { max-height: none; } }
   </style>
 </head>
 <body>
-<div class="app">
-  <aside class="panel">
-    <h1>PORTON PONUDE</h1>
-    <p class="sub">Cjenik 2026/2027 · print spreman</p>
 
-    <label>Broj ponude</label>
-    <div class="row2">
-      <input id="broj" />
-      <button class="btn btn-x" onclick="noviBroj()">Novi broj</button>
+  <div id="lightbox" class="lightbox-overlay">
+    <div class="lightbox-header">
+      <button onclick="zoomIn(event)">➕</button>
+      <button onclick="zoomOut(event)">➖</button>
+      <button onclick="resetZoom(event)">↺ Reset</button>
+      <button class="btn-close-lightbox" onclick="closeLightbox()">✕ Zatvori</button>
     </div>
-    <button class="btn btn-red" style="margin-top:8px" onclick="novaPonuda()">Nova ponuda (obriši sve)</button>
-    <label>Kupac</label>
-    <input id="kupac" placeholder="Ime i prezime / firma" oninput="render()" />
-    <label>Mjesto</label>
-    <input id="grad" value="20000 DUBROVNIK" oninput="render()" />
-    <div class="row2">
-      <div><label>Datum</label><input id="datum" oninput="render()" /></div>
-      <div><label>Valjanost</label><input id="valjanost" value="15 dana" oninput="render()" /></div>
+    <div class="lightbox-viewport" id="zoomViewport">
+      <img id="lightboxImg" class="lightbox-img" src="" alt="Pregled">
     </div>
-    <label>Rok isporuke</label>
-    <input id="isporuka" value="30 radnih dana" oninput="render()" />
-    <label>Plaćanje</label>
-    <input id="placanje" value="70% avans, ostatak nakon ugradnje" oninput="render()" />
-    <label>Uvećanje cijene iz cjenika (%)</label>
-    <input id="postotak" type="number" value="0" oninput="render()" />
+  </div>
 
-    <div id="stavke"></div>
-    <button class="btn btn-g" onclick="dodaj()">+ Dodaj stavku</button>
-
-    <div class="row2">
-      <div><label>Montaža € / kom</label><input id="montaza" type="number" value="100" oninput="render()" /></div>
-      <div><label>Montaža kom (prazno = sva)</label><input id="montazaKom" type="number" placeholder="sva vrata" oninput="render()" /></div>
-    </div>
-    <div class="row2">
-      <div><label>Dostava € / kom</label><input id="dostava" type="number" value="10" oninput="render()" /></div>
-      <div><label>Dostava kom (prazno = sva)</label><input id="dostavaKom" type="number" placeholder="sva vrata" oninput="render()" /></div>
-    </div>
-    <label>Dodatna napomena</label>
-    <textarea id="napomena" rows="3" oninput="render()"></textarea>
-    <button class="btn btn-red" onclick="window.print()">Print / PDF</button>
-  </aside>
-  <div class="preview"><div class="sheet" id="sheet"></div></div>
-</div>
-
-<script>
-const FALC = {
-  "Bijelo mat":{107:370,130:388,150:400,190:427,230:485,280:547},
-  "Bijelo matrix":{107:380,130:398,150:412,190:440,230:513,280:577},
-  "Bijelo palisander":{107:393,130:409,150:422,190:451,230:525,280:590},
-  "Bijelo reflex":{107:407,130:426,150:439,190:476,230:542,280:597},
-  "Saten reflex":{107:419,130:446,150:460,190:496,230:565,280:618},
-  "Hrast pembroke":{107:426,130:453,150:466,190:null,230:573,280:629},
-  "Beton maloja":{107:416,130:436,150:447,190:null,230:551,280:608},
-  "Brijest":{107:403,130:422,150:434,190:null,230:538,280:597},
-  "Orah alter":{107:405,130:424,150:436,190:null,230:540,280:596},
-  "Palisandro blu":{107:424,130:445,150:456,190:null,230:560,280:617},
-  "Tortora":{107:420,130:441,150:458,190:null,230:555,280:613}
-};
-const FILO_IV = {
-  "Bijelo reflex":{107:512,130:537,150:558,190:593,230:663,280:726},
-  "Saten reflex":{107:514,130:540,150:560,190:595,230:665,280:728},
-  "Tortora":{107:530,130:544,150:571,190:null,230:674,280:740}
-};
-const FILO_SA = {
-  "Bijelo mat":{107:411,130:425,150:437,190:468,230:535,280:599},
-  "Lakirano bijelo sa ukladama":{107:736,130:750,150:762,190:791,230:863,280:926}
-};
-const MURO = {
-  "Argento":{lo:640,hi:960},
-  "Bijelo mat":{lo:660,hi:980},
-  "Crno mat":{lo:680,hi:1000}
-};
-const SLIDE = {
-  "Bijelo mat":{S1:467,S2:570,S3:800,S4:250,S5:400},
-  "Bijelo matrix":{S1:471,S2:573,S3:803,S4:253,S5:408},
-  "Bijelo palisander":{S1:478,S2:579,S3:810,S4:262,S5:430},
-  "Bijelo reflex":{S1:488,S2:594,S3:825,S4:276,S5:449},
-  "Saten reflex":{S1:496,S2:597,S3:829,S4:279,S5:464},
-  "Hrast pembroke":{S1:506,S2:607,S3:839,S4:289,S5:474},
-  "Beton maloja":{S1:496,S2:597,S3:828,S4:280,S5:457},
-  "Brijest":{S1:483,S2:582,S3:813,S4:267,S5:442},
-  "Orah alter":{S1:485,S2:582,S3:813,S4:269,S5:446},
-  "Palisandro blu":{S1:505,S2:598,S3:829,S4:290,S5:468},
-  "Tortora":{S1:493,S2:602,S3:811,S4:277,S5:470}
-};
-const MODELI = [
-  ["falc","FALC ispuna saće"],
-  ["filo_iverica","FILO cjevasta iverica"],
-  ["filo_sace","FILO ispuna saće"],
-  ["filo_muro","FILO MURO"],
-  ["slide1","SLIDE 1 (economic + drvena maska)"],
-  ["slide2","SLIDE 2 (soft close + Al maska)"],
-  ["slide3","SLIDE 3 (skrivena vodilica)"],
-  ["slide4","SLIDE 4 (samo krilo)"],
-  ["slide5","SLIDE 5 (kazetna vrata)"]
-];
-const STOK = ["107","130","150","190","230","280"];
-const DODACI = [
-  {id:"multipunto", n:"Brava multipunto", c:300},
-  {id:"hotelska", n:"Brava hotelska", c:915},
-  {id:"brava_kazetna", n:"Brava za kazetna vrata", c:50},
-  {id:"brava_klizna", n:"Brava za klizna sa stoperom", c:90},
-  {id:"okov_crno", n:"Okov brava/prihvatnik/kapice CRNO", c:30},
-  {id:"cilindar", n:"Cilindar", c:18},
-  {id:"elektro", n:"Prihvatnik elektro", c:200},
-  {id:"kapice4k", n:"Pokrovne kapice 4K (6 kom)", c:11},
-  {id:"zurilo", n:"Zurilo", c:17},
-  {id:"padajuca", n:"Padajuća brtva", c:63},
-  {id:"resetka", n:"Ventilacijska rešetka", c:60},
-  {id:"medumjera", n:"Međumjera krila 730/830", c:200},
-  {id:"zapiljivanje", n:"Zapiljivanje dovratnika 230 na 206", c:60},
-  {id:"rupa_zurilo", n:"Rupa za zurilo", c:5},
-  {id:"busenje", n:"Bušenje bez rupe za ključ", c:5},
-  {id:"prosirivac", n:"Proširivač 220 mm", c:150},
-  {id:"zl70", n:"Z.L. 70/12 pero 40 mm", c:16},
-  {id:"zl90", n:"Z.L. 90/12 pero 40 mm", c:16},
-  {id:"iverica", n:"Ispuna krila cjevasta iverica", c:60},
-  {id:"krilo_visina", n:"Krilo duže/kraće od dovratnika", c:100},
-  {id:"krilo_sirina", n:"Krilo širine 934–1200 mm", c:530},
-  {id:"muro_sirina", n:"FILO MURO nestandardna širina", c:400},
-  {id:"al1", n:"AL1 Inox/Crna/Zlatna", c:26},
-  {id:"al2", n:"AL2", c:52},
-  {id:"st1_bez", n:"Otvora ST1 bez stakla", c:80},
-  {id:"st1_sa", n:"Otvora ST1 sa staklom", c:242},
-  {id:"st2_sa", n:"Otvora ST2 sa staklom", c:223},
-  {id:"st3_sa", n:"Otvora ST3 sa staklom", c:190},
-  {id:"nadsvjetlo_staklo", n:"Staklo nadsvjetlo", c:204},
-  {id:"dosvjetlo_staklo", n:"Staklo dosvjetlo", c:401}
-];
-
-function dekori(m){
-  if(m==="filo_iverica") return Object.keys(FILO_IV);
-  if(m==="filo_sace") return Object.keys(FILO_SA);
-  if(m==="filo_muro") return Object.keys(MURO);
-  if(m.startsWith("slide")) return Object.keys(SLIDE);
-  return Object.keys(FALC);
-}
-function slideKey(m){ return ({slide1:"S1",slide2:"S2",slide3:"S3",slide4:"S4",slide5:"S5"})[m]; }
-function cijena(s){
-  const v = Number(s.visina)||210, st = s.stok;
-  if(s.model==="falc") return (FALC[s.dekor]||{})[st] ?? null;
-  if(s.model==="filo_iverica") return (FILO_IV[s.dekor]||{})[st] ?? null;
-  if(s.model==="filo_sace") return (FILO_SA[s.dekor]||{})[st] ?? null;
-  if(s.model==="filo_muro"){ const r=MURO[s.dekor]; return r ? (v>=215?r.hi:r.lo) : null; }
-  const sk = slideKey(s.model);
-  if(sk) return (SLIDE[s.dekor]||{})[sk] ?? null;
-  return null;
-}
-function opis(m){
-  return {
-    falc:["Sobna vrata FALC","Ispuna saće, 4K spojnice","magnetna brava"],
-    filo_iverica:["Sobna vrata FILO","Cjevasta iverica, skrivene","baglame, magnetna brava"],
-    filo_sace:["Sobna vrata FILO","Ispuna saće, skrivene","baglame, magnetna brava"],
-    filo_muro:["Vrata FILO MURO","Ispuna saće, skrivene baglame","magnet, ALU skriveni štok"],
-    slide1:["Klizna vrata SLIDE 1","Vodilica economic, drvena maska","ukopna ručka, saće"],
-    slide2:["Klizna vrata SLIDE 2","Soft close, Al maska","ukopna ručka, saće"],
-    slide3:["Klizna vrata SLIDE 3","Skrivena vodilica soft close","ukopna ručka, saće"],
-    slide4:["Klizno krilo SLIDE 4","Ukopna ručka, ispuna saće","bez vodilice / maske"],
-    slide5:["Klizna kazetna SLIDE 5","Kazetni dovratnik KIT","ukopna ručka, saće"]
-  }[m] || ["Vrata"];
-}
-function stokTxt(s){
-  if(s.model==="filo_muro") return "skriveni ALU";
-  if(s.model && s.model.startsWith("slide")) return s.model==="slide5" ? "kazetni KIT" : "bez dovratnika";
-  return (Number(s.stok)/10).toString().replace(".",",") + " cm";
-}
-function fmt(n){ return Number(n).toLocaleString("hr-HR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function today(){
-  const d=new Date();
-  return String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0")+"."+d.getFullYear()+".";
-}
-function nextBroj(){
-  const d=new Date();
-  const p="P-"+String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
-  const k="porton-broj-"+p;
-  let n=1;
-  try{ n=parseInt(localStorage.getItem(k)||"0",10)+1; localStorage.setItem(k,String(n)); }catch(e){}
-  return p+"-"+String(n).padStart(3,"0");
-}
-function prazna(){ return {model:"filo_muro",dekor:"Bijelo mat",sirina:"80",visina:"210",stok:"107",kom:"1",dodaci:[]}; }
-
-let stavke = [];
-
-function novaPonuda(){
-  document.getElementById("kupac").value = "";
-  document.getElementById("napomena").value = "";
-  document.getElementById("postotak").value = "0";
-  document.getElementById("montazaKom").value = "";
-  document.getElementById("dostavaKom").value = "";
-  document.getElementById("datum").value = today();
-  stavke = [];
-  document.getElementById("broj").value = nextBroj();
-  paintStavke();
-  render();
-}
-function noviBroj(){ document.getElementById("broj").value = nextBroj(); render(); }
-function dodaj(){ stavke.push(prazna()); paintStavke(); render(); }
-function del(i){ stavke.splice(i,1); paintStavke(); render(); }
-function setS(i,f,v){
-  stavke[i][f]=v;
-  if(f==="model"){
-    const d=dekori(v);
-    if(!d.includes(stavke[i].dekor)) stavke[i].dekor=d[0];
-    paintStavke();
-  }
-  render();
-}
-function toggleDodatak(i,id){
-  const arr = stavke[i].dodaci || [];
-  stavke[i].dodaci = arr.includes(id) ? arr.filter(x=>x!==id) : arr.concat([id]);
-  paintStavke();
-  render();
-}
-function val(id){ return document.getElementById(id).value; }
-function dodaciIznos(s){
-  return (s.dodaci||[]).reduce((a,id)=>{
-    const d=DODACI.find(x=>x.id===id);
-    return a+(d?d.c:0);
-  },0);
-}
-
-function paintStavke(){
-  const box=document.getElementById("stavke");
-  box.innerHTML = stavke.map((s,i)=>{
-    const ds=dekori(s.model);
-    const base=cijena(s);
-    const needStok = s.model==="falc"||s.model==="filo_iverica"||s.model==="filo_sace";
-    const extrasHtml = DODACI.map(d=>{
-      const on=(s.dodaci||[]).includes(d.id);
-      return `<label><input type="checkbox" ${on?"checked":""} onchange="toggleDodatak(${i},'${d.id}')"><span>${d.n} (${fmt(d.c)} €)</span></label>`;
-    }).join("");
-    const extraSum = dodaciIznos(s);
-    return `<div class="item">
-      <div class="hd"><span>Stavka ${i+1}</span><button class="btn-del" onclick="del(${i})">Obriši stavku</button></div>
-      <label>Model</label>
-      <select onchange="setS(${i},'model',this.value)">${MODELI.map(([id,l])=>`<option value="${id}" ${s.model===id?"selected":""}>${l}</option>`).join("")}</select>
-      <label>Dekor</label>
-      <select onchange="setS(${i},'dekor',this.value)">${ds.map(d=>`<option ${s.dekor===d?"selected":""}>${d}</option>`).join("")}</select>
-      <div class="row3">
-        <div><label>Širina</label><input value="${s.sirina}" oninput="setS(${i},'sirina',this.value)"></div>
-        <div><label>Visina</label><input value="${s.visina}" oninput="setS(${i},'visina',this.value)"></div>
-        <div><label>Kom</label><input type="number" value="${s.kom}" oninput="setS(${i},'kom',this.value)"></div>
+  <div id="loginModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 380px;">
+      <h3 style="margin-bottom: 6px; font-size: 18px; color: #fff;">Prijava Korisnika</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Odaberite svoje ime i unesite PIN:</p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label>Korisnik:</label>
+        <select id="userSelectDropdown" style="margin-bottom: 12px; font-weight: bold; background: #0f172a; color: #fff;"></select>
       </div>
-      ${needStok?`<label>Štok mm</label><select onchange="setS(${i},'stok',this.value)">${STOK.map(t=>`<option ${s.stok===t?"selected":""}>${t}</option>`).join("")}</select>`:""}
-      ${base==null?`<div class="warn">Nema cijene u cjeniku za ovu kombinaciju.</div>`:
-        `<div class="ok">Cjenik ${fmt(base)} €${extraSum?` + dodaci ${fmt(extraSum)} €`:""} → nakon % ${fmt((base+extraSum)*(1+(Number(val("postotak"))||0)/100))} €</div>`}
-      <label>Dodaci iz cjenika</label>
-      <div class="extras">${extrasHtml}</div>
-    </div>`;
-  }).join("") || `<div class="warn" style="margin-top:8px">Nema stavki. Dodaj stavku.</div>`;
-}
 
-function render(){
-  const markup=(Number(val("postotak"))||0)/100;
-  const rows=stavke.map(s=>{
-    const base=cijena(s);
-    const extra=dodaciIznos(s);
-    const raw = base==null ? null : base+extra;
-    const cij=raw==null?null:+(raw*(1+markup)).toFixed(2);
-    const kom=Number(s.kom)||0;
-    const extraNames=(s.dodaci||[]).map(id=>(DODACI.find(x=>x.id===id)||{}).n).filter(Boolean);
-    return {...s,base,extra,cij,kom,uk:cij==null?null:+(cij*kom).toFixed(2),extraNames};
-  });
-  const vrataKom=rows.reduce((a,r)=>a+r.kom,0);
-  const vrataIzn=rows.reduce((a,r)=>a+(r.uk||0),0);
-  const mKom = val("montazaKom")==="" ? vrataKom : Number(val("montazaKom"))||0;
-  const dKom = val("dostavaKom")==="" ? vrataKom : Number(val("dostavaKom"))||0;
-  const mI = +((Number(val("montaza"))||0)*mKom).toFixed(2);
-  const dI = +((Number(val("dostava"))||0)*dKom).toFixed(2);
-  const sub=+(vrataIzn+mI+dI).toFixed(2);
-  const pdv=+(sub*0.25).toFixed(2);
-  const tot=+(sub+pdv).toFixed(2);
-  const av=+(tot*0.7).toFixed(2);
-  const os=+(tot-av).toFixed(2);
-  const dekoriSet=[...new Set(rows.map(r=>r.dekor))].filter(Boolean).join(" / ") || "—";
-  let n=rows.length;
-  const extraRows=[];
-  if(mI>0){ n++; extraRows.push(`<tr><td>${n}</td><td>Montaža</td><td>—</td><td>—</td><td>${fmt(Number(val("montaza"))||0)} € / vrata</td><td class="c">${mKom}</td><td class="r">${fmt(Number(val("montaza"))||0)}</td><td class="r">${fmt(mI)}</td></tr>`); }
-  if(dI>0){ n++; extraRows.push(`<tr><td>${n}</td><td>Dostava</td><td>—</td><td>—</td><td>${fmt(Number(val("dostava"))||0)} € / vrata</td><td class="c">${dKom}</td><td class="r">${fmt(Number(val("dostava"))||0)}</td><td class="r">${fmt(dI)}</td></tr>`); }
-
-  document.getElementById("sheet").innerHTML = `
-        <div class="memo">
-      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/6xaJSlACEQAAAAEAABZ/anVtYgAAAB5qdW1kYzJwYQARABCAAACqADibcQNjMnBhAAAAFllqdW1iAAAAR2p1bWRjMm1hABEAEIAAAKoAOJtxA3VybjpjMnBhOmNhMjFiNjQ1LWQzZDYtNDhkNy05ZjY0LWQxOTZkOGE4M2FiYgAAAAOUanVtYgAAAClqdW1kYzJhcwARABCAAACqADibcQNjMnBhLmFzc2VydGlvbnMAAAAAuWp1bWIAAABEanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5pbmdyZWRpZW50LnYzAAAAABhjMnNo8UC2wsgcqEINPS6CXj9BUgAAAG1jYm9yo2lkYzpmb3JtYXRqaW1hZ2UvanBlZ2ppbnN0YW5jZUlEeCx4bXA6aWlkOjE3NzNjNmRmLThhM2UtNGZlOC05ZDEyLWM4Mzc3NDk5ZjVjNGxyZWxhdGlvbnNoaXBocGFyZW50T2YAAAHianVtYgAAAEFqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmFjdGlvbnMudjIAAAAAGGMyc2jArDoXR61uOsAifVgAPZzQAAABmWNib3KiZ2FjdGlvbnOComZhY3Rpb25rYzJwYS5vcGVuZWRqcGFyYW1ldGVyc6FraW5ncmVkaWVudHOBomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCDzNqGYXr2xjXwcZf1E9P5rGuUxXgYxwic+JgPWlh3gWKRmYWN0aW9ueB1jb20uYW50aHJvcGljLmNsYXVkZS5wcm92aWRlZGpwYXJhbWV0ZXJzoXgfY29tLmFudGhyb3BpYy5vcmlnaW4tY29uZmlkZW5jZWd1bmtub3dua2Rlc2NyaXB0aW9ueGZDbGF1ZGUgcHJvdmlkZWQgdGhpcyBmaWxlIGF0IHRoZSByZXF1ZXN0IG9mIGEgdXNlciBhbmQgbWF5IGhhdmUgY3JlYXRlZCBvciBtb2RpZmllZCB0aGUgZmlsZSBjb250ZW50cy5tc29mdHdhcmVBZ2VudKFkbmFtZWZDbGF1ZGVyYWxsQWN0aW9uc0luY2x1ZGVk9QAAAMhqdW1iAAAAQGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaGFzaC5kYXRhAAAAABhjMnNoqhhaRybcBwoVuyaMiBWJZAAAAIBjYm9ypWNhbGdmc2hhMjU2Y3BhZE4AAAAAAAAAAAAAAAAAAGRoYXNoWCDG3sJ1rsRERXkSR+/3rAVGmR0PZP707cFWPff3JXTRVmRuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBRmbGVuZ3RoGRaLAAACPmp1bWIAAAAnanVtZGMyY2wAEQAQgAAAqgA4m3EDYzJwYS5jbGFpbS52MgAAAAIPY2JvcqVjYWxnZnNoYTI1NmlzaWduYXR1cmV4TXNlbGYjanVtYmY9L2MycGEvdXJuOmMycGE6Y2EyMWI2NDUtZDNkNi00OGQ3LTlmNjQtZDE5NmQ4YTgzYWJiL2MycGEuc2lnbmF0dXJlamluc3RhbmNlSUR4LHhtcDppaWQ6NjVhN2Y1ZjItZDljOS00ZDExLWI3M2ItY2ZjZmVjYTMwYTAxcmNyZWF0ZWRfYXNzZXJ0aW9uc4OiY3VybHgtc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5pbmdyZWRpZW50LnYzZGhhc2hYIPM2oZhevbGNfBxl/UT0/msa5TFeBjHCJz4mA9aWHeBYomN1cmx4KnNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuYWN0aW9ucy52MmRoYXNoWCDYuQKHJyJpwwJYwdmYWSc+2asL/PGL8K9QQ2QC1ujnAaJjdXJseClzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmhhc2guZGF0YWRoYXNoWCBLlnqosiqkW3QgexoMZKj90KceFiHewDnk8fRrvzndJ3RjbGFpbV9nZW5lcmF0b3JfaW5mb6NkbmFtZW9BbnRocm9waWMgRmlsZXNndmVyc2lvbmUxLjAuMGtzcGVjVmVyc2lvbmUyLjQuMAAAEDhqdW1iAAAAKGp1bWRjMmNzABEAEIAAAKoAOJtxA2MycGEuc2lnbmF0dXJlAAAAEAhjYm9y0oRZAhKiASYYIVkCCjCCAgYwggGNoAMCAQICFEDloAruwjnQvriD+gZCBT1nVRMAMAoGCCqGSM49BAMDMEkxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMS4wLAYDVQQDEyVBbnRocm9waWMgQ29udGVudCBDcmVkZW50aWFscyBSb290IENBMB4XDTI2MDgwNzE4NDM1NloXDTI4MDgwNjE5NDM1NlowRDEXMBUGA1UEChMOQW50aHJvcGljLCBQQkMxKTAnBgNVBAMTIEFudGhyb3BpYyBDbGF1ZGUgQ29udGVudCBTaWduaW5nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmHoKa8tQGAUU1TS9QqU5W0Tp2N3XsvlK7BfQt6YWKwEzd2R3/dzKPEUDdCjlLjp9fT+KFjRVnuZ9v0oXvTe3k6NYMFYwDgYDVR0PAQH/BAQDAgeAMBUGA1UdJQQOMAwGCisGAQQBg+heAgEwDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBTOUeIEgU5kWyP448TPmj6cwddcwjAKBggqhkjOPQQDAwNnADBkAjAxcx0UngF60stVjs5G4T2eiptsBk5mf9oCtfJPAUBl8qs/PEXa8+gk1/X5QJ2DVcYCMHBfXN31YapiSqYvlIWrDVDJKOvXMl+kkz37Wt0PBI8sw486Mq6JeOhT+lRR4b1HCaFjcGFkWQ2eAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9lhAga8hOBIqMRlGZEMDQd0+7udX6WRAWq0f8i06qsLOkc+LDQdZkgPffAKnFSWk3vsiPUwF3V3Y8+neRn4TPUNkZf/bAEMACAYGBwYFCAcHBwkJCAoMFA0MCwsMGRITDxQdGh8eHRocHCAkLicgIiwjHBwoNyksMDE0NDQfJzk9ODI8LjM0Mv/bAEMBCQkJDAsMGA0NGDIhHCEyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMv/AABEIAKED4AMBIgACEQEDEQH/xAAfAAABBQEBAQEBAQAAAAAAAAAAAQIDBAUGBwgJCgv/xAC1EAACAQMDAgQDBQUEBAAAAX0BAgMABBEFEiExQQYTUWEHInEUMoGRoQgjQrHBFVLR8CQzYnKCCQoWFxgZGiUmJygpKjQ1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4eLj5OXm5+jp6vHy8/T19vf4+fr/xAAfAQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgv/xAC1EQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/APf6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKY/A/EfzrwL4jeJtd0/x7qdraaxfW9unlbIop2VVzEhOAD6kmnFXA+gKK+V/+Ey8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09a5+00a5LTT3lqr3J02CBHdlZhIFfeAc8clee9ULjQLtyBcQXcqSWUMA+zeQWiZVIYZk5XnkFT1+goA7XzEx95eu3r39KrT38Frdw28zbWmV2VjgKAuM5P4isRtLu28TLqH2cG0WRVMBcZdwuPtGM4yM7cdcDPUAVau7J9R1PTri5sF8qET7kkKttJICnGecgE+2ecUAbDTRJjdIi5xjJAznpUtctpGhyxXllJeWaFLa0eJNzK3lt5mVAH+7jnt0rqaACiiigAooooAKKKKACiiigAooooAKKKKACiijI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAKKMj1oyPWgAooyPWjI9aACijI9aMj1oAaFUMWCjceCccmnUZHrRketABRRketGR60AFFGR60ZHrQAUUZHrRketABRRketGR60AFFGaKACiiigAooooAKKKKACiiigAooooAKKKKAKWoW8t1p9xbxTvbySRsiTJ1QkEBhyOR161xv/CB67/0Ouo/k/wD8crvqTFTKCluaU606fw/kn+ZwX/CBa9/0Ouofk/8A8co/4QLXv+h11D8n/wDjld7ijH0qPZR/ps1+t1e6+5f5HBf8IFr3/Q66h+T/APxyj/hAte/6HXUPyf8A+OV3uPpRj6Ueyj/TYfW6vl9y/wAjgv8AhAte/wCh11D8n/8AjlH/AAgWvf8AQ66h+T//AByu9x9KMfSj2Uf6bD63V8vuX+RwX/CB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DrqH5P8A/HKP+EC17/oddQ/J/wD45Xe4+lGPpR7KP9Nh9bq+X3L/ACOC/wCEC17/AKHXUPyf/wCOUf8ACBa9/wBDrqH5P/8AHK73H0ox9KPZR/psPrdXy+5f5HBf8IFr3/Q66h+T/wDxyj/hAte/6HXUPyf/AOOV3uPpRj6Ueyj/AE2H1ur5fcv8jgv+EC17/oddQ/J//jlH/CBa9/0Ouofk/wD8crvcfSjH0o9lH+mw+t1fL7l/kcF/wgWvf9DrqH5P/wDHKP8AhAte/wCh11D8n/8Ajld7j6UY+lHso/02H1ur5fcv8jgv+EC17/oddQ/J/wD45R/wgWvf9DrqH5P/APHK73H0ox9KPZR/psPrdXy+5f5HBf8ACBa9/wBDrqH5P/8AHKP+EC17/oddQ/J//jld7j6UY+lHso/02H1ur5fcv8jgv+EC17/oddQ/J/8A45R/wgWvf9DrqH5P/wDHK73H0ox9KPZR/psPrdXy+5f5HBf8IFr3/Q66h+T/APxyj/hAte/6HXUPyf8A+OV3uPpRj6Ueyj/TYfW6vl9y/wAjgv8AhAte/wCh11D8n/8AjlH/AAgWvf8AQ66h+T//AByu9x9KMfSj2Uf6bD63V8vuX+RwX/CBa9/0Ouofk/8A8co/4QLXv+h11D8n/wDjld7j6UY+lHso/wBNh9bq+X3L/I4L/hAte/6HXUPyf/45R/wgWvf9DrqH5P8A/HK73H0ox9KPZR/psPrdXy+5f5HBf8IFr3/Q66h+T/8Axyj/AIQLXv8AoddQ/J//AI5Xe4+lGKPZR/psPrdXy+5f5HEWPgvWrS/t55fF19NHFKrtEwfEgBBKnMh4PTpXcDp1poHvTq0UVHYxqVZVHeX5JfkLRRRTICiiigAooooAKKKKACiiigAooooAKSiigELRRRSAKKKKGAUUUUAFFFFMAooooAKKKKACg0UUgCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASloopgFFFFABRRRQAUUUUAf/2Q==" alt="PORTAL MONTAŽA &amp; SERVIS">
-    </div>
-    <div class="top">
-      <div>
-        <h2>PONUDA</h2>
-        <div class="tl">Sobna vrata – <b>${dekoriSet}</b></div>
-        <div class="kupac"><b>Kupac / Naručitelj:</b>${val("kupac")||"________________"}<div>${val("grad")}</div></div>
+      <div class="form-group" style="text-align: left; margin-bottom: 16px;">
+        <label>PIN Lozinka:</label>
+        <input type="password" id="userPinInput" placeholder="PIN..." style="font-size: 18px; text-align: center; letter-spacing: 6px;" inputmode="numeric">
       </div>
-      <div class="meta">
-        <div><span>BROJ PONUDE:</span><b>${val("broj")}</b></div>
-        <div><span>DATUM:</span><b>${val("datum")}</b></div>
-        <div><span>VALJANOST:</span><b>${val("valjanost")}</b></div>
-        <div><span>ISPORUKA:</span><b>${val("isporuka")}</b></div>
-        <div><span>PLAĆANJE:</span><b>${val("placanje")}</b></div>
+
+      <button onclick="confirmUserLogin()" class="btn-submit">POTVRDI PRIJAVU</button>
+    </div>
+  </div>
+
+  <div id="pinModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <button onclick="document.getElementById('pinModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 16px; font-weight: bold; cursor: pointer;">✕</button>
+      <h3 style="margin-bottom: 4px; font-size: 18px; color: #38bdf8;">⚙️ Pregled i Postavke PIN-ova</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Administratorski pregled svih aktivnih korisnika i lozinki:</p>
+      
+      <div style="max-height: 220px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+        <table class="pin-table">
+          <thead>
+            <tr>
+              <th>Korisnik</th>
+              <th style="text-align:center;">PIN</th>
+              <th style="text-align:right;">Akcija</th>
+            </tr>
+          </thead>
+          <tbody id="pinTableBody"></tbody>
+        </table>
+      </div>
+
+      <div style="background: var(--card-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 14px; text-align: left;">
+        <label style="color:#38bdf8;">✏️ Promjena PIN-a radniku:</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <select id="pinTargetDropdown" style="flex: 1.5; font-size: 12px;"></select>
+          <input type="text" id="newPinVal" placeholder="Novi PIN" maxlength="6" style="flex: 1; text-align: center; font-weight: bold; letter-spacing: 2px;">
+        </div>
+        <button onclick="saveUserPinChange()" class="btn-submit" style="background: var(--success); margin-top: 8px; padding: 9px; font-size: 12px;">💾 SPREMI NOVI PIN</button>
+      </div>
+
+      <div style="background: rgba(2, 132, 199, 0.1); border: 1px dashed #0284c7; border-radius: 8px; padding: 12px; text-align: left;">
+        <label style="color:#38bdf8;">➕ Dodaj novog radnika:</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <input type="text" id="newWorkerName" placeholder="Ime i prezime..." style="flex: 1.5; font-size: 12px;">
+          <input type="text" id="newWorkerPin" placeholder="PIN (npr. 1234)" maxlength="6" style="flex: 1; text-align: center; font-size: 12px;">
+        </div>
+        <button onclick="addNewWorkerWithPin()" class="btn-submit" style="background: #0284c7; margin-top: 8px; padding: 9px; font-size: 12px;">➕ DODAJ RADNIKA</button>
       </div>
     </div>
-    <table class="stavke">
-      <thead><tr><th>R.BR.</th><th>OPIS / IZVEDBA</th><th>DIMENZIJA</th><th>ŠTOK</th><th>DEKOR</th><th class="c">KOM</th><th class="r">CIJENA</th><th class="r">UKUPNO</th></tr></thead>
-      <tbody>
-        ${rows.map((r,i)=>`<tr>
-          <td>${i+1}</td>
-          <td class="opis">${opis(r.model).map(l=>`<div>${l}</div>`).join("")}${r.extraNames.length?`<div>${r.extraNames.join(", ")}</div>`:""}</td>
-          <td>${r.sirina} × ${r.visina} cm</td>
-          <td>${stokTxt(r)}</td>
-          <td>${r.dekor}</td>
-          <td class="c">${r.kom}</td>
-          <td class="r">${r.cij==null?"—":fmt(r.cij)}</td>
-          <td class="r">${r.uk==null?"—":fmt(r.uk)}</td>
-        </tr>`).join("")}
-        ${extraRows.join("")}
-      </tbody>
-    </table>
-    <div class="totals">
-      <div><span>UKUPNO bez PDV-a</span><b>${fmt(sub)} €</b></div>
-      <div><span>PDV 25%</span><b>${fmt(pdv)} €</b></div>
-      <div class="grand"><span>UKUPNO s PDV-om</span><span>${fmt(tot)} €</span></div>
-    </div>
-    <div class="nap">
-      <b>NAPOMENE:</b>
-      <div>• Kvake nisu uračunate osim ako je navedeno u stavkama.</div>
-      ${val("napomena")?`<div>• ${val("napomena")}</div>`:""}
-      <div>• Rok isporuke: ${val("isporuka")}. Plaćanje: ${val("placanje")}.</div>
-    </div>
-    <div class="foot">
-      <div class="box">Za naplatu:<div class="big">${fmt(tot)} €</div><div>${val("placanje")}</div>
-        ${val("placanje").toLowerCase().includes("70")?`<div>Avans ${fmt(av)} € · ostatak ${fmt(os)} €</div>`:""}
-      </div>
-      <div class="box">Plaćanje izvršiti na račun kod RBA:<div class="iban">HR76 2484008 1105901607</div>
-      <div>Ponuda vrijedi za navedenu izvedbu i količinu.</div>
-      <div>PORTAL MONTAŽA &amp; SERVIS d.o.o.</div></div>
-    </div>
-    <div class="sign">POTPIS NARUČITELJA: _______________________ &nbsp;&nbsp; IZDAVATELJ PONUDE: _______________________</div>
-  `;
-}
+  </div>
 
-document.getElementById("datum").value = today();
-document.getElementById("broj").value = nextBroj();
-paintStavke();
-render();
-</script>
+  <header>
+    <div class="logo">TEREN<span>RAD</span></div>
+    <div class="header-right">
+      <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
+      <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
+      <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
+      <div class="view-toggle">
+        <button id="tab-monter" onclick="showMonterView()">➕ Novo</button>
+        <button id="tab-admin" class="active" onclick="showAdminView()">📋 Nalozi</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    
+    <div id="monter-view">
+      <div class="card">
+        <h3 style="font-size: 15px; margin-bottom: 12px;">Novo Terensko Mjerenje</h3>
+
+        <form onsubmit="saveNewProject(event)">
+          <label>Fotografije Skica / Mjerenja</label>
+          <div style="display:flex; gap:12px; margin-bottom:8px; font-size:12px;">
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
+              <input type="radio" name="imgMode" value="color" checked style="width:auto; margin:0;"> 🎨 Boja
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
+              <input type="radio" name="imgMode" value="bw" style="width:auto; margin:0;"> ⚫ Crno-bijelo
+            </label>
+          </div>
+          <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <span id="upload-status">📷 Dodaj fotografije bilježnice</span>
+            <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleImageSelection(event)">
+          </div>
+
+          <div class="preview-grid" id="previewGrid"></div>
+
+          <div class="form-group">
+            <label>Klijent / Objekt</label>
+            <input type="text" id="cName" required placeholder="npr. ELLABO IND ili Tomičić">
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <div class="form-group" style="flex:1;">
+              <label>Telefon</label>
+              <input type="text" id="cPhone" placeholder="095...">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Lokacija</label>
+              <input type="text" id="cLoc" placeholder="npr. Lapad">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Opće napomene s mjerenja</label>
+            <textarea id="cNotes" rows="3" placeholder="Boja, profil, staklo, situacija..."></textarea>
+          </div>
+
+          <button type="submit" id="btnSubmit" class="btn-submit">💾 SPREMI MJERENJE</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="admin-view" class="active">
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
+            <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
+          </div>
+          <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži klijenta ili lokaciju..." oninput="renderSidebar()">
+          <div id="statusFilters" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; max-height:90px; overflow-y:auto;"></div>
+        </div>
+        <div class="sidebar-list" id="projectList">
+          <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje...</p>
+        </div>
+      </div>
+
+      <div class="detail-panel" id="detailPanel">
+        
+        <div class="full-width">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
+            <div>
+              <h2 id="d-name" style="font-size: 19px;">-</h2>
+              <p id="d-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">-</p>
+            </div>
+          </div>
+          <div class="btn-action-group">
+            <button onclick="deleteCurrent()" class="btn-action btn-delete">🗑️ Izbriši</button>
+            <button onclick="window.print()" class="btn-action btn-print">🖨️ Ispiši</button>
+          </div>
+        </div>
+
+        <div class="grid-six-col">
+          
+          <!-- 1. MAPA: SLIKE MJERENJA -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage1Title" style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE <span id="stage1Badge"></span></h4>
+              <button onclick="document.getElementById('addSketchFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Dodaj skicu</button>
+              <input type="file" id="addSketchFileInput" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
+            </div>
+
+            <div class="main-sketch" onclick="openSketchFull()">
+              <img id="d-img" src="" alt="Skica" title="Klik za Zoom">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
+              <button id="btnDeleteCurrentSketch" onclick="deleteCurrentSketch()" style="display:none; background:none; border:none; color:#f87171; font-size:11px; cursor:pointer; font-weight:bold;">🗑️ Obriši ovu sliku</button>
+            </div>
+
+            <div class="gallery-thumbs" id="d-thumbs" style="margin-top:6px;"></div>
+            <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
+          </div>
+
+          <!-- 2. MAPA: PONUDA -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage2Title" style="color: #34d399; font-size: 13px;">📄 2. PONUDA <span id="stage2Badge"></span></h4>
+              <button id="btnDelOffer" onclick="removeOffer()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
+            </div>
+
+            <div id="offerUploadZone" class="doc-box">
+              <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
+              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu (PDF / Slika)</button>
+              <input type="file" id="offerFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleOfferUpload(event)">
+            </div>
+
+            <div id="offerDisplayZone" style="display:none;">
+              <div class="doc-preview" id="offerPreviewBox"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
+                <span style="font-size: 11px; color: #34d399; font-weight: bold;">✅ Učitano</span>
+                <button onclick="document.getElementById('offerFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. MAPA: RADNI NALOG -->
+          <div class="card" style="border-left: 4px solid #fbbf24;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage3Title" style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG <span id="stage3Badge"></span></h4>
+              <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
+            </div>
+
+            <div id="rnUploadZone" class="doc-box">
+              <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN (PDF / Slika)</button>
+              <input type="file" id="rnFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleRnUpload(event)">
+            </div>
+
+            <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
+              <div class="doc-preview" id="rnPreviewBox"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
+                <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">✅ RN Učitan</span>
+                <button onclick="document.getElementById('rnFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+              <label style="margin:0; color:#fbbf24;">📦 POZICIJE NALOGA:</label>
+              <button onclick="promptAddPosition()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
+            </div>
+
+            <div class="positions-box" id="positionsListRn"></div>
+          </div>
+
+          <!-- 4. MAPA: SKLADIŠTE -->
+          <div class="card" style="border-left: 4px solid var(--cyan);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage4Title" style="color: var(--cyan); font-size: 13px;">📦 4. SKLADIŠTE <span id="stage4Badge"></span></h4>
+              <span id="skladisteStatusBadge" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(6,182,212,0.15); color:var(--cyan);">ROBA U SKLADIŠTU</span>
+            </div>
+
+            <label style="color:var(--cyan);">STANJE POZICIJA U SKLADIŠTU:</label>
+            <div class="positions-box" id="positionsListSkladiste" style="margin-bottom: 10px;"></div>
+
+            <div class="form-group">
+              <label>Skladišna napomena / lokacija police:</label>
+              <textarea id="mSkladisteNotes" rows="2" placeholder="npr. Paleta 3, spremno za preuzimanje..." onchange="saveSkladisteNotes()"></textarea>
+            </div>
+          </div>
+
+          <!-- 5. MAPA: MONTAŽA -->
+          <div class="card" style="border-left: 4px solid #a855f7;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage5Title" style="color: #c084fc; font-size: 13px;">🛠️ 5. MONTAŽA <span id="stage5Badge"></span></h4>
+              <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike</button>
+              <input type="file" id="doneFileInput" multiple style="display:none" onchange="uploadDoneImages(event)">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+              <label style="margin:0; color:#c084fc;">📦 STANJE ROBE (KLIK ZA PROMJENU):</label>
+              <button onclick="promptAddPosition()" style="background:none; border:none; color:#c084fc; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
+            </div>
+            <div class="positions-box" id="positionsListMontaza" style="margin-bottom: 12px;"></div>
+
+            <label>MONTERI NA GRADILIŠTU:</label>
+            <div class="monteri-container" id="monteriCheckboxList"></div>
+
+            <div class="form-group">
+              <label>Nedostaci / Zapažanja:</label>
+              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1, za poz. 2 fali lajsna..." onchange="saveMontazaNotes()"></textarea>
+            </div>
+
+            <label>Fotografije montaže:</label>
+            <div class="gallery-thumbs" id="d-done-thumbs"></div>
+          </div>
+
+          <!-- 6. MAPA: FAKTURIRANJE -->
+          <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage6Title" style="color: #34d399; font-size: 13px;">💰 6. FAKTURIRANJE <span id="stage6Badge"></span></h4>
+              <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
+            </div>
+
+            <div id="readyForInvoiceAlert" style="display:none; background: rgba(16,185,129,0.2); border: 1px solid var(--success); color: #a7f3d0; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 10px; text-align: center;">
+              📢 SVE JE MONTIRANO - MOŽE SE FAKTURIRATI!
+            </div>
+
+            <div class="form-group">
+              <label>Broj Računa / Fakture:</label>
+              <input type="text" id="inpInvoiceNum" placeholder="npr. R1 142/2026" onchange="saveInvoiceData()">
+            </div>
+
+            <div class="form-group">
+              <label>Priloži Račun (PDF / Slika):</label>
+              <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
+              <input type="file" id="invoiceFileInput" style="display:none" onchange="handleInvoiceUpload(event)">
+              <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
+            </div>
+
+            <button type="button" id="btnFinishInvoice" class="btn-submit" style="background: var(--success); margin-top: 6px;" onclick="finalizeProjectInvoice()">
+              ✅ OZNAČI KAO FAKTURIRANO
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyABrJCjpEBj6ZsXu4Or2TCTDvi1yQkAnVc",
+      authDomain: "mjerenje-b0bc5.firebaseapp.com",
+      projectId: "mjerenje-b0bc5",
+      storageBucket: "mjerenje-b0bc5.firebasestorage.app",
+      messagingSenderId: "923942715900",
+      appId: "1:923942715900:web:86fb6c3a27694931a7fa2a"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Upload u Storage i vrati download URL
+    async function uploadToStorage(dataUrlOrFile, path) {
+      const ref = storage.ref(path);
+      if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
+        await ref.putString(dataUrlOrFile, 'data_url');
+      } else {
+        await ref.put(dataUrlOrFile);
+      }
+      return await ref.getDownloadURL();
+    }
+
+    function formatToday() {
+      const d = new Date();
+      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
+    }
+
+    const DEFAULT_PINS = {
+      "VEDRAN VUKANOVIĆ": "7020",
+      "ANKICA BAČIĆ PRKAČIN": "1234",
+      "BRANISLAV BEGENUŠIĆ": "1234",
+      "ZLATKO RADIŠ": "1234",
+      "SINIŠA PRAVICA": "1234",
+      "SLAVEN PUHALO": "1234",
+      "NIKOLA MRDIĆ": "1234",
+      "LJUBIŠA DOŠLO": "1234",
+      "RANKO JANJIĆ": "1234",
+      "MIODRAG ĆERANIĆ": "1234"
+    };
+
+    let userPins = { ...DEFAULT_PINS };
+    let currentWorker = localStorage.getItem('teren_worker_name') || 'VEDRAN VUKANOVIĆ';
+    let projects = [];
+    let selectedId = null;
+    let currentImageIndex = 0;
+    let uploadedImages = [];
+
+    let zoomLevel = 1;
+    let panX = 0, panY = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    db.collection("postavke").doc("pinovi").onSnapshot(doc => {
+      if (doc.exists && doc.data().pins) {
+        userPins = { ...doc.data().pins };
+      } else if (!doc.exists) {
+        // Dokument stvarno ne postoji u bazi (prvo pokretanje) - jednokratno ga inicijaliziramo.
+        userPins = { ...DEFAULT_PINS };
+        db.collection("postavke").doc("pinovi").set({ pins: DEFAULT_PINS });
+      }
+      // Ako dokument postoji ali (privremeno) nema 'pins' polje, NE diramo bazu -
+      // zadržavamo zadnje poznato stanje u memoriji dok ne stigne ispravan snapshot.
+      populateUserDropdowns();
+      renderPinTable();
+      renderMonteriCheckboxes();
+      checkWorkerAuth();
+    }, err => {
+      console.error("Greška pri čitanju PIN-ova:", err);
+    });
+
+    function populateUserDropdowns() {
+      const loginDrop = document.getElementById('userSelectDropdown');
+      const pinDrop = document.getElementById('pinTargetDropdown');
+      
+      let opts = '';
+      Object.keys(userPins).forEach(name => {
+        const isAdm = name.includes('VEDRAN');
+        const isUred = name.includes('ANKICA');
+        const isSkladiste = name.includes('BRANISLAV');
+        let icon = '👷 ';
+        if (isAdm) icon = '👑 ';
+        else if (isUred) icon = '💼 ';
+        else if (isSkladiste) icon = '📦 ';
+        opts += `<option value="${name}">${icon}${name}${isAdm ? ' (ADMINISTRATOR)' : ''}</option>`;
+      });
+
+      if (loginDrop) {
+        loginDrop.innerHTML = opts;
+        if (currentWorker) loginDrop.value = currentWorker;
+      }
+      if (pinDrop) {
+        pinDrop.innerHTML = opts;
+      }
+    }
+
+    function renderPinTable() {
+      const tbody = document.getElementById('pinTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = Object.keys(userPins).map(name => {
+        const isAdm = name.includes('VEDRAN');
+        const isUred = name.includes('ANKICA');
+        const isSkl = name.includes('BRANISLAV');
+        let role = 'Monter';
+        if (isAdm) role = '👑 Administrator';
+        else if (isUred) role = '💼 Ured / Fakturiranje';
+        else if (isSkl) role = '📦 Skladište';
+
+        const pinVal = userPins[name];
+
+        let deleteBtn = '';
+        if (!isAdm) {
+          deleteBtn = `<button onclick="deleteWorker('${name}')" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 6px; border-radius:4px; font-size:11px; cursor:pointer; margin-left:4px;">🗑️</button>`;
+        }
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:bold; color:#fff;">${name}</div>
+              <div style="font-size:10px; color:var(--text-muted);">${role}</div>
+            </td>
+            <td style="text-align:center;">
+              <span class="pin-code-badge">${pinVal}</span>
+            </td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button onclick="quickEditPin('${name}')" style="background:#0284c7; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">✏️ Uredi</button>
+              ${deleteBtn}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function quickEditPin(name) {
+      document.getElementById('pinTargetDropdown').value = name;
+      document.getElementById('newPinVal').value = userPins[name] || '';
+      document.getElementById('newPinVal').focus();
+    }
+
+    async function deleteWorker(name) {
+      if (confirm(`Želite li obrisati radnika: ${name}?`)) {
+        await db.collection("postavke").doc("pinovi").update({
+          [`pins.${name}`]: firebase.firestore.FieldValue.delete()
+        });
+      }
+    }
+
+    function workerName() {
+      return (currentWorker || '').toUpperCase().trim();
+    }
+    function isVedran() {
+      const u = workerName();
+      return u.indexOf('VEDRAN') !== -1;
+    }
+    function isAnkica() {
+      return workerName().indexOf('ANKICA') !== -1;
+    }
+    function isZlatko() {
+      return workerName().indexOf('ZLATKO') !== -1;
+    }
+    function isBranislav() {
+      return workerName().indexOf('BRANISLAV') !== -1;
+    }
+    function isMontazaMonter() {
+      // Siniša, Slaven, Nikola + assigned monters can set montirano/reklamacija
+      const u = workerName();
+      if (u.indexOf('SINIŠA') !== -1 || u.indexOf('SINISA') !== -1) return true;
+      if (u.indexOf('SLAVEN') !== -1) return true;
+      if (u.indexOf('NIKOLA') !== -1) return true;
+      if (u.indexOf('ZLATKO') !== -1) return true;
+      return false;
+    }
+    function isViewOnlyMonter() {
+      // Ljubo, Ranko, Miodrag - only view
+      const u = workerName();
+      return u.indexOf('LJUBO') !== -1 || u.indexOf('RANKO') !== -1 || u.indexOf('MIODRAG') !== -1;
+    }
+
+    function canEditSkladiste() {
+      return isVedran() || isBranislav();
+    }
+
+    function canEditMontaza() {
+      if (isVedran()) return true;
+      if (isViewOnlyMonter()) return false;
+      if (isMontazaMonter()) return true;
+      // Dodijeljeni monteri na ovom nalogu
+      if (!selectedId) return false;
+      const p = projects.find(item => item.id === selectedId);
+      if (!p || !p.assignedMonteri) return false;
+      const u = workerName();
+      return p.assignedMonteri.some(m => {
+        const mu = (m || '').toUpperCase().trim();
+        return mu === u || u.indexOf(mu) !== -1 || mu.indexOf(u) !== -1;
+      });
+    }
+
+    function canViewFinancialDocs() {
+      // Samo Vedran i Ankica vide ponudu/RN/fakturu jasno
+      return isVedran() || isAnkica();
+    }
+
+    function checkWorkerAuth() {
+      if (!currentWorker) {
+        openLoginModal();
+      } else {
+        document.getElementById('loginModal').style.display = 'none';
+        
+        const isVedranAdmin = currentWorker.toUpperCase().trim() === 'VEDRAN VUKANOVIĆ';
+        const isUred = currentWorker.toUpperCase().includes('ANKICA');
+        const isSkladiste = currentWorker.toUpperCase().includes('BRANISLAV');
+        
+        let icon = '👷 ';
+        if (isVedranAdmin) icon = '👑 ';
+        else if (isUred) icon = '💼 ';
+        else if (isSkladiste) icon = '📦 ';
+        document.getElementById('userBadge').innerText = `${icon}${currentWorker}`;
+
+        const btnPin = document.getElementById('btnPinNav');
+        if (btnPin) {
+          btnPin.style.display = isVedranAdmin ? 'inline-flex' : 'none';
+        }
+
+        const sklNotes = document.getElementById('mSkladisteNotes');
+        if (sklNotes) {
+          sklNotes.disabled = !canEditSkladiste();
+          sklNotes.style.opacity = canEditSkladiste() ? '1' : '0.6';
+        }
+      }
+    }
+
+    function openLoginModal() {
+      document.getElementById('userPinInput').value = '';
+      populateUserDropdowns();
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+
+    function confirmUserLogin() {
+      const selected = document.getElementById('userSelectDropdown').value;
+      const enteredPin = document.getElementById('userPinInput').value.trim();
+      const correctPin = userPins[selected] || "1234";
+
+      if (enteredPin !== correctPin) {
+        alert('❌ Pogrešan PIN!');
+        return;
+      }
+      
+      currentWorker = selected;
+      localStorage.setItem('teren_worker_name', currentWorker);
+      checkWorkerAuth();
+      renderPositions();
+    }
+
+    function openPinModal() {
+      const isVedranAdmin = currentWorker.toUpperCase().trim() === 'VEDRAN VUKANOVIĆ';
+      if (!isVedranAdmin) {
+        alert('❌ Pristup dopušten samo Administratoru.');
+        return;
+      }
+      populateUserDropdowns();
+      renderPinTable();
+      document.getElementById('pinModal').style.display = 'flex';
+    }
+
+    function onTargetUserChanged() {
+      const selected = document.getElementById('pinTargetDropdown').value;
+      document.getElementById('newPinVal').value = userPins[selected] || '';
+    }
+
+    async function saveUserPinChange() {
+      const target = document.getElementById('pinTargetDropdown').value;
+      const newPin = document.getElementById('newPinVal').value.trim();
+      if (!newPin || newPin.length < 4) {
+        alert('PIN mora imati najmanje 4 znamenke.');
+        return;
+      }
+
+      await db.collection("postavke").doc("pinovi").update({
+        [`pins.${target}`]: newPin
+      });
+      alert(`✅ Uspješno postavljen novi PIN za: ${target} (${newPin})`);
+      document.getElementById('newPinVal').value = '';
+    }
+
+    async function addNewWorkerWithPin() {
+      const name = document.getElementById('newWorkerName').value.trim().toUpperCase();
+      const pin = document.getElementById('newWorkerPin').value.trim() || '1234';
+
+      if (!name) {
+        alert('Unesite ime.');
+        return;
+      }
+
+      await db.collection("postavke").doc("pinovi").update({
+        [`pins.${name}`]: pin
+      });
+      
+      document.getElementById('newWorkerName').value = '';
+      document.getElementById('newWorkerPin').value = '';
+      alert(`✅ Dodan: ${name} (PIN: ${pin})`);
+    }
+
+    // BRZO I POUZDANO ČITANJE DATOTEKA
+    function readFileAsDataURL(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function processImageFile(file, mode = 'color') {
+      return new Promise(async (resolve) => {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        const rawBase64 = await readFileAsDataURL(file);
+        
+        if (isPdf || !rawBase64) {
+          resolve(rawBase64);
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1600;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
+          else { if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          if (mode === 'bw') {
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+              const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+              data[i] = data[i+1] = data[i+2] = avg;
+            }
+            ctx.putImageData(imageData, 0, 0);
+          }
+
+          resolve(canvas.toDataURL('image/jpeg', 0.65));
+        };
+        img.onerror = () => resolve(rawBase64);
+        img.src = rawBase64;
+      });
+    }
+
+    async function uploadAdditionalSketches(e) {
+      const files = Array.from(e.target.files);
+      if (!selectedId || files.length === 0) return;
+      const p = projects.find(item => item.id === selectedId);
+      let existing = [...(p.images || [])];
+      try {
+        for (let f of files) {
+          const dataUrl = await processImageFile(f);
+          if (!dataUrl) continue;
+          const path = `nalozi/${selectedId}/mjerenje_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
+          const url = await uploadToStorage(dataUrl, path);
+          existing.push(url);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ images: existing });
+        currentImageIndex = existing.length - 1;
+        alert('✅ Slike dodane');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      }
+      e.target.value = '';
+    }
+
+    async function deleteCurrentSketch() {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      let imgs = p.images || [];
+      if (imgs.length === 0) return;
+
+      if (confirm('Želite li obrisati ovu stranicu/skicu?')) {
+        imgs.splice(currentImageIndex, 1);
+        currentImageIndex = Math.max(0, currentImageIndex - 1);
+        await db.collection("nalozi").doc(selectedId).update({ images: imgs });
+      }
+    }
+
+    async function promptAddPosition() {
+      if (!selectedId) return;
+      const naziv = prompt('Unesite naziv pozicije (npr. Pozicija 1 - Garažna vrata):');
+      if (!naziv || !naziv.trim()) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      const positions = p.positions || [];
+      positions.push({ name: naziv.trim(), status: 'proizvodnja' });
+
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    async function cyclePositionStatus(index, fromSkladiste = false) {
+      if (!selectedId) return;
+      
+      if (fromSkladiste && !canEditSkladiste()) {
+        alert('❌ Samo Branislav i Vedran mogu mijenjati status u skladištu.');
+        return;
+      }
+
+      const p = projects.find(item => item.id === selectedId);
+      // Montaža: samo dodijeljeni monteri + admin
+      if (!fromSkladiste && p) {
+        const pos0 = (p.positions && p.positions[index]) ? p.positions[index] : null;
+        const cur = pos0 ? (pos0.status || 'proizvodnja') : 'proizvodnja';
+        if ((cur === 'skladiste' || cur === 'montirano' || cur === 'reklamacija') && !canEditMontaza() && !canEditSkladiste()) {
+          alert('❌ Samo dodijeljeni monteri mogu označiti Montirano / Reklamacija.');
+          return;
+        }
+      }
+      let positions = p.positions || [];
+      
+      if (positions.length === 0) {
+        positions = [{ name: 'Cijeli nalog / Roba', status: 'proizvodnja' }];
+      }
+
+      if (!positions[index]) return;
+
+      const current = positions[index].status || 'proizvodnja';
+      if (current === 'proizvodnja') positions[index].status = 'skladiste';
+      else if (current === 'skladiste') positions[index].status = 'montirano';
+      else if (current === 'montirano') positions[index].status = 'reklamacija';
+      else positions[index].status = 'proizvodnja';
+
+      const updates = { positions: positions };
+      if (positions[index].status === 'skladiste' && !p.dateSkladiste) {
+        updates.dateSkladiste = formatToday();
+      }
+      if (positions[index].status === 'montirano' && !p.dateMontaza) {
+        updates.dateMontaza = formatToday();
+      }
+      await db.collection("nalozi").doc(selectedId).update(updates);
+    }
+
+    async function deletePosition(index) {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      let positions = p.positions || [];
+      if (index < 0 || index >= positions.length) return;
+      if (!confirm(`Obrisati poziciju: ${positions[index].name}?`)) return;
+      positions.splice(index, 1);
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    function renderPositions() {
+      const boxRn = document.getElementById('positionsListRn');
+      const boxSkl = document.getElementById('positionsListSkladiste');
+      const boxMontaza = document.getElementById('positionsListMontaza');
+      if (!boxRn || !boxSkl || !boxMontaza) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      let positions = (p && p.positions && p.positions.length > 0) ? p.positions : [];
+
+      const isDefault = positions.length === 0;
+      const displayPositions = isDefault ? [{ name: 'Cijeli nalog / Roba', status: 'proizvodnja' }] : positions;
+
+      const htmlNormal = displayPositions.map((pos, idx) => {
+        let chip = '';
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx}, false)">🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx}, false)">📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx}, false)">✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija" onclick="cyclePositionStatus(${idx}, false)">⚠️ Reklamacija / Fali</button>`;
+        }
+
+        const delBtn = isDefault ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtn}</div>
+          </div>
+        `;
+      }).join('');
+
+      const canEditSkl = canEditSkladiste();
+      const htmlSkl = displayPositions.map((pos, idx) => {
+        let chip = '';
+        const clickAction = canEditSkl ? `onclick="cyclePositionStatus(${idx}, true)"` : ``;
+        const disabledClass = canEditSkl ? '' : 'disabled-btn';
+
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja ${disabledClass}" ${clickAction}>🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste ${disabledClass}" ${clickAction}>📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano ${disabledClass}" ${clickAction}>✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija ${disabledClass}" ${clickAction}>⚠️ Reklamacija / Fali</button>`;
+        }
+
+        const delBtnSkl = (isDefault || !canEditSkl) ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtnSkl}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Montaža - samo dodijeljeni monteri + admin
+      const canMont = canEditMontaza();
+      const htmlMontaza = displayPositions.map((pos, idx) => {
+        let chip = '';
+        const clickMont = canMont ? `onclick="cyclePositionStatus(${idx}, false)"` : '';
+        const disMont = canMont ? '' : 'disabled-btn';
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja ${disMont}" ${clickMont}>🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste ${disMont}" ${clickMont}>📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano ${disMont}" ${clickMont}>✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija ${disMont}" ${clickMont}>⚠️ Reklamacija / Fali</button>`;
+        }
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div>${chip}</div>
+          </div>
+        `;
+      }).join('');
+
+      boxRn.innerHTML = htmlNormal;
+      boxMontaza.innerHTML = htmlMontaza;
+      boxSkl.innerHTML = htmlSkl;
+    }
+
+    async function saveSkladisteNotes() {
+      if (!selectedId) return;
+      if (!canEditSkladiste()) {
+        alert('❌ Nemate ovlasti za unos skladišnih napomena.');
+        return;
+      }
+      await db.collection("nalozi").doc(selectedId).update({
+        skladisteNotes: document.getElementById('mSkladisteNotes').value
+      });
+    }
+
+    function renderMonteriCheckboxes() {
+      const cont = document.getElementById('monteriCheckboxList');
+      if (!cont) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      const selectedWorkers = (p && p.assignedMonteri) ? p.assignedMonteri : [];
+      const canAssign = canAssignMonteri();
+
+      if (canAssign) {
+        // Vedran / Zlatko – mogu birati
+        const workers = Object.keys(userPins).filter(w => {
+          const u = w.toUpperCase();
+          return !u.includes('VEDRAN') && !u.includes('ANKICA');
+        });
+        cont.innerHTML = workers.map(name => {
+          const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
+          return `
+            <div class="monter-row">
+              <label class="monter-label">
+                <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
+                <span>${name}</span>
+              </label>
+            </div>
+          `;
+        }).join('');
+      } else {
+        // Ostali – samo vide tko montira (bez kvačica)
+        if (selectedWorkers.length === 0) {
+          cont.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px;">Nitko nije dodijeljen.</div>';
+        } else {
+          cont.innerHTML = selectedWorkers.map(name => `
+            <div class="monter-row">
+              <span style="font-size:12px;font-weight:600;color:#fff;">👷 ${name}</span>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function canAssignMonteri() {
+      // Vedran i Zlatko mogu dodjeljivati montere
+      return isVedran() || isZlatko();
+    }
+
+    function canEditInvoice() {
+      // Ankica može fakturirati, ali nakon FAKTURIRANO samo Vedran može mijenjati
+      if (isVedran()) return true;
+      if (!isAnkica()) return false;
+      if (!selectedId) return true;
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.isInvoiced) return false; // zaključano
+      return true;
+    }
+
+    function canUploadOfferOrRn() {
+      return isVedran() || isAnkica();
+    }
+
+    async function toggleMonter(name, isChecked) {
+      if (!selectedId) return;
+      if (!canAssignMonteri()) {
+        alert('❌ Samo Vedran i Zlatko mogu dodjeljivati montere.');
+        renderMonteriCheckboxes(); // vrati kvačice na staro
+        return;
+      }
+      const p = projects.find(item => item.id === selectedId);
+      let currentAssigned = (p.assignedMonteri || []).slice();
+
+      if (isChecked) {
+        if (!currentAssigned.includes(name)) currentAssigned.push(name);
+      } else {
+        currentAssigned = currentAssigned.filter(item => item !== name);
+      }
+
+      await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: currentAssigned });
+    }
+
+    async function saveMontazaNotes() {
+      if (!selectedId) return;
+      await db.collection("nalozi").doc(selectedId).update({
+        montazaNotes: document.getElementById('mMontazaNotes').value
+      });
+    }
+
+    async function saveInvoiceData() {
+      if (!selectedId) return;
+      await db.collection("nalozi").doc(selectedId).update({
+        invoiceNum: document.getElementById('inpInvoiceNum').value
+      });
+    }
+
+    async function handleInvoiceUpload(e) {
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          url = await uploadToStorage(file, `nalozi/${selectedId}/faktura_${Date.now()}.pdf`);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje');
+          url = await uploadToStorage(dataUrl, `nalozi/${selectedId}/faktura_${Date.now()}.jpg`);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: url });
+        alert('✅ Faktura učitana');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      }
+      e.target.value = '';
+    }
+
+    async function removeInvoiceDoc() {
+      if (!selectedId || !confirm('Obrisati račun?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: null });
+    }
+
+    async function finalizeProjectInvoice() {
+      if (!selectedId) return;
+      if (!canEditInvoice()) {
+        alert('❌ Samo Vedran može mijenjati status nakon što je nalog fakturiran. Ankica može samo prvi put označiti.');
+        return;
+      }
+      const p = projects.find(item => item.id === selectedId);
+      const num = document.getElementById('inpInvoiceNum').value.trim();
+      const isAlreadyInvoiced = p.isInvoiced;
+
+      const updates = {
+        invoiceNum: num,
+        isInvoiced: !isAlreadyInvoiced
+      };
+      if (!isAlreadyInvoiced) updates.dateInvoice = formatToday();
+      await db.collection("nalozi").doc(selectedId).update(updates);
+    }
+
+    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+      projects = [];
+      snapshot.forEach(doc => {
+        projects.push({ id: doc.id, ...doc.data() });
+      });
+
+      renderSidebar();
+
+      if (projects.length > 0) {
+        if (!selectedId || !projects.find(p => p.id === selectedId)) {
+          if (window.innerWidth > 900) {
+            openDetails(projects[0].id);
+          }
+        } else {
+          renderDetails();
+        }
+      } else {
+        selectedId = null;
+      }
+    });
+
+    let currentStatusFilter = 'sve';
+
+    function getProjectStage(p) {
+      if (p.isInvoiced) return 'fakturirano';
+      const positions = p.positions || [];
+      const total = positions.length;
+      const montirano = positions.filter(x => x.status === 'montirano').length;
+      const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
+      const skladiste = positions.filter(x => x.status === 'skladiste').length;
+      if (reklamacija > 0) return 'reklamacija';
+      if (total > 0 && montirano === total) return 'montirano';
+      if (skladiste > 0 || p.dateSkladiste) return 'skladiste';
+      if (p.rnDoc) return 'proizvodnja';
+      if (p.offerDoc) return 'ponuda';
+      return 'mjerenje';
+    }
+
+    function setStatusFilter(f) {
+      currentStatusFilter = f;
+      renderSidebar();
+    }
+
+    function renderSidebar() {
+      const list = document.getElementById('projectList');
+      const query = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
+      const filtersEl = document.getElementById('statusFilters');
+
+      const counts = { sve: 0, mjerenje: 0, ponuda: 0, proizvodnja: 0, skladiste: 0, montirano: 0, reklamacija: 0, fakturirano: 0 };
+      projects.forEach(p => {
+        const st = getProjectStage(p);
+        counts[st]++;
+        counts.sve++;
+      });
+
+      if (filtersEl) {
+        const btns = [
+          ['sve', 'Sve', counts.sve, '#94a3b8'],
+          ['mjerenje', 'Mjerenje', counts.mjerenje, '#38bdf8'],
+          ['ponuda', 'Ponuda', counts.ponuda, '#34d399'],
+          ['proizvodnja', 'U radu', counts.proizvodnja, '#fbbf24'],
+          ['skladiste', 'Skladište', counts.skladiste, '#06b6d4'],
+          ['montirano', 'Montirano', counts.montirano, '#10b981'],
+          ['reklamacija', 'Reklamacija', counts.reklamacija, '#ef4444'],
+          ['fakturirano', 'Fakturirano', counts.fakturirano, '#a855f7']
+        ];
+        filtersEl.innerHTML = btns.map(([key, label, cnt, color]) => {
+          const active = currentStatusFilter === key;
+          return `<button onclick="setStatusFilter('${key}')" style="font-size:10px;padding:3px 7px;border-radius:4px;border:1px solid ${color};cursor:pointer;font-weight:bold;background:${active ? color : 'transparent'};color:${active ? '#0b1120' : color};">${label} (${cnt})</button>`;
+        }).join('');
+      }
+
+      const filtered = projects.filter(p => {
+        if (currentStatusFilter !== 'sve' && getProjectStage(p) !== currentStatusFilter) return false;
+        if (!query) return true;
+        const nameMatch = (p.name || '').toLowerCase().includes(query);
+        const locMatch = (p.loc || '').toLowerCase().includes(query);
+        return nameMatch || locMatch;
+      });
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema naloga u ovom filteru.</p>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(p => {
+        const positions = p.positions || [];
+        const total = positions.length;
+        const montirano = positions.filter(x => x.status === 'montirano').length;
+        const skladiste = positions.filter(x => x.status === 'skladiste').length;
+        const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
+
+        const stage = getProjectStage(p);
+        let statusText = '';
+        if (total > 0 && (stage === 'skladiste' || stage === 'montirano' || stage === 'reklamacija')) {
+          if (montirano === total) {
+            statusText = `<span style="color:#10b981; font-weight:bold;">✅ Sve montirano (${montirano}/${total})</span>`;
+          } else {
+            let extra = reklamacija > 0 ? ` • <span style="color:#f87171; font-weight:bold;">⚠️ Reklamacija: ${reklamacija}</span>` : '';
+            statusText = `<span style="color:#38bdf8;">📦 Skladište: ${skladiste}</span> • <span style="color:#10b981;">🛠️ Montirano: ${montirano}</span>${extra}`;
+          }
+        } else {
+          const STAGE_LABELS = {
+            mjerenje: { text: '📐 Mjerenje', color: '#38bdf8' },
+            ponuda: { text: '📄 Ponuda', color: '#34d399' },
+            proizvodnja: { text: '🏭 U Proizvodnji', color: '#fbbf24' },
+            fakturirano: { text: '🏁 Fakturirano', color: '#a855f7' }
+          };
+          const label = STAGE_LABELS[stage] || STAGE_LABELS.mjerenje;
+          statusText = `<span style="color:${label.color}; font-weight:bold;">${label.text}</span>`;
+        }
+
+        let fakturaBadge = p.isInvoiced 
+          ? '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>'
+          : '';
+
+        return `
+          <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="openDetails('${p.id}')">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h4>${p.name}</h4>
+              ${fakturaBadge}
+            </div>
+            <p>${p.loc || '-'} • 📅 ${p.date}</p>
+            <div style="margin-top: 5px; font-size: 11px; line-height: 1.4;">
+              ${statusText}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openDetails(id) {
+      selectedId = id;
+      currentImageIndex = 0;
+      renderSidebar();
+      renderDetails();
+
+      if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.add('mobile-hide');
+        document.getElementById('detailPanel').classList.add('mobile-show');
+      }
+    }
+
+    function backToSidebar() {
+      document.getElementById('sidebar').classList.remove('mobile-hide');
+      document.getElementById('detailPanel').classList.remove('mobile-show');
+    }
+
+    function openDocumentView(docUrl) {
+      if (!docUrl) return;
+      // Ako je slika – koristi lightbox s zoomom
+      if (docUrl.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(docUrl)) {
+        openLightbox(docUrl);
+        return;
+      }
+      // PDF ili drugi dokument – otvori u novom tabu (preglednik ima svoj zoom)
+      window.open(docUrl, '_blank');
+    }
+
+    function openOfferFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.offerDoc) openDocumentView(p.offerDoc);
+    }
+
+    function openRnFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.rnDoc) openDocumentView(p.rnDoc);
+    }
+
+    function renderDetails() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+
+      document.getElementById('d-name').innerText = p.name;
+      document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
+      document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
+
+      // 1. Skice
+      const images = (p.images && p.images.length > 0) ? p.images : [];
+      currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
+      
+      const mainImg = document.getElementById('d-img');
+      const btnDelSketch = document.getElementById('btnDeleteCurrentSketch');
+
+      if (images.length > 0) {
+        mainImg.src = images[currentImageIndex];
+        mainImg.style.display = 'block';
+        document.getElementById('d-page').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
+        btnDelSketch.style.display = 'inline-block';
+      } else {
+        mainImg.style.display = 'none';
+        document.getElementById('d-page').innerText = 'Nema slika';
+        btnDelSketch.style.display = 'none';
+      }
+
+      const thumbs = document.getElementById('d-thumbs');
+      if (images.length > 1) {
+        thumbs.innerHTML = images.map((src, idx) => `
+          <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="selectThumb(${idx})">
+            <img src="${src}">
+          </div>
+        `).join('');
+      } else {
+        thumbs.innerHTML = '';
+      }
+
+      // 2. Ponuda
+      const offUpload = document.getElementById('offerUploadZone');
+      const offDisplay = document.getElementById('offerDisplayZone');
+      const btnDelOff = document.getElementById('btnDelOffer');
+      const offBox = document.getElementById('offerPreviewBox');
+
+      if (p.offerDoc) {
+        offUpload.style.display = 'none';
+        offDisplay.style.display = 'block';
+        btnDelOff.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
+        
+        if (!canViewFinancialDocs()) {
+          offBox.innerHTML = `
+            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
+              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            </div>
+          `;
+        } else {
+          // Za admina uvijek pokaži gumb + pokušaj thumbnail ako je slika
+          const isPdf = p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf') || p.offerDoc.includes('application%2Fpdf');
+          if (isPdf) {
+            offBox.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
+                <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
+                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
+              </div>
+            `;
+          } else {
+            offBox.innerHTML = `
+              <img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display:none; text-align:center; padding:20px;">
+                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
+              </div>
+            `;
+          }
+        }
+      } else {
+        offUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
+        offDisplay.style.display = 'none';
+        btnDelOff.style.display = 'none';
+        offBox.innerHTML = '';
+      }
+
+      // 3. Radni Nalog
+      const rnUpload = document.getElementById('rnUploadZone');
+      const rnDisplay = document.getElementById('rnDisplayZone');
+      const btnDelRn = document.getElementById('btnDelRn');
+      const rnBox = document.getElementById('rnPreviewBox');
+
+      if (p.rnDoc) {
+        rnUpload.style.display = 'none';
+        rnDisplay.style.display = 'block';
+        btnDelRn.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
+        
+        if (!canViewFinancialDocs()) {
+          rnBox.innerHTML = `
+            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
+              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            </div>
+          `;
+        } else {
+          const isPdf = p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf') || p.rnDoc.includes('application%2Fpdf');
+          if (isPdf) {
+            rnBox.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+                <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
+                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
+              </div>
+            `;
+          } else {
+            rnBox.innerHTML = `
+              <img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display:none; text-align:center; padding:20px;">
+                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
+              </div>
+            `;
+          }
+        }
+      } else {
+        rnUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
+        rnDisplay.style.display = 'none';
+        btnDelRn.style.display = 'none';
+        rnBox.innerHTML = '';
+      }
+
+      // 4. Skladište
+      document.getElementById('mSkladisteNotes').value = p.skladisteNotes || '';
+      renderPositions();
+
+      // 5. Montaža
+      document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
+      renderMonteriCheckboxes();
+
+      const doneThumbs = document.getElementById('d-done-thumbs');
+      const doneImgs = p.doneImages || [];
+      if (doneImgs.length > 0) {
+        doneThumbs.innerHTML = doneImgs.map(src => `
+          <div class="gallery-thumb active" onclick="openLightbox('${src}')">
+            <img src="${src}">
+          </div>
+        `).join('');
+      } else {
+        doneThumbs.innerHTML = '<span style="font-size:11px; color:var(--text-muted); padding:6px;">Nema slika montaže.</span>';
+      }
+
+      // 6. Fakturiranje
+      document.getElementById('inpInvoiceNum').value = p.invoiceNum || '';
+      const readyAlert = document.getElementById('readyForInvoiceAlert');
+      const pill = document.getElementById('fakturaPill');
+      const btnFinal = document.getElementById('btnFinishInvoice');
+
+      const positions = p.positions || [];
+      const total = positions.length;
+      const montirano = positions.filter(x => x.status === 'montirano').length;
+      const allDone = (total > 0 && montirano === total);
+
+      if (allDone && !p.isInvoiced) {
+        readyAlert.style.display = 'block';
+      } else {
+        readyAlert.style.display = 'none';
+      }
+
+      if (p.isInvoiced) {
+        pill.style.background = '#10b981';
+        pill.style.color = '#fff';
+        pill.innerText = '✅ FAKTURIRANO';
+        btnFinal.innerText = '🔄 PONIŠTI STATUS FAKTURIRANO';
+        btnFinal.style.background = 'rgba(239, 68, 68, 0.2)';
+        btnFinal.style.color = '#f87171';
+        btnFinal.style.display = isVedran() ? 'block' : 'none';
+      } else {
+        pill.style.background = 'rgba(255,255,255,0.1)';
+        pill.style.color = 'var(--text-muted)';
+        pill.innerText = 'ČEKA RAČUN';
+        btnFinal.innerText = '✅ OZNAČI KAO FAKTURIRANO';
+        btnFinal.style.background = 'var(--success)';
+        btnFinal.style.color = '#fff';
+        btnFinal.style.display = (isVedran() || isAnkica()) ? 'block' : 'none';
+      }
+
+      const invoicePrev = document.getElementById('invoiceDocPreview');
+      if (p.invoiceDoc) {
+        if (canViewFinancialDocs()) {
+          invoicePrev.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
+              <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
+              <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
+            </div>
+          `;
+        } else {
+          invoicePrev.innerHTML = `
+            <div style="text-align:center; padding:10px; filter:blur(3px); opacity:0.5;">
+              <span style="font-size:12px; color:#94a3b8;">🔒 Financijski dokument – samo za ured</span>
+            </div>
+          `;
+        }
+      } else {
+        invoicePrev.innerHTML = '';
+      }
+
+      // === SEMAFOR SUSTAV ===
+      const hasMeasure = (p.images && p.images.length > 0);
+      const hasOffer = !!p.offerDoc;
+      const hasRn = !!p.rnDoc;
+      const posList = p.positions || [];
+      const hasSkladiste = posList.some(x => x.status === 'skladiste' || x.status === 'montirano' || x.status === 'reklamacija') || !!p.skladisteNotes;
+      const hasMontaza = posList.some(x => x.status === 'montirano') || (p.doneImages && p.doneImages.length > 0);
+      const isInvoiced = !!p.isInvoiced;
+
+      function setBadge(id, done, isCurrent) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (done) {
+          el.innerHTML = '<span style="background:#10b981;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">✓</span>';
+        } else if (isCurrent) {
+          el.innerHTML = '<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">●</span>';
+        } else {
+          el.innerHTML = '';
+        }
+      }
+
+      // Trenutna faza (prva koja nije gotova)
+      let currentStage = 1;
+      if (hasMeasure && hasOffer) currentStage = 3;
+      if (hasRn) currentStage = 4;
+      if (hasSkladiste) currentStage = 5;
+      if (hasMontaza) currentStage = 6;
+      if (isInvoiced) currentStage = 7;
+
+      setBadge('stage1Badge', hasMeasure, currentStage === 1);
+      setBadge('stage2Badge', hasOffer, currentStage === 2);
+      setBadge('stage3Badge', hasRn, currentStage === 3);
+      setBadge('stage4Badge', hasSkladiste, currentStage === 4);
+      setBadge('stage5Badge', hasMontaza, currentStage === 5);
+      setBadge('stage6Badge', isInvoiced, currentStage === 6);
+
+      // Prikaz datuma faza
+      const isAdmin = canViewFinancialDocs();
+      function showDate(id, val, field) {
+        let el = document.getElementById(id);
+        if (!el) {
+          const title = document.getElementById(id.replace('Date','Title'));
+          if (title) {
+            el = document.createElement('div');
+            el.id = id;
+            el.style.cssText = 'font-size:10px;color:#94a3b8;margin-top:2px;';
+            title.parentNode.insertBefore(el, title.nextSibling);
+          }
+        }
+        if (!el) return;
+        if (isAdmin) {
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.value = val || '';
+          inp.placeholder = 'dd.mm.gggg.';
+          inp.style.cssText = 'width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:3px;';
+          inp.onchange = function() { updateStageDate(field, this.value); };
+          el.innerHTML = '📅 ';
+          el.appendChild(inp);
+        } else {
+          el.innerHTML = val ? ('📅 ' + val) : '';
+        }
+      }
+      showDate('stage1Date', p.date || '', 'date');
+      showDate('stage2Date', p.dateOffer || '', 'dateOffer');
+      showDate('stage3Date', p.dateRn || '', 'dateRn');
+      showDate('stage4Date', p.dateSkladiste || '', 'dateSkladiste');
+      showDate('stage5Date', p.dateMontaza || '', 'dateMontaza');
+      showDate('stage6Date', p.dateInvoice || '', 'dateInvoice');
+    }
+
+    async function updateStageDate(field, value) {
+      if (!selectedId || !canViewFinancialDocs()) return;
+      var obj = {};
+      obj[field] = value.trim();
+      await db.collection("nalozi").doc(selectedId).update(obj);
+    }
+
+    function selectThumb(idx) {
+      currentImageIndex = idx;
+      renderDetails();
+    }
+
+    function updateTransform() {
+      const img = document.getElementById('lightboxImg');
+      img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+    }
+
+    function zoomIn(e) {
+      if (e) e.stopPropagation();
+      zoomLevel = Math.min(zoomLevel + 0.5, 5);
+      updateTransform();
+    }
+
+    function zoomOut(e) {
+      if (e) e.stopPropagation();
+      zoomLevel = Math.max(zoomLevel - 0.5, 1);
+      if (zoomLevel === 1) { panX = 0; panY = 0; }
+      updateTransform();
+    }
+
+    function resetZoom(e) {
+      if (e) e.stopPropagation();
+      zoomLevel = 1; panX = 0; panY = 0;
+      updateTransform();
+    }
+
+    function openLightbox(src) {
+      if (!src) return;
+      const img = document.getElementById('lightboxImg');
+      img.src = src;
+      resetZoom();
+      document.getElementById('lightbox').style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').style.display = 'none';
+      resetZoom();
+    }
+
+    function openSketchFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.images && p.images[currentImageIndex]) openLightbox(p.images[currentImageIndex]);
+    }
+
+    const viewport = document.getElementById('zoomViewport');
+
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        zoomLevel = Math.min(zoomLevel + 0.3, 5);
+      } else {
+        zoomLevel = Math.max(zoomLevel - 0.3, 1);
+        if (zoomLevel === 1) { panX = 0; panY = 0; }
+      }
+      updateTransform();
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (zoomLevel > 1) {
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging && zoomLevel > 1) {
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        updateTransform();
+      }
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1 && zoomLevel > 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - panX;
+        startY = e.touches[0].clientY - panY;
+      }
+    });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (isDragging && e.touches.length === 1 && zoomLevel > 1) {
+        panX = e.touches[0].clientX - startX;
+        panY = e.touches[0].clientY - startY;
+        updateTransform();
+      }
+    });
+
+    viewport.addEventListener('touchend', () => { isDragging = false; });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    async function handleOfferUpload(e) {
+      if (!canUploadOfferOrRn()) {
+        alert('❌ Samo Vedran i Ankica mogu učitavati ponudu.');
+        e.target.value = '';
+        return;
+      }
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      const txt = document.getElementById('txtOfferStatus');
+      txt.innerText = '⏳ Spremam ponudu...';
+
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.pdf`;
+          url = await uploadToStorage(file, path);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
+          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.jpg`;
+          url = await uploadToStorage(dataUrl, path);
+        }
+        const updates = { offerDoc: url };
+        const p = projects.find(item => item.id === selectedId);
+        if (!p || !p.dateOffer) updates.dateOffer = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
+        alert('✅ Ponuda uspješno učitana');
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju ponude: ' + (err.message || err));
+      }
+      txt.innerText = 'Nema ponude';
+      e.target.value = '';
+    }
+
+    async function removeOffer() {
+      if (!selectedId || !confirm('Obrisati ponudu za ovog klijenta?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ offerDoc: null });
+    }
+
+    async function handleRnUpload(e) {
+      if (!canUploadOfferOrRn()) {
+        alert('❌ Samo Vedran i Ankica mogu učitavati radni nalog.');
+        e.target.value = '';
+        return;
+      }
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      const txt = document.getElementById('txtRnStatus');
+      txt.innerText = '⏳ Spremam RN...';
+
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          const path = `nalozi/${selectedId}/rn_${Date.now()}.pdf`;
+          url = await uploadToStorage(file, path);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
+          const path = `nalozi/${selectedId}/rn_${Date.now()}.jpg`;
+          url = await uploadToStorage(dataUrl, path);
+        }
+        const updates = { rnDoc: url };
+        const p = projects.find(item => item.id === selectedId);
+        if (!p || !p.dateRn) updates.dateRn = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
+        alert('✅ Radni nalog uspješno učitan');
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju RN: ' + (err.message || err));
+      }
+      txt.innerText = 'Nema radnog naloga';
+      e.target.value = '';
+    }
+
+    async function removeRn() {
+      if (!selectedId || !confirm('Obrisati radni nalog za ovog klijenta?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ rnDoc: null });
+    }
+
+    async function uploadDoneImages(e) {
+      const files = Array.from(e.target.files);
+      if (!selectedId || files.length === 0) return;
+      const p = projects.find(item => item.id === selectedId);
+      let existing = [...(p.doneImages || [])];
+      try {
+        for (let f of files) {
+          const dataUrl = await processImageFile(f);
+          if (!dataUrl) continue;
+          const path = `nalozi/${selectedId}/montaza_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
+          const url = await uploadToStorage(dataUrl, path);
+          existing.push(url);
+        }
+        const updates = { doneImages: existing };
+        if (!p.dateMontaza) updates.dateMontaza = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
+        alert('✅ Slike montaže učitane');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      }
+      e.target.value = '';
+    }
+
+    async function deleteCurrent() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      if (confirm(`Izbrisati cijeli radni nalog za: ${p.name}?`)) {
+        await db.collection("nalozi").doc(selectedId).delete();
+        backToSidebar();
+      }
+    }
+
+    function showMonterView() {
+      document.getElementById('monter-view').classList.add('active');
+      document.getElementById('admin-view').classList.remove('active');
+      document.getElementById('tab-monter').classList.add('active');
+      document.getElementById('tab-admin').classList.remove('active');
+    }
+
+    function showAdminView() {
+      document.getElementById('monter-view').classList.remove('active');
+      document.getElementById('admin-view').classList.add('active');
+      document.getElementById('tab-monter').classList.remove('active');
+      document.getElementById('tab-admin').classList.add('active');
+      backToSidebar();
+    }
+
+    async function handleImageSelection(e) {
+      const files = Array.from(e.target.files);
+      const status = document.getElementById('upload-status');
+      const modeEl = document.querySelector('input[name="imgMode"]:checked');
+      const mode = modeEl ? modeEl.value : 'color';
+      
+      for (let i = 0; i < files.length; i++) {
+        status.innerText = `⏳ Učitavam sliku ${i+1}/${files.length}...`;
+        const base64 = await processImageFile(files[i], mode);
+        if (base64) uploadedImages.push(base64);
+      }
+      renderPreviews();
+      e.target.value = '';
+    }
+
+    function removeImage(idx) {
+      uploadedImages.splice(idx, 1);
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      const grid = document.getElementById('previewGrid');
+      grid.innerHTML = uploadedImages.map((src, i) => `
+        <div class="preview-thumb">
+          <img src="${src}">
+          <button type="button" class="btn-remove" onclick="removeImage(${i})">✕</button>
+        </div>
+      `).join('');
+
+      const count = uploadedImages.length;
+      document.getElementById('upload-status').innerText = count > 0 
+        ? `✅ Učitano: ${count} slika` 
+        : '📷 Dodaj fotografije bilježnice';
+    }
+
+    async function saveNewProject(e) {
+      e.preventDefault();
+      if (!currentWorker) { checkWorkerAuth(); return; }
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = 'Spremanje...';
+
+      const d = new Date();
+      const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}.${d.getFullYear()}.`;
+
+      const newProj = {
+        worker: currentWorker,
+        name: document.getElementById('cName').value,
+        phone: document.getElementById('cPhone').value || '-',
+        loc: document.getElementById('cLoc').value || '-',
+        date: formattedDate,
+        timestamp: Date.now(),
+        notes: document.getElementById('cNotes').value,
+        images: [],
+        offerDoc: null,
+        rnDoc: null,
+        positions: [],
+        skladisteNotes: '',
+        assignedMonteri: [],
+        montazaNotes: '',
+        doneImages: [],
+        invoiceNum: '',
+        invoiceDoc: null,
+        isInvoiced: false
+      };
+
+      try {
+        const docRef = await db.collection("nalozi").add(newProj);
+        const nalogId = docRef.id;
+        const imageUrls = [];
+        for (let i = 0; i < uploadedImages.length; i++) {
+          btn.innerText = `Upload slike ${i+1}/${uploadedImages.length}...`;
+          const path = `nalozi/${nalogId}/mjerenje_${i}_${Date.now()}.jpg`;
+          const url = await uploadToStorage(uploadedImages[i], path);
+          imageUrls.push(url);
+        }
+        if (imageUrls.length > 0) {
+          await db.collection("nalozi").doc(nalogId).update({ images: imageUrls });
+        }
+        uploadedImages = [];
+        renderPreviews();
+        document.querySelector('form').reset();
+        showAdminView();
+        openDetails(nalogId);
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '💾 SPREMI MJERENJE';
+      }
+    }
+
+    function exportNalozi() {
+      if (!canViewFinancialDocs()) {
+        alert('❌ Samo admin može exportati podatke.');
+        return;
+      }
+      // Mjerenja + slike montaže
+      const data = projects.map(p => ({
+        klijent: p.name,
+        mjernik: p.worker || '',
+        telefon: p.phone || '',
+        lokacija: p.loc || '',
+        datumMjerenja: p.date || '',
+        datumMontaze: p.dateMontaza || '',
+        napomene: p.notes || '',
+        napomeneMontaze: p.montazaNotes || '',
+        monteri: p.assignedMonteri || [],
+        brojSlikaMjerenja: (p.images || []).length,
+        linkoviSlikaMjerenja: p.images || [],
+        brojSlikaMontaze: (p.doneImages || []).length,
+        linkoviSlikaMontaze: p.doneImages || []
+      }));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mjerenja_backup_' + formatToday().replace(/\./g, '-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('✅ Export spreman – ' + data.length + ' zapisa (mjerenja + montaža). Spremi na svoj cloud.');
+    }
+
+    populateUserDropdowns();
+    checkWorkerAuth();
+  </script>
 </body>
 </html>
