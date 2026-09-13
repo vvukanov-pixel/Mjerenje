@@ -1,126 +1,2026 @@
-/* 1) POMOĆNE FUNKCIJE — dodaj oboje negdje u <script> */
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TerenRad - Sustav Radnih Naloga</title>
 
-async function savePins(nextPins) {
-  const ref = db.collection("postavke").doc("pinovi");
-  const snap = await ref.get();
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 
-  if (!snap.exists) {
-    console.error("PIN dokument ne postoji — spremanje otkazano, PIN-ovi nisu dirani.");
-    return false;
-  }
-
-  const prev = snap.data() || {};
-  const prevPins = prev.pins || {};
-
-  await ref.set(
-    {
-      pins: nextPins,
-      lastModified: Date.now(),
-      backup: prevPins,
-      createdAt: prev.createdAt || Date.now(),
-    },
-    { merge: true }
-  );
-
-  return true;
-}
-
-async function initPins() {
-  const ref = db.collection("postavke").doc("pinovi");
-  try {
-    const doc = await ref.get();
-    if (!doc.exists) {
-      await ref.set({
-        pins: DEFAULT_PINS,
-        createdAt: Date.now(),
-        lastModified: Date.now(),
-        backup: DEFAULT_PINS,
-      });
-      console.warn("PIN dokument nije postojao — napravljena jednokratna inicijalizacija.");
+  <style>
+    :root {
+      --bg-dark: #0b1120;
+      --panel-dark: #151f38;
+      --card-dark: #1e294b;
+      --border-color: #2e3d66;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --purple: #a855f7;
+      --cyan: #06b6d4;
     }
-  } catch (e) {
-    console.error("initPins nije uspio, ništa nije zapisano:", e);
-  }
-}
 
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
 
-/* 2) onSnapshot LISTENER — zamijeni cijeli postojeći blok */
+    header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 17px; font-weight: bold; }
+    .logo span { color: #38bdf8; }
 
-db.collection("postavke").doc("pinovi").onSnapshot(doc => {
-  if (doc.exists && doc.data().pins) {
-    userPins = { ...doc.data().pins };
-  } else if (!doc.exists) {
-    console.error("PIN dokument 'postavke/pinovi' ne postoji ili je nedostupan — PIN-ovi NISU resetirani.");
-  }
-  populateUserDropdowns();
-  renderPinTable();
-  renderMonteriCheckboxes();
-  checkWorkerAuth();
-}, err => {
-  console.error("Greška pri čitanju PIN-ova:", err);
-});
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .user-tag { background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
 
+    .btn-pin-nav { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: none; align-items: center; gap: 4px; }
+    .btn-pin-nav:hover { background: #334155; }
 
-/* 3) saveUserPinChange() — zamijeni cijelu funkciju */
+    .view-toggle { display: flex; background: var(--bg-dark); padding: 3px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .view-toggle button { background: none; border: none; color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; }
+    .view-toggle button.active { background: var(--accent); color: white; }
 
-async function saveUserPinChange() {
-  const target = document.getElementById('pinTargetDropdown').value;
-  const newPin = document.getElementById('newPinVal').value.trim();
-  if (!newPin || newPin.length < 4) {
-    alert('PIN mora imati najmanje 4 znamenke.');
-    return;
-  }
+    .main-container { flex: 1; display: flex; width: 100%; position: relative; }
 
-  const pins = { ...userPins };
-  pins[target] = newPin;
+    #monter-view { width: 100%; max-width: 650px; margin: 0 auto; padding: 16px; display: none; }
+    #monter-view.active { display: block; }
+    .card { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
+    input, textarea, select { width: 100%; background: #0f172a; border: 1px solid var(--border-color); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: #38bdf8; }
 
-  const ok = await savePins(pins);
-  if (!ok) {
-    alert('Greška: dokument PIN-ova nije pronađen. Promjena NIJE spremljena.');
-    return;
-  }
+    .upload-zone { border: 2px dashed #0284c7; border-radius: 10px; padding: 18px; text-align: center; cursor: pointer; background: rgba(2, 132, 199, 0.08); margin-bottom: 12px; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .preview-thumb { position: relative; width: 100%; height: 75px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); background: #000; }
+    .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .btn-remove { position: absolute; top: 2px; right: 2px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; font-weight: bold; cursor: pointer; }
 
-  alert(`✅ Uspješno postavljen novi PIN za: ${target} (${newPin})`);
-  document.getElementById('newPinVal').value = '';
-}
+    .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 13px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-submit:disabled { opacity: 0.5; }
 
+    #admin-view { width: 100%; display: none; }
+    #admin-view.active { display: flex; }
 
-/* 4) addNewWorkerWithPin() — zamijeni cijelu funkciju */
+    .sidebar { width: 340px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; height: calc(100vh - 52px); }
+    .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
+    .search-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 7px 10px; border-radius: 6px; font-size: 12px; outline: none; }
+    .sidebar-list { flex: 1; overflow-y: auto; }
+    .project-item { padding: 12px 14px; border-bottom: 1px solid var(--border-color); cursor: pointer; border-left: 4px solid #38bdf8; }
+    .project-item:hover { background: var(--card-dark); }
+    .project-item.selected { background: rgba(37,99,235,0.2); }
+    .project-item h4 { font-size: 14px; margin-bottom: 3px; }
+    .project-item p { font-size: 11px; color: var(--text-muted); }
 
-async function addNewWorkerWithPin() {
-  const name = document.getElementById('newWorkerName').value.trim().toUpperCase();
-  const pin = document.getElementById('newWorkerPin').value.trim() || '1234';
+    .detail-panel { flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; height: calc(100vh - 52px); }
+    .full-width { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 8px; }
 
-  if (!name) {
-    alert('Unesite ime.');
-    return;
-  }
+    .btn-mobile-back { display: none; background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .btn-action-group { display: flex; gap: 8px; }
+    .btn-action { padding: 7px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; }
+    .btn-print { background: var(--accent); color: white; }
+    .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
 
-  const pins = { ...userPins };
-  pins[name] = pin;
+    .grid-six-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
 
-  const ok = await savePins(pins);
-  if (!ok) {
-    alert('Greška: dokument PIN-ova nije pronađen. Novi radnik NIJE spremljen.');
-    return;
-  }
+    .main-sketch { background: #000; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; min-height: 240px; max-height: 360px; overflow: hidden; margin-bottom: 8px; cursor: pointer; }
+    .main-sketch img { width: 100%; height: 100%; max-height: 360px; object-fit: contain; }
+    .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+    .gallery-thumb { width: 55px; height: 55px; flex-shrink: 0; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; opacity: 0.5; }
+    .gallery-thumb.active { border-color: #38bdf8; opacity: 1; }
+    .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-  document.getElementById('newWorkerName').value = '';
-  document.getElementById('newWorkerPin').value = '';
-  alert(`✅ Dodan: ${name} (PIN: ${pin})`);
-}
+    .doc-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 18px; text-align: center; background: rgba(0,0,0,0.2); min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); padding: 8px; }
+    .doc-preview img { width: 100%; max-height: 340px; object-fit: contain; }
 
+    .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
+    .pos-name { font-size: 13px; font-weight: bold; flex: 1; color: white; }
 
-/* 5) deleteWorker() — zamijeni cijelu funkciju */
+    .status-chip { font-size: 11px; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; }
+    .status-chip.disabled-btn { cursor: default; opacity: 0.85; }
+    .chip-proizvodnja { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .chip-skladiste { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .chip-montirano { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .chip-reklamacija { background: rgba(239, 68, 68, 0.3); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.6); }
 
-async function deleteWorker(name) {
-  if (!confirm(`Želite li obrisati radnika: ${name}?`)) return;
+    .monteri-container { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+    .monter-row { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+    .monter-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin: 0; text-transform: none; color: #fff; flex: 1; }
+    .monter-label input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: #c084fc; }
 
-  const pins = { ...userPins };
-  delete pins[name];
+    .pin-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+    .pin-table th { background: #0f172a; color: var(--text-muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color); font-size: 11px; text-transform: uppercase; }
+    .pin-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .pin-table tr:hover { background: rgba(255,255,255,0.02); }
+    .pin-code-badge { background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 13px; font-weight: bold; padding: 3px 8px; border-radius: 4px; border: 1px solid #334155; }
 
-  const ok = await savePins(pins);
-  if (!ok) {
-    alert('Greška: dokument PIN-ova nije pronađen. Radnik NIJE obrisan.');
-  }
-}
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+    .modal-box { background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; width: 100%; max-width: 480px; text-align: center; position: relative; max-height: 90vh; overflow-y: auto; }
+
+    .lightbox-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 300; display: none; flex-direction: column; overflow: hidden; }
+    .lightbox-header { position: absolute; top: 12px; right: 16px; display: flex; align-items: center; gap: 8px; z-index: 310; }
+    .lightbox-header button { background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    .btn-close-lightbox { background: var(--danger) !important; border: none !important; }
+    .lightbox-viewport { flex: 1; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+    .lightbox-viewport:active { cursor: grabbing; }
+    .lightbox-img { max-width: 90vw; max-height: 85vh; object-fit: contain; transform-origin: center center; transition: transform 0.05s ease-out; user-select: none; }
+
+    @media (max-width: 900px) {
+      .main-container { display: block; }
+      .sidebar { width: 100%; height: auto; min-height: calc(100vh - 52px); border-right: none; display: block; }
+      .sidebar.mobile-hide { display: none; }
+      .detail-panel { width: 100%; height: auto; min-height: calc(100vh - 52px); display: none; padding: 12px; }
+      .detail-panel.mobile-show { display: flex; }
+      .btn-mobile-back { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="lightbox" class="lightbox-overlay">
+    <div class="lightbox-header">
+      <button onclick="zoomIn(event)">➕</button>
+      <button onclick="zoomOut(event)">➖</button>
+      <button onclick="resetZoom(event)">↺ Reset</button>
+      <button class="btn-close-lightbox" onclick="closeLightbox()">✕ Zatvori</button>
+    </div>
+    <div class="lightbox-viewport" id="zoomViewport">
+      <img id="lightboxImg" class="lightbox-img" src="" alt="Pregled">
+    </div>
+  </div>
+
+  <div id="loginModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 380px;">
+      <h3 style="margin-bottom: 6px; font-size: 18px; color: #fff;">Prijava Korisnika</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Odaberite svoje ime i unesite PIN:</p>
+
+      <div class="form-group" style="text-align: left;">
+        <label>Korisnik:</label>
+        <select id="userSelectDropdown" style="margin-bottom: 12px; font-weight: bold; background: #0f172a; color: #fff;"></select>
+      </div>
+
+      <div class="form-group" style="text-align: left; margin-bottom: 16px;">
+        <label>PIN Lozinka:</label>
+        <input type="password" id="userPinInput" placeholder="PIN..." style="font-size: 18px; text-align: center; letter-spacing: 6px;" inputmode="numeric">
+      </div>
+
+      <button onclick="confirmUserLogin()" class="btn-submit">POTVRDI PRIJAVU</button>
+    </div>
+  </div>
+
+  <div id="pinModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <button onclick="document.getElementById('pinModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 16px; font-weight: bold; cursor: pointer;">✕</button>
+      <h3 style="margin-bottom: 4px; font-size: 18px; color: #38bdf8;">⚙️ Pregled i Postavke PIN-ova</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Administratorski pregled svih aktivnih korisnika i lozinki:</p>
+
+      <div style="max-height: 220px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+        <table class="pin-table">
+          <thead>
+            <tr>
+              <th>Korisnik</th>
+              <th style="text-align:center;">PIN</th>
+              <th style="text-align:right;">Akcija</th>
+            </tr>
+          </thead>
+          <tbody id="pinTableBody"></tbody>
+        </table>
+      </div>
+
+      <div style="background: var(--card-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 14px; text-align: left;">
+        <label style="color:#38bdf8;">✏️ Promjena PIN-a radniku:</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <select id="pinTargetDropdown" style="flex: 1.5; font-size: 12px;"></select>
+          <input type="text" id="newPinVal" placeholder="Novi PIN" maxlength="6" style="flex: 1; text-align: center; font-weight: bold; letter-spacing: 2px;">
+        </div>
+        <button onclick="saveUserPinChange()" class="btn-submit" style="background: var(--success); margin-top: 8px; padding: 9px; font-size: 12px;">💾 SPREMI NOVI PIN</button>
+      </div>
+
+      <div style="background: rgba(2, 132, 199, 0.1); border: 1px dashed #0284c7; border-radius: 8px; padding: 12px; text-align: left;">
+        <label style="color:#38bdf8;">➕ Dodaj novog radnika:</label>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          <input type="text" id="newWorkerName" placeholder="Ime i prezime..." style="flex: 1.5; font-size: 12px;">
+          <input type="text" id="newWorkerPin" placeholder="PIN (npr. 1234)" maxlength="6" style="flex: 1; text-align: center; font-size: 12px;">
+        </div>
+        <button onclick="addNewWorkerWithPin()" class="btn-submit" style="background: #0284c7; margin-top: 8px; padding: 9px; font-size: 12px;">➕ DODAJ RADNIKA</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo">TEREN<span>RAD</span></div>
+    <div class="header-right">
+      <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
+      <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
+      <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
+      <div class="view-toggle">
+        <button id="tab-monter" onclick="showMonterView()">➕ Novo</button>
+        <button id="tab-admin" class="active" onclick="showAdminView()">📋 Nalozi</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+
+    <div id="monter-view">
+      <div class="card">
+        <h3 style="font-size: 15px; margin-bottom: 12px;">Novo Terensko Mjerenje</h3>
+
+        <form onsubmit="saveNewProject(event)">
+          <label>Fotografije Skica / Mjerenja</label>
+          <div style="display:flex; gap:12px; margin-bottom:8px; font-size:12px;">
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
+              <input type="radio" name="imgMode" value="color" checked style="width:auto; margin:0;"> 🎨 Boja
+            </label>
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; text-transform:none; color:#fff;">
+              <input type="radio" name="imgMode" value="bw" style="width:auto; margin:0;"> ⚫ Crno-bijelo
+            </label>
+          </div>
+          <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <span id="upload-status">📷 Dodaj fotografije bilježnice</span>
+            <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleImageSelection(event)">
+          </div>
+
+          <div class="preview-grid" id="previewGrid"></div>
+
+          <div class="form-group">
+            <label>Klijent / Objekt</label>
+            <input type="text" id="cName" required placeholder="npr. ELLABO IND ili Tomičić">
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <div class="form-group" style="flex:1;">
+              <label>Telefon</label>
+              <input type="text" id="cPhone" placeholder="095...">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>Lokacija</label>
+              <input type="text" id="cLoc" placeholder="npr. Lapad">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Opće napomene s mjerenja</label>
+            <textarea id="cNotes" rows="3" placeholder="Boja, profil, staklo, situacija..."></textarea>
+          </div>
+
+          <button type="submit" id="btnSubmit" class="btn-submit">💾 SPREMI MJERENJE</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="admin-view" class="active">
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted);">SVI NALOZI</span>
+            <button onclick="showMonterView()" style="background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Novo</button>
+          </div>
+          <input type="text" id="searchQuery" class="search-input" placeholder="🔍 Pretraži klijenta ili lokaciju..." oninput="renderSidebar()">
+          <div id="statusFilters" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; max-height:90px; overflow-y:auto;"></div>
+        </div>
+        <div class="sidebar-list" id="projectList">
+          <p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Učitavanje...</p>
+        </div>
+      </div>
+
+      <div class="detail-panel" id="detailPanel">
+
+        <div class="full-width">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
+            <div>
+              <h2 id="d-name" style="font-size: 19px;">-</h2>
+              <p id="d-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">-</p>
+            </div>
+          </div>
+          <div class="btn-action-group">
+            <button onclick="deleteCurrent()" class="btn-action btn-delete">🗑️ Izbriši</button>
+            <button onclick="window.print()" class="btn-action btn-print">🖨️ Ispiši</button>
+          </div>
+        </div>
+
+        <div class="grid-six-col">
+
+          <!-- 1. MAPA: SLIKE MJERENJA -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage1Title" style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE <span id="stage1Badge"></span></h4>
+              <button onclick="document.getElementById('addSketchFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Dodaj skicu</button>
+              <input type="file" id="addSketchFileInput" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
+            </div>
+
+            <div class="main-sketch" onclick="openSketchFull()">
+              <img id="d-img" src="" alt="Skica" title="Klik za Zoom">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
+              <button id="btnDeleteCurrentSketch" onclick="deleteCurrentSketch()" style="display:none; background:none; border:none; color:#f87171; font-size:11px; cursor:pointer; font-weight:bold;">🗑️ Obriši ovu sliku</button>
+            </div>
+
+            <div class="gallery-thumbs" id="d-thumbs" style="margin-top:6px;"></div>
+            <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
+          </div>
+
+          <!-- 2. MAPA: PONUDA -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage2Title" style="color: #34d399; font-size: 13px;">📄 2. PONUDA <span id="stage2Badge"></span></h4>
+              <button id="btnDelOffer" onclick="removeOffer()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
+            </div>
+
+            <div id="offerUploadZone" class="doc-box">
+              <p id="txtOfferStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema ponude</p>
+              <button onclick="document.getElementById('offerFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj Ponudu (PDF / Slika)</button>
+              <input type="file" id="offerFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleOfferUpload(event)">
+            </div>
+
+            <div id="offerDisplayZone" style="display:none;">
+              <div class="doc-preview" id="offerPreviewBox"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
+                <span style="font-size: 11px; color: #34d399; font-weight: bold;">✅ Učitano</span>
+                <button onclick="document.getElementById('offerFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. MAPA: RADNI NALOG -->
+          <div class="card" style="border-left: 4px solid #fbbf24;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage3Title" style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG <span id="stage3Badge"></span></h4>
+              <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
+            </div>
+
+            <div id="rnUploadZone" class="doc-box">
+              <p id="txtRnStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Nema radnog naloga</p>
+              <button onclick="document.getElementById('rnFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: bold; cursor: pointer;">📤 Učitaj RN (PDF / Slika)</button>
+              <input type="file" id="rnFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleRnUpload(event)">
+            </div>
+
+            <div id="rnDisplayZone" style="display:none; margin-bottom: 12px;">
+              <div class="doc-preview" id="rnPreviewBox"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
+                <span style="font-size: 11px; color: #fbbf24; font-weight: bold;">✅ RN Učitan</span>
+                <button onclick="document.getElementById('rnFileInput').click()" style="background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🔄 Zamijeni</button>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+              <label style="margin:0; color:#fbbf24;">📦 POZICIJE NALOGA:</label>
+              <button onclick="promptAddPosition()" style="background:none; border:none; color:#38bdf8; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
+            </div>
+
+            <div class="positions-box" id="positionsListRn"></div>
+          </div>
+
+          <!-- 4. MAPA: SKLADIŠTE -->
+          <div class="card" style="border-left: 4px solid var(--cyan);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage4Title" style="color: var(--cyan); font-size: 13px;">📦 4. SKLADIŠTE <span id="stage4Badge"></span></h4>
+              <span id="skladisteStatusBadge" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(6,182,212,0.15); color:var(--cyan);">ROBA U SKLADIŠTU</span>
+            </div>
+
+            <label style="color:var(--cyan);">STANJE POZICIJA U SKLADIŠTU:</label>
+            <div class="positions-box" id="positionsListSkladiste" style="margin-bottom: 10px;"></div>
+
+            <div class="form-group">
+              <label>Skladišna napomena / lokacija police:</label>
+              <textarea id="mSkladisteNotes" rows="2" placeholder="npr. Paleta 3, spremno za preuzimanje..." onchange="saveSkladisteNotes()"></textarea>
+            </div>
+          </div>
+
+          <!-- 5. MAPA: MONTAŽA -->
+          <div class="card" style="border-left: 4px solid #a855f7;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage5Title" style="color: #c084fc; font-size: 13px;">🛠️ 5. MONTAŽA <span id="stage5Badge"></span></h4>
+              <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike</button>
+              <input type="file" id="doneFileInput" multiple style="display:none" onchange="uploadDoneImages(event)">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+              <label style="margin:0; color:#c084fc;">📦 STANJE ROBE (KLIK ZA PROMJENU):</label>
+              <button onclick="promptAddPosition()" style="background:none; border:none; color:#c084fc; font-size:11px; font-weight:bold; cursor:pointer;">➕ Dodaj poziciju</button>
+            </div>
+            <div class="positions-box" id="positionsListMontaza" style="margin-bottom: 12px;"></div>
+
+            <label>MONTERI NA GRADILIŠTU:</label>
+            <div class="monteri-container" id="monteriCheckboxList"></div>
+
+            <div class="form-group">
+              <label>Nedostaci / Zapažanja:</label>
+              <textarea id="mMontazaNotes" rows="2" placeholder="npr. Montirana poz. 1, za poz. 2 fali lajsna..." onchange="saveMontazaNotes()"></textarea>
+            </div>
+
+            <label>Fotografije montaže:</label>
+            <div class="gallery-thumbs" id="d-done-thumbs"></div>
+          </div>
+
+          <!-- 6. MAPA: FAKTURIRANJE -->
+          <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <h4 id="stage6Title" style="color: #34d399; font-size: 13px;">💰 6. FAKTURIRANJE <span id="stage6Badge"></span></h4>
+              <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
+            </div>
+
+            <div id="readyForInvoiceAlert" style="display:none; background: rgba(16,185,129,0.2); border: 1px solid var(--success); color: #a7f3d0; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 10px; text-align: center;">
+              📢 SVE JE MONTIRANO - MOŽE SE FAKTURIRATI!
+            </div>
+
+            <div class="form-group">
+              <label>Broj Računa / Fakture:</label>
+              <input type="text" id="inpInvoiceNum" placeholder="npr. R1 142/2026" onchange="saveInvoiceData()">
+            </div>
+
+            <div class="form-group">
+              <label>Priloži Račun (PDF / Slika):</label>
+              <button onclick="document.getElementById('invoiceFileInput').click()" style="width:100%; background: #065f46; color: #a7f3d0; border: 1px dashed #10b981; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">📎 Učitaj Fakturu</button>
+              <input type="file" id="invoiceFileInput" style="display:none" onchange="handleInvoiceUpload(event)">
+              <div id="invoiceDocPreview" style="margin-top: 6px; font-size: 12px;"></div>
+            </div>
+
+            <button type="button" id="btnFinishInvoice" class="btn-submit" style="background: var(--success); margin-top: 6px;" onclick="finalizeProjectInvoice()">
+              ✅ OZNAČI KAO FAKTURIRANO
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyABrJCjpEBj6ZsXu4Or2TCTDvi1yQkAnVc",
+      authDomain: "mjerenje-b0bc5.firebaseapp.com",
+      projectId: "mjerenje-b0bc5",
+      storageBucket: "mjerenje-b0bc5.firebasestorage.app",
+      messagingSenderId: "923942715900",
+      appId: "1:923942715900:web:86fb6c3a27694931a7fa2a"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Upload u Storage i vrati download URL
+    async function uploadToStorage(dataUrlOrFile, path) {
+      const ref = storage.ref(path);
+      if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
+        await ref.putString(dataUrlOrFile, 'data_url');
+      } else {
+        await ref.put(dataUrlOrFile);
+      }
+      return await ref.getDownloadURL();
+    }
+
+    function formatToday() {
+      const d = new Date();
+      return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
+    }
+
+    const DEFAULT_PINS = {
+      "VEDRAN VUKANOVIĆ": "7020",
+      "ANKICA BAČIĆ PRKAČIN": "1234",
+      "BRANISLAV BEGENUŠIĆ": "1234",
+      "ZLATKO RADIŠ": "1234",
+      "SINIŠA PRAVICA": "1234",
+      "SLAVEN PUHALO": "1234",
+      "NIKOLA MRDIĆ": "1234",
+      "LJUBIŠA DOŠLO": "1234",
+      "RANKO JANJIĆ": "1234",
+      "MIODRAG ĆERANIĆ": "1234"
+    };
+
+    let userPins = { ...DEFAULT_PINS };
+    let currentWorker = localStorage.getItem('teren_worker_name') || 'VEDRAN VUKANOVIĆ';
+    let projects = [];
+    let selectedId = null;
+    let currentImageIndex = 0;
+    let uploadedImages = [];
+
+    let zoomLevel = 1;
+    let panX = 0, panY = 0;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    /* ============================================================
+       PIN FIX — POMOĆNE FUNKCIJE
+       savePins() centralizira svako pisanje PIN-ova u bazu i NIKAD
+       ne piše ako dokument ne postoji (nema tihog reseta).
+       initPins() se poziva jednom, samo pravi dokument ako stvarno
+       ne postoji.
+       ============================================================ */
+    async function savePins(nextPins) {
+      const ref = db.collection("postavke").doc("pinovi");
+      const snap = await ref.get();
+
+      if (!snap.exists) {
+        console.error("PIN dokument ne postoji — spremanje otkazano, PIN-ovi nisu dirani.");
+        return false;
+      }
+
+      const prev = snap.data() || {};
+      const prevPins = prev.pins || {};
+
+      await ref.set(
+        {
+          pins: nextPins,
+          lastModified: Date.now(),
+          backup: prevPins,
+          createdAt: prev.createdAt || Date.now(),
+        },
+        { merge: true }
+      );
+
+      return true;
+    }
+
+    async function initPins() {
+      const ref = db.collection("postavke").doc("pinovi");
+      try {
+        const doc = await ref.get();
+        if (!doc.exists) {
+          await ref.set({
+            pins: DEFAULT_PINS,
+            createdAt: Date.now(),
+            lastModified: Date.now(),
+            backup: DEFAULT_PINS,
+          });
+          console.warn("PIN dokument nije postojao — napravljena jednokratna inicijalizacija.");
+        }
+      } catch (e) {
+        console.error("initPins nije uspio, ništa nije zapisano:", e);
+      }
+    }
+    initPins();
+
+    db.collection("postavke").doc("pinovi").onSnapshot(doc => {
+      if (doc.exists && doc.data().pins) {
+        userPins = { ...doc.data().pins };
+      } else if (!doc.exists) {
+        // Dokument ne postoji ili je trenutno nedostupan — VIŠE SE NE PIŠE
+        // DEFAULT_PINS natrag. Zadržava se zadnje poznato stanje u memoriji.
+        console.error("PIN dokument 'postavke/pinovi' ne postoji ili je nedostupan — PIN-ovi NISU resetirani.");
+      }
+      // Ako dokument postoji ali (privremeno) nema 'pins' polje, isto se
+      // ne dira baza — zadržava se zadnje poznato stanje.
+      populateUserDropdowns();
+      renderPinTable();
+      renderMonteriCheckboxes();
+      checkWorkerAuth();
+    }, err => {
+      console.error("Greška pri čitanju PIN-ova:", err);
+    });
+
+    function populateUserDropdowns() {
+      const loginDrop = document.getElementById('userSelectDropdown');
+      const pinDrop = document.getElementById('pinTargetDropdown');
+
+      let opts = '';
+      Object.keys(userPins).forEach(name => {
+        const isAdm = name.includes('VEDRAN');
+        const isUred = name.includes('ANKICA');
+        const isSkladiste = name.includes('BRANISLAV');
+        let icon = '👷 ';
+        if (isAdm) icon = '👑 ';
+        else if (isUred) icon = '💼 ';
+        else if (isSkladiste) icon = '📦 ';
+        opts += `<option value="${name}">${icon}${name}${isAdm ? ' (ADMINISTRATOR)' : ''}</option>`;
+      });
+
+      if (loginDrop) {
+        loginDrop.innerHTML = opts;
+        if (currentWorker) loginDrop.value = currentWorker;
+      }
+      if (pinDrop) {
+        pinDrop.innerHTML = opts;
+      }
+    }
+
+    function renderPinTable() {
+      const tbody = document.getElementById('pinTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = Object.keys(userPins).map(name => {
+        const isAdm = name.includes('VEDRAN');
+        const isUred = name.includes('ANKICA');
+        const isSkl = name.includes('BRANISLAV');
+        let role = 'Monter';
+        if (isAdm) role = '👑 Administrator';
+        else if (isUred) role = '💼 Ured / Fakturiranje';
+        else if (isSkl) role = '📦 Skladište';
+
+        const pinVal = userPins[name];
+
+        let deleteBtn = '';
+        if (!isAdm) {
+          deleteBtn = `<button onclick="deleteWorker('${name}')" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 6px; border-radius:4px; font-size:11px; cursor:pointer; margin-left:4px;">🗑️</button>`;
+        }
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:bold; color:#fff;">${name}</div>
+              <div style="font-size:10px; color:var(--text-muted);">${role}</div>
+            </td>
+            <td style="text-align:center;">
+              <span class="pin-code-badge">${pinVal}</span>
+            </td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button onclick="quickEditPin('${name}')" style="background:#0284c7; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">✏️ Uredi</button>
+              ${deleteBtn}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function quickEditPin(name) {
+      document.getElementById('pinTargetDropdown').value = name;
+      document.getElementById('newPinVal').value = userPins[name] || '';
+      document.getElementById('newPinVal').focus();
+    }
+
+    /* PIN FIX: deleteWorker() sad koristi savePins() umjesto
+       .update({[`pins.${name}`]: FieldValue.delete()}) */
+    async function deleteWorker(name) {
+      if (!confirm(`Želite li obrisati radnika: ${name}?`)) return;
+
+      const pins = { ...userPins };
+      delete pins[name];
+
+      const ok = await savePins(pins);
+      if (!ok) {
+        alert('Greška: dokument PIN-ova nije pronađen. Radnik NIJE obrisan.');
+      }
+    }
+
+    function workerName() {
+      return (currentWorker || '').toUpperCase().trim();
+    }
+    function isVedran() {
+      const u = workerName();
+      return u.indexOf('VEDRAN') !== -1;
+    }
+    function isAnkica() {
+      return workerName().indexOf('ANKICA') !== -1;
+    }
+    function isZlatko() {
+      return workerName().indexOf('ZLATKO') !== -1;
+    }
+    function isBranislav() {
+      return workerName().indexOf('BRANISLAV') !== -1;
+    }
+    function isMontazaMonter() {
+      // Siniša, Slaven, Nikola + assigned monters can set montirano/reklamacija
+      const u = workerName();
+      if (u.indexOf('SINIŠA') !== -1 || u.indexOf('SINISA') !== -1) return true;
+      if (u.indexOf('SLAVEN') !== -1) return true;
+      if (u.indexOf('NIKOLA') !== -1) return true;
+      if (u.indexOf('ZLATKO') !== -1) return true;
+      return false;
+    }
+    function isViewOnlyMonter() {
+      // Ljubo, Ranko, Miodrag - only view
+      const u = workerName();
+      return u.indexOf('LJUBO') !== -1 || u.indexOf('RANKO') !== -1 || u.indexOf('MIODRAG') !== -1;
+    }
+
+    function canEditSkladiste() {
+      return isVedran() || isBranislav();
+    }
+
+    function canEditMontaza() {
+      if (isVedran()) return true;
+      if (isViewOnlyMonter()) return false;
+      if (isMontazaMonter()) return true;
+      // Dodijeljeni monteri na ovom nalogu
+      if (!selectedId) return false;
+      const p = projects.find(item => item.id === selectedId);
+      if (!p || !p.assignedMonteri) return false;
+      const u = workerName();
+      return p.assignedMonteri.some(m => {
+        const mu = (m || '').toUpperCase().trim();
+        return mu === u || u.indexOf(mu) !== -1 || mu.indexOf(u) !== -1;
+      });
+    }
+
+    function canViewFinancialDocs() {
+      // Samo Vedran i Ankica vide ponudu/RN/fakturu jasno
+      return isVedran() || isAnkica();
+    }
+
+    function checkWorkerAuth() {
+      if (!currentWorker) {
+        openLoginModal();
+      } else {
+        document.getElementById('loginModal').style.display = 'none';
+
+        const isVedranAdmin = currentWorker.toUpperCase().trim() === 'VEDRAN VUKANOVIĆ';
+        const isUred = currentWorker.toUpperCase().includes('ANKICA');
+        const isSkladiste = currentWorker.toUpperCase().includes('BRANISLAV');
+
+        let icon = '👷 ';
+        if (isVedranAdmin) icon = '👑 ';
+        else if (isUred) icon = '💼 ';
+        else if (isSkladiste) icon = '📦 ';
+        document.getElementById('userBadge').innerText = `${icon}${currentWorker}`;
+
+        const btnPin = document.getElementById('btnPinNav');
+        if (btnPin) {
+          btnPin.style.display = isVedranAdmin ? 'inline-flex' : 'none';
+        }
+
+        const sklNotes = document.getElementById('mSkladisteNotes');
+        if (sklNotes) {
+          sklNotes.disabled = !canEditSkladiste();
+          sklNotes.style.opacity = canEditSkladiste() ? '1' : '0.6';
+        }
+      }
+    }
+
+    function openLoginModal() {
+      document.getElementById('userPinInput').value = '';
+      populateUserDropdowns();
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+
+    function confirmUserLogin() {
+      const selected = document.getElementById('userSelectDropdown').value;
+      const enteredPin = document.getElementById('userPinInput').value.trim();
+      const correctPin = userPins[selected] || "1234";
+
+      if (enteredPin !== correctPin) {
+        alert('❌ Pogrešan PIN!');
+        return;
+      }
+
+      currentWorker = selected;
+      localStorage.setItem('teren_worker_name', currentWorker);
+      checkWorkerAuth();
+      renderPositions();
+    }
+
+    function openPinModal() {
+      const isVedranAdmin = currentWorker.toUpperCase().trim() === 'VEDRAN VUKANOVIĆ';
+      if (!isVedranAdmin) {
+        alert('❌ Pristup dopušten samo Administratoru.');
+        return;
+      }
+      populateUserDropdowns();
+      renderPinTable();
+      document.getElementById('pinModal').style.display = 'flex';
+    }
+
+    function onTargetUserChanged() {
+      const selected = document.getElementById('pinTargetDropdown').value;
+      document.getElementById('newPinVal').value = userPins[selected] || '';
+    }
+
+    /* PIN FIX: saveUserPinChange() sad koristi savePins() umjesto
+       .update({[`pins.${target}`]: newPin}) */
+    async function saveUserPinChange() {
+      const target = document.getElementById('pinTargetDropdown').value;
+      const newPin = document.getElementById('newPinVal').value.trim();
+      if (!newPin || newPin.length < 4) {
+        alert('PIN mora imati najmanje 4 znamenke.');
+        return;
+      }
+
+      const pins = { ...userPins };
+      pins[target] = newPin;
+
+      const ok = await savePins(pins);
+      if (!ok) {
+        alert('Greška: dokument PIN-ova nije pronađen. Promjena NIJE spremljena.');
+        return;
+      }
+
+      alert(`✅ Uspješno postavljen novi PIN za: ${target} (${newPin})`);
+      document.getElementById('newPinVal').value = '';
+    }
+
+    /* PIN FIX: addNewWorkerWithPin() sad koristi savePins() umjesto
+       .update({[`pins.${name}`]: pin}) */
+    async function addNewWorkerWithPin() {
+      const name = document.getElementById('newWorkerName').value.trim().toUpperCase();
+      const pin = document.getElementById('newWorkerPin').value.trim() || '1234';
+
+      if (!name) {
+        alert('Unesite ime.');
+        return;
+      }
+
+      const pins = { ...userPins };
+      pins[name] = pin;
+
+      const ok = await savePins(pins);
+      if (!ok) {
+        alert('Greška: dokument PIN-ova nije pronađen. Novi radnik NIJE spremljen.');
+        return;
+      }
+
+      document.getElementById('newWorkerName').value = '';
+      document.getElementById('newWorkerPin').value = '';
+      alert(`✅ Dodan: ${name} (PIN: ${pin})`);
+    }
+
+    // BRZO I POUZDANO ČITANJE DATOTEKA
+    function readFileAsDataURL(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function processImageFile(file, mode = 'color') {
+      return new Promise(async (resolve) => {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        const rawBase64 = await readFileAsDataURL(file);
+
+        if (isPdf || !rawBase64) {
+          resolve(rawBase64);
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1600;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; } }
+          else { if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          if (mode === 'bw') {
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+              const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+              data[i] = data[i+1] = data[i+2] = avg;
+            }
+            ctx.putImageData(imageData, 0, 0);
+          }
+
+          resolve(canvas.toDataURL('image/jpeg', 0.65));
+        };
+        img.onerror = () => resolve(rawBase64);
+        img.src = rawBase64;
+      });
+    }
+
+    async function uploadAdditionalSketches(e) {
+      const files = Array.from(e.target.files);
+      if (!selectedId || files.length === 0) return;
+      const p = projects.find(item => item.id === selectedId);
+      let existing = [...(p.images || [])];
+      try {
+        for (let f of files) {
+          const dataUrl = await processImageFile(f);
+          if (!dataUrl) continue;
+          const path = `nalozi/${selectedId}/mjerenje_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
+          const url = await uploadToStorage(dataUrl, path);
+          existing.push(url);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ images: existing });
+        currentImageIndex = existing.length - 1;
+        alert('✅ Slike dodane');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      }
+      e.target.value = '';
+    }
+
+    async function deleteCurrentSketch() {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      let imgs = p.images || [];
+      if (imgs.length === 0) return;
+
+      if (confirm('Želite li obrisati ovu stranicu/skicu?')) {
+        imgs.splice(currentImageIndex, 1);
+        currentImageIndex = Math.max(0, currentImageIndex - 1);
+        await db.collection("nalozi").doc(selectedId).update({ images: imgs });
+      }
+    }
+
+    async function promptAddPosition() {
+      if (!selectedId) return;
+      const naziv = prompt('Unesite naziv pozicije (npr. Pozicija 1 - Garažna vrata):');
+      if (!naziv || !naziv.trim()) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      const positions = p.positions || [];
+      positions.push({ name: naziv.trim(), status: 'proizvodnja' });
+
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    async function cyclePositionStatus(index, fromSkladiste = false) {
+      if (!selectedId) return;
+
+      if (fromSkladiste && !canEditSkladiste()) {
+        alert('❌ Samo Branislav i Vedran mogu mijenjati status u skladištu.');
+        return;
+      }
+
+      const p = projects.find(item => item.id === selectedId);
+      // Montaža: samo dodijeljeni monteri + admin
+      if (!fromSkladiste && p) {
+        const pos0 = (p.positions && p.positions[index]) ? p.positions[index] : null;
+        const cur = pos0 ? (pos0.status || 'proizvodnja') : 'proizvodnja';
+        if ((cur === 'skladiste' || cur === 'montirano' || cur === 'reklamacija') && !canEditMontaza() && !canEditSkladiste()) {
+          alert('❌ Samo dodijeljeni monteri mogu označiti Montirano / Reklamacija.');
+          return;
+        }
+      }
+      let positions = p.positions || [];
+
+      if (positions.length === 0) {
+        positions = [{ name: 'Cijeli nalog / Roba', status: 'proizvodnja' }];
+      }
+
+      if (!positions[index]) return;
+
+      const current = positions[index].status || 'proizvodnja';
+      if (current === 'proizvodnja') positions[index].status = 'skladiste';
+      else if (current === 'skladiste') positions[index].status = 'montirano';
+      else if (current === 'montirano') positions[index].status = 'reklamacija';
+      else positions[index].status = 'proizvodnja';
+
+      const updates = { positions: positions };
+      if (positions[index].status === 'skladiste' && !p.dateSkladiste) {
+        updates.dateSkladiste = formatToday();
+      }
+      if (positions[index].status === 'montirano' && !p.dateMontaza) {
+        updates.dateMontaza = formatToday();
+      }
+      await db.collection("nalozi").doc(selectedId).update(updates);
+    }
+
+    async function deletePosition(index) {
+      if (!selectedId) return;
+      const p = projects.find(item => item.id === selectedId);
+      let positions = p.positions || [];
+      if (index < 0 || index >= positions.length) return;
+      if (!confirm(`Obrisati poziciju: ${positions[index].name}?`)) return;
+      positions.splice(index, 1);
+      await db.collection("nalozi").doc(selectedId).update({ positions: positions });
+    }
+
+    function renderPositions() {
+      const boxRn = document.getElementById('positionsListRn');
+      const boxSkl = document.getElementById('positionsListSkladiste');
+      const boxMontaza = document.getElementById('positionsListMontaza');
+      if (!boxRn || !boxSkl || !boxMontaza) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      let positions = (p && p.positions && p.positions.length > 0) ? p.positions : [];
+
+      const isDefault = positions.length === 0;
+      const displayPositions = isDefault ? [{ name: 'Cijeli nalog / Roba', status: 'proizvodnja' }] : positions;
+
+      const htmlNormal = displayPositions.map((pos, idx) => {
+        let chip = '';
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja" onclick="cyclePositionStatus(${idx}, false)">🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste" onclick="cyclePositionStatus(${idx}, false)">📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano" onclick="cyclePositionStatus(${idx}, false)">✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija" onclick="cyclePositionStatus(${idx}, false)">⚠️ Reklamacija / Fali</button>`;
+        }
+
+        const delBtn = isDefault ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtn}</div>
+          </div>
+        `;
+      }).join('');
+
+      const canEditSkl = canEditSkladiste();
+      const htmlSkl = displayPositions.map((pos, idx) => {
+        let chip = '';
+        const clickAction = canEditSkl ? `onclick="cyclePositionStatus(${idx}, true)"` : ``;
+        const disabledClass = canEditSkl ? '' : 'disabled-btn';
+
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja ${disabledClass}" ${clickAction}>🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste ${disabledClass}" ${clickAction}>📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano ${disabledClass}" ${clickAction}>✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija ${disabledClass}" ${clickAction}>⚠️ Reklamacija / Fali</button>`;
+        }
+
+        const delBtnSkl = (isDefault || !canEditSkl) ? '' : `<button onclick="deletePosition(${idx})" style="background:none;border:none;color:#f87171;font-size:12px;cursor:pointer;margin-left:4px;" title="Obriši poziciju">🗑️</button>`;
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div style="display:flex;align-items:center;gap:4px;">${chip}${delBtnSkl}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Montaža - samo dodijeljeni monteri + admin
+      const canMont = canEditMontaza();
+      const htmlMontaza = displayPositions.map((pos, idx) => {
+        let chip = '';
+        const clickMont = canMont ? `onclick="cyclePositionStatus(${idx}, false)"` : '';
+        const disMont = canMont ? '' : 'disabled-btn';
+        if (pos.status === 'proizvodnja') {
+          chip = `<button class="status-chip chip-proizvodnja ${disMont}" ${clickMont}>🏭 U Proizvodnji</button>`;
+        } else if (pos.status === 'skladiste') {
+          chip = `<button class="status-chip chip-skladiste ${disMont}" ${clickMont}>📦 U Skladištu</button>`;
+        } else if (pos.status === 'montirano') {
+          chip = `<button class="status-chip chip-montirano ${disMont}" ${clickMont}>✅ Montirano</button>`;
+        } else if (pos.status === 'reklamacija') {
+          chip = `<button class="status-chip chip-reklamacija ${disMont}" ${clickMont}>⚠️ Reklamacija / Fali</button>`;
+        }
+        return `
+          <div class="pos-item">
+            <span class="pos-name">${pos.name}</span>
+            <div>${chip}</div>
+          </div>
+        `;
+      }).join('');
+
+      boxRn.innerHTML = htmlNormal;
+      boxMontaza.innerHTML = htmlMontaza;
+      boxSkl.innerHTML = htmlSkl;
+    }
+
+    async function saveSkladisteNotes() {
+      if (!selectedId) return;
+      if (!canEditSkladiste()) {
+        alert('❌ Nemate ovlasti za unos skladišnih napomena.');
+        return;
+      }
+      await db.collection("nalozi").doc(selectedId).update({
+        skladisteNotes: document.getElementById('mSkladisteNotes').value
+      });
+    }
+
+    function renderMonteriCheckboxes() {
+      const cont = document.getElementById('monteriCheckboxList');
+      if (!cont) return;
+
+      const p = projects.find(item => item.id === selectedId);
+      const selectedWorkers = (p && p.assignedMonteri) ? p.assignedMonteri : [];
+      const canAssign = canAssignMonteri();
+
+      if (canAssign) {
+        // Vedran / Zlatko – mogu birati
+        const workers = Object.keys(userPins).filter(w => {
+          const u = w.toUpperCase();
+          return !u.includes('VEDRAN') && !u.includes('ANKICA');
+        });
+        cont.innerHTML = workers.map(name => {
+          const isChecked = selectedWorkers.includes(name) ? 'checked' : '';
+          return `
+            <div class="monter-row">
+              <label class="monter-label">
+                <input type="checkbox" value="${name}" ${isChecked} onchange="toggleMonter('${name}', this.checked)">
+                <span>${name}</span>
+              </label>
+            </div>
+          `;
+        }).join('');
+      } else {
+        // Ostali – samo vide tko montira (bez kvačica)
+        if (selectedWorkers.length === 0) {
+          cont.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:6px;">Nitko nije dodijeljen.</div>';
+        } else {
+          cont.innerHTML = selectedWorkers.map(name => `
+            <div class="monter-row">
+              <span style="font-size:12px;font-weight:600;color:#fff;">👷 ${name}</span>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function canAssignMonteri() {
+      // Vedran i Zlatko mogu dodjeljivati montere
+      return isVedran() || isZlatko();
+    }
+
+    function canEditInvoice() {
+      // Ankica može fakturirati, ali nakon FAKTURIRANO samo Vedran može mijenjati
+      if (isVedran()) return true;
+      if (!isAnkica()) return false;
+      if (!selectedId) return true;
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.isInvoiced) return false; // zaključano
+      return true;
+    }
+
+    function canUploadOfferOrRn() {
+      return isVedran() || isAnkica();
+    }
+
+    async function toggleMonter(name, isChecked) {
+      if (!selectedId) return;
+      if (!canAssignMonteri()) {
+        alert('❌ Samo Vedran i Zlatko mogu dodjeljivati montere.');
+        renderMonteriCheckboxes(); // vrati kvačice na staro
+        return;
+      }
+      const p = projects.find(item => item.id === selectedId);
+      let currentAssigned = (p.assignedMonteri || []).slice();
+
+      if (isChecked) {
+        if (!currentAssigned.includes(name)) currentAssigned.push(name);
+      } else {
+        currentAssigned = currentAssigned.filter(item => item !== name);
+      }
+
+      await db.collection("nalozi").doc(selectedId).update({ assignedMonteri: currentAssigned });
+    }
+
+    async function saveMontazaNotes() {
+      if (!selectedId) return;
+      await db.collection("nalozi").doc(selectedId).update({
+        montazaNotes: document.getElementById('mMontazaNotes').value
+      });
+    }
+
+    async function saveInvoiceData() {
+      if (!selectedId) return;
+      await db.collection("nalozi").doc(selectedId).update({
+        invoiceNum: document.getElementById('inpInvoiceNum').value
+      });
+    }
+
+    async function handleInvoiceUpload(e) {
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          url = await uploadToStorage(file, `nalozi/${selectedId}/faktura_${Date.now()}.pdf`);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje');
+          url = await uploadToStorage(dataUrl, `nalozi/${selectedId}/faktura_${Date.now()}.jpg`);
+        }
+        await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: url });
+        alert('✅ Faktura učitana');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      }
+      e.target.value = '';
+    }
+
+    async function removeInvoiceDoc() {
+      if (!selectedId || !confirm('Obrisati račun?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ invoiceDoc: null });
+    }
+
+    async function finalizeProjectInvoice() {
+      if (!selectedId) return;
+      if (!canEditInvoice()) {
+        alert('❌ Samo Vedran može mijenjati status nakon što je nalog fakturiran. Ankica može samo prvi put označiti.');
+        return;
+      }
+      const p = projects.find(item => item.id === selectedId);
+      const num = document.getElementById('inpInvoiceNum').value.trim();
+      const isAlreadyInvoiced = p.isInvoiced;
+
+      const updates = {
+        invoiceNum: num,
+        isInvoiced: !isAlreadyInvoiced
+      };
+      if (!isAlreadyInvoiced) updates.dateInvoice = formatToday();
+      await db.collection("nalozi").doc(selectedId).update(updates);
+    }
+
+    db.collection("nalozi").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+      projects = [];
+      snapshot.forEach(doc => {
+        projects.push({ id: doc.id, ...doc.data() });
+      });
+
+      renderSidebar();
+
+      if (projects.length > 0) {
+        if (!selectedId || !projects.find(p => p.id === selectedId)) {
+          if (window.innerWidth > 900) {
+            openDetails(projects[0].id);
+          }
+        } else {
+          renderDetails();
+        }
+      } else {
+        selectedId = null;
+      }
+    });
+
+    let currentStatusFilter = 'sve';
+
+    function getProjectStage(p) {
+      if (p.isInvoiced) return 'fakturirano';
+      const positions = p.positions || [];
+      const total = positions.length;
+      const montirano = positions.filter(x => x.status === 'montirano').length;
+      const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
+      const skladiste = positions.filter(x => x.status === 'skladiste').length;
+      if (reklamacija > 0) return 'reklamacija';
+      if (total > 0 && montirano === total) return 'montirano';
+      if (skladiste > 0 || p.dateSkladiste) return 'skladiste';
+      if (p.rnDoc) return 'proizvodnja';
+      if (p.offerDoc) return 'ponuda';
+      return 'mjerenje';
+    }
+
+    function setStatusFilter(f) {
+      currentStatusFilter = f;
+      renderSidebar();
+    }
+
+    function renderSidebar() {
+      const list = document.getElementById('projectList');
+      const query = (document.getElementById('searchQuery')?.value || '').toLowerCase().trim();
+      const filtersEl = document.getElementById('statusFilters');
+
+      const counts = { sve: 0, mjerenje: 0, ponuda: 0, proizvodnja: 0, skladiste: 0, montirano: 0, reklamacija: 0, fakturirano: 0 };
+      projects.forEach(p => {
+        const st = getProjectStage(p);
+        counts[st]++;
+        counts.sve++;
+      });
+
+      if (filtersEl) {
+        const btns = [
+          ['sve', 'Sve', counts.sve, '#94a3b8'],
+          ['mjerenje', 'Mjerenje', counts.mjerenje, '#38bdf8'],
+          ['ponuda', 'Ponuda', counts.ponuda, '#34d399'],
+          ['proizvodnja', 'U radu', counts.proizvodnja, '#fbbf24'],
+          ['skladiste', 'Skladište', counts.skladiste, '#06b6d4'],
+          ['montirano', 'Montirano', counts.montirano, '#10b981'],
+          ['reklamacija', 'Reklamacija', counts.reklamacija, '#ef4444'],
+          ['fakturirano', 'Fakturirano', counts.fakturirano, '#a855f7']
+        ];
+        filtersEl.innerHTML = btns.map(([key, label, cnt, color]) => {
+          const active = currentStatusFilter === key;
+          return `<button onclick="setStatusFilter('${key}')" style="font-size:10px;padding:3px 7px;border-radius:4px;border:1px solid ${color};cursor:pointer;font-weight:bold;background:${active ? color : 'transparent'};color:${active ? '#0b1120' : color};">${label} (${cnt})</button>`;
+        }).join('');
+      }
+
+      const filtered = projects.filter(p => {
+        if (currentStatusFilter !== 'sve' && getProjectStage(p) !== currentStatusFilter) return false;
+        if (!query) return true;
+        const nameMatch = (p.name || '').toLowerCase().includes(query);
+        const locMatch = (p.loc || '').toLowerCase().includes(query);
+        return nameMatch || locMatch;
+      });
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p style="padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center;">Nema naloga u ovom filteru.</p>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(p => {
+        const positions = p.positions || [];
+        const total = positions.length;
+        const montirano = positions.filter(x => x.status === 'montirano').length;
+        const skladiste = positions.filter(x => x.status === 'skladiste').length;
+        const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
+
+        const stage = getProjectStage(p);
+        let statusText = '';
+        if (total > 0 && (stage === 'skladiste' || stage === 'montirano' || stage === 'reklamacija')) {
+          if (montirano === total) {
+            statusText = `<span style="color:#10b981; font-weight:bold;">✅ Sve montirano (${montirano}/${total})</span>`;
+          } else {
+            let extra = reklamacija > 0 ? ` • <span style="color:#f87171; font-weight:bold;">⚠️ Reklamacija: ${reklamacija}</span>` : '';
+            statusText = `<span style="color:#38bdf8;">📦 Skladište: ${skladiste}</span> • <span style="color:#10b981;">🛠️ Montirano: ${montirano}</span>${extra}`;
+          }
+        } else {
+          const STAGE_LABELS = {
+            mjerenje: { text: '📐 Mjerenje', color: '#38bdf8' },
+            ponuda: { text: '📄 Ponuda', color: '#34d399' },
+            proizvodnja: { text: '🏭 U Proizvodnji', color: '#fbbf24' },
+            fakturirano: { text: '🏁 Fakturirano', color: '#a855f7' }
+          };
+          const label = STAGE_LABELS[stage] || STAGE_LABELS.mjerenje;
+          statusText = `<span style="color:${label.color}; font-weight:bold;">${label.text}</span>`;
+        }
+
+        let fakturaBadge = p.isInvoiced
+          ? '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>'
+          : '';
+
+        return `
+          <div class="project-item ${p.id === selectedId ? 'selected' : ''}" onclick="openDetails('${p.id}')">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h4>${p.name}</h4>
+              ${fakturaBadge}
+            </div>
+            <p>${p.loc || '-'} • 📅 ${p.date}</p>
+            <div style="margin-top: 5px; font-size: 11px; line-height: 1.4;">
+              ${statusText}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openDetails(id) {
+      selectedId = id;
+      currentImageIndex = 0;
+      renderSidebar();
+      renderDetails();
+
+      if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.add('mobile-hide');
+        document.getElementById('detailPanel').classList.add('mobile-show');
+      }
+    }
+
+    function backToSidebar() {
+      document.getElementById('sidebar').classList.remove('mobile-hide');
+      document.getElementById('detailPanel').classList.remove('mobile-show');
+    }
+
+    function openDocumentView(docUrl) {
+      if (!docUrl) return;
+      // Ako je slika – koristi lightbox s zoomom
+      if (docUrl.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(docUrl)) {
+        openLightbox(docUrl);
+        return;
+      }
+      // PDF ili drugi dokument – otvori u novom tabu (preglednik ima svoj zoom)
+      window.open(docUrl, '_blank');
+    }
+
+    function openOfferFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.offerDoc) openDocumentView(p.offerDoc);
+    }
+
+    function openRnFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.rnDoc) openDocumentView(p.rnDoc);
+    }
+
+    function renderDetails() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+
+      document.getElementById('d-name').innerText = p.name;
+      document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
+      document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
+
+      // 1. Skice
+      const images = (p.images && p.images.length > 0) ? p.images : [];
+      currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
+
+      const mainImg = document.getElementById('d-img');
+      const btnDelSketch = document.getElementById('btnDeleteCurrentSketch');
+
+      if (images.length > 0) {
+        mainImg.src = images[currentImageIndex];
+        mainImg.style.display = 'block';
+        document.getElementById('d-page').innerText = `Stranica ${currentImageIndex + 1} od ${images.length}`;
+        btnDelSketch.style.display = 'inline-block';
+      } else {
+        mainImg.style.display = 'none';
+        document.getElementById('d-page').innerText = 'Nema slika';
+        btnDelSketch.style.display = 'none';
+      }
+
+      const thumbs = document.getElementById('d-thumbs');
+      if (images.length > 1) {
+        thumbs.innerHTML = images.map((src, idx) => `
+          <div class="gallery-thumb ${idx === currentImageIndex ? 'active' : ''}" onclick="selectThumb(${idx})">
+            <img src="${src}">
+          </div>
+        `).join('');
+      } else {
+        thumbs.innerHTML = '';
+      }
+
+      // 2. Ponuda
+      const offUpload = document.getElementById('offerUploadZone');
+      const offDisplay = document.getElementById('offerDisplayZone');
+      const btnDelOff = document.getElementById('btnDelOffer');
+      const offBox = document.getElementById('offerPreviewBox');
+
+      if (p.offerDoc) {
+        offUpload.style.display = 'none';
+        offDisplay.style.display = 'block';
+        btnDelOff.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
+
+        if (!canViewFinancialDocs()) {
+          offBox.innerHTML = `
+            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
+              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            </div>
+          `;
+        } else {
+          // Za admina uvijek pokaži gumb + pokušaj thumbnail ako je slika
+          const isPdf = p.offerDoc.startsWith('data:application/pdf') || p.offerDoc.toLowerCase().includes('.pdf') || p.offerDoc.includes('application%2Fpdf');
+          if (isPdf) {
+            offBox.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📄</div>
+                <div style="font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 12px;">PDF Ponuda Priložena</div>
+                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
+              </div>
+            `;
+          } else {
+            offBox.innerHTML = `
+              <img src="${p.offerDoc}" alt="Ponuda" onclick="openLightbox('${p.offerDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display:none; text-align:center; padding:20px;">
+                <button onclick="openDocumentView('${p.offerDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
+              </div>
+            `;
+          }
+        }
+      } else {
+        offUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
+        offDisplay.style.display = 'none';
+        btnDelOff.style.display = 'none';
+        offBox.innerHTML = '';
+      }
+
+      // 3. Radni Nalog
+      const rnUpload = document.getElementById('rnUploadZone');
+      const rnDisplay = document.getElementById('rnDisplayZone');
+      const btnDelRn = document.getElementById('btnDelRn');
+      const rnBox = document.getElementById('rnPreviewBox');
+
+      if (p.rnDoc) {
+        rnUpload.style.display = 'none';
+        rnDisplay.style.display = 'block';
+        btnDelRn.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
+
+        if (!canViewFinancialDocs()) {
+          rnBox.innerHTML = `
+            <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
+              <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
+              <div style="font-size: 13px; font-weight: bold; color: #94a3b8;">Financijski dokument</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Samo za ured</div>
+            </div>
+          `;
+        } else {
+          const isPdf = p.rnDoc.startsWith('data:application/pdf') || p.rnDoc.toLowerCase().includes('.pdf') || p.rnDoc.includes('application%2Fpdf');
+          if (isPdf) {
+            rnBox.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+                <div style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 12px;">PDF Radni Nalog Priložen</div>
+                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori PDF</button>
+              </div>
+            `;
+          } else {
+            rnBox.innerHTML = `
+              <img src="${p.rnDoc}" alt="Radni Nalog" onclick="openLightbox('${p.rnDoc}')" style="width:100%; max-height:340px; object-fit:contain; cursor:pointer;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display:none; text-align:center; padding:20px;">
+                <button onclick="openDocumentView('${p.rnDoc}')" style="background:#0284c7; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔍 Otvori dokument</button>
+              </div>
+            `;
+          }
+        }
+      } else {
+        rnUpload.style.display = canViewFinancialDocs() ? 'flex' : 'none';
+        rnDisplay.style.display = 'none';
+        btnDelRn.style.display = 'none';
+        rnBox.innerHTML = '';
+      }
+
+      // 4. Skladište
+      document.getElementById('mSkladisteNotes').value = p.skladisteNotes || '';
+      renderPositions();
+
+      // 5. Montaža
+      document.getElementById('mMontazaNotes').value = p.montazaNotes || '';
+      renderMonteriCheckboxes();
+
+      const doneThumbs = document.getElementById('d-done-thumbs');
+      const doneImgs = p.doneImages || [];
+      if (doneImgs.length > 0) {
+        doneThumbs.innerHTML = doneImgs.map(src => `
+          <div class="gallery-thumb active" onclick="openLightbox('${src}')">
+            <img src="${src}">
+          </div>
+        `).join('');
+      } else {
+        doneThumbs.innerHTML = '<span style="font-size:11px; color:var(--text-muted); padding:6px;">Nema slika montaže.</span>';
+      }
+
+      // 6. Fakturiranje
+      document.getElementById('inpInvoiceNum').value = p.invoiceNum || '';
+      const readyAlert = document.getElementById('readyForInvoiceAlert');
+      const pill = document.getElementById('fakturaPill');
+      const btnFinal = document.getElementById('btnFinishInvoice');
+
+      const positions = p.positions || [];
+      const total = positions.length;
+      const montirano = positions.filter(x => x.status === 'montirano').length;
+      const allDone = (total > 0 && montirano === total);
+
+      if (allDone && !p.isInvoiced) {
+        readyAlert.style.display = 'block';
+      } else {
+        readyAlert.style.display = 'none';
+      }
+
+      if (p.isInvoiced) {
+        pill.style.background = '#10b981';
+        pill.style.color = '#fff';
+        pill.innerText = '✅ FAKTURIRANO';
+        btnFinal.innerText = '🔄 PONIŠTI STATUS FAKTURIRANO';
+        btnFinal.style.background = 'rgba(239, 68, 68, 0.2)';
+        btnFinal.style.color = '#f87171';
+        btnFinal.style.display = isVedran() ? 'block' : 'none';
+      } else {
+        pill.style.background = 'rgba(255,255,255,0.1)';
+        pill.style.color = 'var(--text-muted)';
+        pill.innerText = 'ČEKA RAČUN';
+        btnFinal.innerText = '✅ OZNAČI KAO FAKTURIRANO';
+        btnFinal.style.background = 'var(--success)';
+        btnFinal.style.color = '#fff';
+        btnFinal.style.display = (isVedran() || isAnkica()) ? 'block' : 'none';
+      }
+
+      const invoicePrev = document.getElementById('invoiceDocPreview');
+      if (p.invoiceDoc) {
+        if (canViewFinancialDocs()) {
+          invoicePrev.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px;">
+              <a href="#" onclick="openDocumentView('${p.invoiceDoc}')" style="color:#38bdf8; font-weight:bold; text-decoration:none;">📄 Pogledaj Fakturu</a>
+              <button onclick="removeInvoiceDoc()" style="background:none; border:none; color:#f87171; font-weight:bold; cursor:pointer;">✕</button>
+            </div>
+          `;
+        } else {
+          invoicePrev.innerHTML = `
+            <div style="text-align:center; padding:10px; filter:blur(3px); opacity:0.5;">
+              <span style="font-size:12px; color:#94a3b8;">🔒 Financijski dokument – samo za ured</span>
+            </div>
+          `;
+        }
+      } else {
+        invoicePrev.innerHTML = '';
+      }
+
+      // === SEMAFOR SUSTAV ===
+      const hasMeasure = (p.images && p.images.length > 0);
+      const hasOffer = !!p.offerDoc;
+      const hasRn = !!p.rnDoc;
+      const posList = p.positions || [];
+      const hasSkladiste = posList.some(x => x.status === 'skladiste' || x.status === 'montirano' || x.status === 'reklamacija') || !!p.skladisteNotes;
+      const hasMontaza = posList.some(x => x.status === 'montirano') || (p.doneImages && p.doneImages.length > 0);
+      const isInvoiced = !!p.isInvoiced;
+
+      function setBadge(id, done, isCurrent) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (done) {
+          el.innerHTML = '<span style="background:#10b981;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">✓</span>';
+        } else if (isCurrent) {
+          el.innerHTML = '<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">●</span>';
+        } else {
+          el.innerHTML = '';
+        }
+      }
+
+      // Trenutna faza (prva koja nije gotova)
+      let currentStage = 1;
+      if (hasMeasure && hasOffer) currentStage = 3;
+      if (hasRn) currentStage = 4;
+      if (hasSkladiste) currentStage = 5;
+      if (hasMontaza) currentStage = 6;
+      if (isInvoiced) currentStage = 7;
+
+      setBadge('stage1Badge', hasMeasure, currentStage === 1);
+      setBadge('stage2Badge', hasOffer, currentStage === 2);
+      setBadge('stage3Badge', hasRn, currentStage === 3);
+      setBadge('stage4Badge', hasSkladiste, currentStage === 4);
+      setBadge('stage5Badge', hasMontaza, currentStage === 5);
+      setBadge('stage6Badge', isInvoiced, currentStage === 6);
+
+      // Prikaz datuma faza
+      const isAdmin = canViewFinancialDocs();
+      function showDate(id, val, field) {
+        let el = document.getElementById(id);
+        if (!el) {
+          const title = document.getElementById(id.replace('Date','Title'));
+          if (title) {
+            el = document.createElement('div');
+            el.id = id;
+            el.style.cssText = 'font-size:10px;color:#94a3b8;margin-top:2px;';
+            title.parentNode.insertBefore(el, title.nextSibling);
+          }
+        }
+        if (!el) return;
+        if (isAdmin) {
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.value = val || '';
+          inp.placeholder = 'dd.mm.gggg.';
+          inp.style.cssText = 'width:90px;font-size:10px;padding:1px 4px;background:#0f172a;border:1px solid #334155;color:#fff;border-radius:3px;';
+          inp.onchange = function() { updateStageDate(field, this.value); };
+          el.innerHTML = '📅 ';
+          el.appendChild(inp);
+        } else {
+          el.innerHTML = val ? ('📅 ' + val) : '';
+        }
+      }
+      showDate('stage1Date', p.date || '', 'date');
+      showDate('stage2Date', p.dateOffer || '', 'dateOffer');
+      showDate('stage3Date', p.dateRn || '', 'dateRn');
+      showDate('stage4Date', p.dateSkladiste || '', 'dateSkladiste');
+      showDate('stage5Date', p.dateMontaza || '', 'dateMontaza');
+      showDate('stage6Date', p.dateInvoice || '', 'dateInvoice');
+    }
+
+    async function updateStageDate(field, value) {
+      if (!selectedId || !canViewFinancialDocs()) return;
+      var obj = {};
+      obj[field] = value.trim();
+      await db.collection("nalozi").doc(selectedId).update(obj);
+    }
+
+    function selectThumb(idx) {
+      currentImageIndex = idx;
+      renderDetails();
+    }
+
+    function updateTransform() {
+      const img = document.getElementById('lightboxImg');
+      img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+    }
+
+    function zoomIn(e) {
+      if (e) e.stopPropagation();
+      zoomLevel = Math.min(zoomLevel + 0.5, 5);
+      updateTransform();
+    }
+
+    function zoomOut(e) {
+      if (e) e.stopPropagation();
+      zoomLevel = Math.max(zoomLevel - 0.5, 1);
+      if (zoomLevel === 1) { panX = 0; panY = 0; }
+      updateTransform();
+    }
+
+    function resetZoom(e) {
+      if (e) e.stopPropagation();
+      zoomLevel = 1; panX = 0; panY = 0;
+      updateTransform();
+    }
+
+    function openLightbox(src) {
+      if (!src) return;
+      const img = document.getElementById('lightboxImg');
+      img.src = src;
+      resetZoom();
+      document.getElementById('lightbox').style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').style.display = 'none';
+      resetZoom();
+    }
+
+    function openSketchFull() {
+      const p = projects.find(item => item.id === selectedId);
+      if (p && p.images && p.images[currentImageIndex]) openLightbox(p.images[currentImageIndex]);
+    }
+
+    const viewport = document.getElementById('zoomViewport');
+
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        zoomLevel = Math.min(zoomLevel + 0.3, 5);
+      } else {
+        zoomLevel = Math.max(zoomLevel - 0.3, 1);
+        if (zoomLevel === 1) { panX = 0; panY = 0; }
+      }
+      updateTransform();
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (zoomLevel > 1) {
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging && zoomLevel > 1) {
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        updateTransform();
+      }
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1 && zoomLevel > 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - panX;
+        startY = e.touches[0].clientY - panY;
+      }
+    });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (isDragging && e.touches.length === 1 && zoomLevel > 1) {
+        panX = e.touches[0].clientX - startX;
+        panY = e.touches[0].clientY - startY;
+        updateTransform();
+      }
+    });
+
+    viewport.addEventListener('touchend', () => { isDragging = false; });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    async function handleOfferUpload(e) {
+      if (!canUploadOfferOrRn()) {
+        alert('❌ Samo Vedran i Ankica mogu učitavati ponudu.');
+        e.target.value = '';
+        return;
+      }
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      const txt = document.getElementById('txtOfferStatus');
+      txt.innerText = '⏳ Spremam ponudu...';
+
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.pdf`;
+          url = await uploadToStorage(file, path);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
+          const path = `nalozi/${selectedId}/ponuda_${Date.now()}.jpg`;
+          url = await uploadToStorage(dataUrl, path);
+        }
+        const updates = { offerDoc: url };
+        const p = projects.find(item => item.id === selectedId);
+        if (!p || !p.dateOffer) updates.dateOffer = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
+        alert('✅ Ponuda uspješno učitana');
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju ponude: ' + (err.message || err));
+      }
+      txt.innerText = 'Nema ponude';
+      e.target.value = '';
+    }
+
+    async function removeOffer() {
+      if (!selectedId || !confirm('Obrisati ponudu za ovog klijenta?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ offerDoc: null });
+    }
+
+    async function handleRnUpload(e) {
+      if (!canUploadOfferOrRn()) {
+        alert('❌ Samo Vedran i Ankica mogu učitavati radni nalog.');
+        e.target.value = '';
+        return;
+      }
+      const file = e.target.files[0];
+      if (!file || !selectedId) return;
+      const txt = document.getElementById('txtRnStatus');
+      txt.innerText = '⏳ Spremam RN...';
+
+      try {
+        const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+        let url;
+        if (isPdf) {
+          const path = `nalozi/${selectedId}/rn_${Date.now()}.pdf`;
+          url = await uploadToStorage(file, path);
+        } else {
+          const dataUrl = await processImageFile(file);
+          if (!dataUrl) throw new Error('Neuspješno čitanje slike');
+          const path = `nalozi/${selectedId}/rn_${Date.now()}.jpg`;
+          url = await uploadToStorage(dataUrl, path);
+        }
+        const updates = { rnDoc: url };
+        const p = projects.find(item => item.id === selectedId);
+        if (!p || !p.dateRn) updates.dateRn = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
+        alert('✅ Radni nalog uspješno učitan');
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju RN: ' + (err.message || err));
+      }
+      txt.innerText = 'Nema radnog naloga';
+      e.target.value = '';
+    }
+
+    async function removeRn() {
+      if (!selectedId || !confirm('Obrisati radni nalog za ovog klijenta?')) return;
+      await db.collection("nalozi").doc(selectedId).update({ rnDoc: null });
+    }
+
+    async function uploadDoneImages(e) {
+      const files = Array.from(e.target.files);
+      if (!selectedId || files.length === 0) return;
+      const p = projects.find(item => item.id === selectedId);
+      let existing = [...(p.doneImages || [])];
+      try {
+        for (let f of files) {
+          const dataUrl = await processImageFile(f);
+          if (!dataUrl) continue;
+          const path = `nalozi/${selectedId}/montaza_${Date.now()}_${Math.random().toString(36).slice(2,6)}.jpg`;
+          const url = await uploadToStorage(dataUrl, path);
+          existing.push(url);
+        }
+        const updates = { doneImages: existing };
+        if (!p.dateMontaza) updates.dateMontaza = formatToday();
+        await db.collection("nalozi").doc(selectedId).update(updates);
+        alert('✅ Slike montaže učitane');
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      }
+      e.target.value = '';
+    }
+
+    async function deleteCurrent() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      if (confirm(`Izbrisati cijeli radni nalog za: ${p.name}?`)) {
+        await db.collection("nalozi").doc(selectedId).delete();
+        backToSidebar();
+      }
+    }
+
+    function showMonterView() {
+      document.getElementById('monter-view').classList.add('active');
+      document.getElementById('admin-view').classList.remove('active');
+      document.getElementById('tab-monter').classList.add('active');
+      document.getElementById('tab-admin').classList.remove('active');
+    }
+
+    function showAdminView() {
+      document.getElementById('monter-view').classList.remove('active');
+      document.getElementById('admin-view').classList.add('active');
+      document.getElementById('tab-monter').classList.remove('active');
+      document.getElementById('tab-admin').classList.add('active');
+      backToSidebar();
+    }
+
+    async function handleImageSelection(e) {
+      const files = Array.from(e.target.files);
+      const status = document.getElementById('upload-status');
+      const modeEl = document.querySelector('input[name="imgMode"]:checked');
+      const mode = modeEl ? modeEl.value : 'color';
+
+      for (let i = 0; i < files.length; i++) {
+        status.innerText = `⏳ Učitavam sliku ${i+1}/${files.length}...`;
+        const base64 = await processImageFile(files[i], mode);
+        if (base64) uploadedImages.push(base64);
+      }
+      renderPreviews();
+      e.target.value = '';
+    }
+
+    function removeImage(idx) {
+      uploadedImages.splice(idx, 1);
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      const grid = document.getElementById('previewGrid');
+      grid.innerHTML = uploadedImages.map((src, i) => `
+        <div class="preview-thumb">
+          <img src="${src}">
+          <button type="button" class="btn-remove" onclick="removeImage(${i})">✕</button>
+        </div>
+      `).join('');
+
+      const count = uploadedImages.length;
+      document.getElementById('upload-status').innerText = count > 0
+        ? `✅ Učitano: ${count} slika`
+        : '📷 Dodaj fotografije bilježnice';
+    }
+
+    async function saveNewProject(e) {
+      e.preventDefault();
+      if (!currentWorker) { checkWorkerAuth(); return; }
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = 'Spremanje...';
+
+      const d = new Date();
+      const formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')}.${d.getFullYear()}.`;
+
+      const newProj = {
+        worker: currentWorker,
+        name: document.getElementById('cName').value,
+        phone: document.getElementById('cPhone').value || '-',
+        loc: document.getElementById('cLoc').value || '-',
+        date: formattedDate,
+        timestamp: Date.now(),
+        notes: document.getElementById('cNotes').value,
+        images: [],
+        offerDoc: null,
+        rnDoc: null,
+        positions: [],
+        skladisteNotes: '',
+        assignedMonteri: [],
+        montazaNotes: '',
+        doneImages: [],
+        invoiceNum: '',
+        invoiceDoc: null,
+        isInvoiced: false
+      };
+
+      try {
+        const docRef = await db.collection("nalozi").add(newProj);
+        const nalogId = docRef.id;
+        const imageUrls = [];
+        for (let i = 0; i < uploadedImages.length; i++) {
+          btn.innerText = `Upload slike ${i+1}/${uploadedImages.length}...`;
+          const path = `nalozi/${nalogId}/mjerenje_${i}_${Date.now()}.jpg`;
+          const url = await uploadToStorage(uploadedImages[i], path);
+          imageUrls.push(url);
+        }
+        if (imageUrls.length > 0) {
+          await db.collection("nalozi").doc(nalogId).update({ images: imageUrls });
+        }
+        uploadedImages = [];
+        renderPreviews();
+        document.querySelector('form').reset();
+        showAdminView();
+        openDetails(nalogId);
+      } catch (err) {
+        console.error(err);
+        alert('Greška: ' + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '💾 SPREMI MJERENJE';
+      }
+    }
+
+    function exportNalozi() {
+      if (!canViewFinancialDocs()) {
+        alert('❌ Samo admin može exportati podatke.');
+        return;
+      }
+      // Mjerenja + slike montaže
+      const data = projects.map(p => ({
+        klijent: p.name,
+        mjernik: p.worker || '',
+        telefon: p.phone || '',
+        lokacija: p.loc || '',
+        datumMjerenja: p.date || '',
+        datumMontaze: p.dateMontaza || '',
+        napomene: p.notes || '',
+        napomeneMontaze: p.montazaNotes || '',
+        monteri: p.assignedMonteri || [],
+        brojSlikaMjerenja: (p.images || []).length,
+        linkoviSlikaMjerenja: p.images || [],
+        brojSlikaMontaze: (p.doneImages || []).length,
+        linkoviSlikaMontaze: p.doneImages || []
+      }));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mjerenja_backup_' + formatToday().replace(/\./g, '-') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('✅ Export spreman – ' + data.length + ' zapisa (mjerenja + montaža). Spremi na svoj cloud.');
+    }
+
+    populateUserDropdowns();
+    checkWorkerAuth();
+  </script>
+</body>
+</html>
