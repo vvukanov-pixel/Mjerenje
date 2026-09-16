@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TerenRad - Sustav Radnih Naloga</title>
-
+  
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
@@ -28,14 +28,14 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
-
+    
     header { background-color: var(--panel-dark); border-bottom: 1px solid var(--border-color); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
     .logo { font-size: 17px; font-weight: bold; }
     .logo span { color: #38bdf8; }
 
     .header-right { display: flex; align-items: center; gap: 8px; }
     .user-tag { background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-
+    
     .btn-pin-nav { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: none; align-items: center; gap: 4px; }
     .btn-pin-nav:hover { background: #334155; }
 
@@ -64,7 +64,7 @@
 
     #admin-view { width: 100%; display: none; }
     #admin-view.active { display: flex; }
-
+    
     .sidebar { width: 340px; background: var(--panel-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; height: calc(100vh - 52px); }
     .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
     .search-input { width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 7px 10px; border-radius: 6px; font-size: 12px; outline: none; }
@@ -100,7 +100,7 @@
     .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
     .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
     .pos-name { font-size: 13px; font-weight: bold; flex: 1; color: white; }
-
+    
     .status-chip { font-size: 11px; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; }
     .status-chip.disabled-btn { cursor: default; opacity: 0.85; }
     .chip-proizvodnja { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
@@ -158,7 +158,7 @@
     <div class="modal-box" style="max-width: 380px;">
       <h3 style="margin-bottom: 6px; font-size: 18px; color: #fff;">Prijava Korisnika</h3>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Odaberite svoje ime i unesite PIN:</p>
-
+      
       <div class="form-group" style="text-align: left;">
         <label>Korisnik:</label>
         <select id="userSelectDropdown" style="margin-bottom: 12px; font-weight: bold; background: #0f172a; color: #fff;"></select>
@@ -178,7 +178,7 @@
       <button onclick="document.getElementById('pinModal').style.display='none'" style="position: absolute; top: 12px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 16px; font-weight: bold; cursor: pointer;">✕</button>
       <h3 style="margin-bottom: 4px; font-size: 18px; color: #38bdf8;">⚙️ Pregled i Postavke PIN-ova</h3>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Administratorski pregled svih aktivnih korisnika i lozinki:</p>
-
+      
       <div style="max-height: 220px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
         <table class="pin-table">
           <thead>
@@ -226,7 +226,7 @@
   </header>
 
   <div class="main-container">
-
+    
     <div id="monter-view">
       <div class="card">
         <h3 style="font-size: 15px; margin-bottom: 12px;">Novo Terensko Mjerenje</h3>
@@ -290,7 +290,7 @@
       </div>
 
       <div class="detail-panel" id="detailPanel">
-
+        
         <div class="full-width">
           <div style="display: flex; align-items: center; gap: 10px;">
             <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
@@ -306,7 +306,7 @@
         </div>
 
         <div class="grid-six-col">
-
+          
           <!-- 1. MAPA: SLIKE MJERENJA -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
@@ -511,67 +511,21 @@
     let isDragging = false;
     let startX = 0, startY = 0;
 
-    /* ============================================================
-       PIN FIX — POMOĆNE FUNKCIJE
-       savePins() centralizira svako pisanje PIN-ova u bazu i NIKAD
-       ne piše ako dokument ne postoji (nema tihog reseta).
-       initPins() se poziva jednom, samo pravi dokument ako stvarno
-       ne postoji.
-       ============================================================ */
-    async function savePins(nextPins) {
-      const ref = db.collection("postavke").doc("pinovi");
-      const snap = await ref.get();
-
-      if (!snap.exists) {
-        console.error("PIN dokument ne postoji — spremanje otkazano, PIN-ovi nisu dirani.");
-        return false;
-      }
-
-      const prev = snap.data() || {};
-      const prevPins = prev.pins || {};
-
-      await ref.set(
-        {
-          pins: nextPins,
-          lastModified: Date.now(),
-          backup: prevPins,
-          createdAt: prev.createdAt || Date.now(),
-        },
-        { merge: true }
-      );
-
-      return true;
-    }
-
-    async function initPins() {
-      const ref = db.collection("postavke").doc("pinovi");
-      try {
-        const doc = await ref.get();
-        if (!doc.exists) {
-          await ref.set({
-            pins: DEFAULT_PINS,
-            createdAt: Date.now(),
-            lastModified: Date.now(),
-            backup: DEFAULT_PINS,
-          });
-          console.warn("PIN dokument nije postojao — napravljena jednokratna inicijalizacija.");
-        }
-      } catch (e) {
-        console.error("initPins nije uspio, ništa nije zapisano:", e);
-      }
-    }
-    initPins();
-
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
-      if (doc.exists && doc.data().pins) {
+      if (doc.exists && doc.data().pins && Object.keys(doc.data().pins).length > 0) {
         userPins = { ...doc.data().pins };
-      } else if (!doc.exists) {
-        // Dokument ne postoji ili je trenutno nedostupan — VIŠE SE NE PIŠE
-        // DEFAULT_PINS natrag. Zadržava se zadnje poznato stanje u memoriji.
-        console.error("PIN dokument 'postavke/pinovi' ne postoji ili je nedostupan — PIN-ovi NISU resetirani.");
+      } else {
+        // NIKAD ne pišemo automatski u bazu ovdje, bez obzira postoji li dokument ili ne.
+        // Ovo sprječava da bilo koji (i zastarjeli) uređaj ikad sam prebriše PIN-ove
+        // na tvornička podešavanja. Ako se ovo prikaže, dokument treba RUČNO provjeriti
+        // u Firebase konzoli (Firestore > postavke > pinovi).
+        console.error("PIN dokument je prazan ili ne postoji! Ovo NE smije ostati ovako - provjeri Firebase konzolu ručno. PIN-ovi se NEĆE automatski resetirati.");
+        if (Object.keys(userPins).length === 0) {
+          // Samo ako baš ništa nemamo u memoriji (prvo ikad pokretanje), prikaži zadano
+          // isključivo za prijavu - ovo se NE piše u bazu.
+          userPins = { ...DEFAULT_PINS };
+        }
       }
-      // Ako dokument postoji ali (privremeno) nema 'pins' polje, isto se
-      // ne dira baza — zadržava se zadnje poznato stanje.
       populateUserDropdowns();
       renderPinTable();
       renderMonteriCheckboxes();
@@ -583,7 +537,7 @@
     function populateUserDropdowns() {
       const loginDrop = document.getElementById('userSelectDropdown');
       const pinDrop = document.getElementById('pinTargetDropdown');
-
+      
       let opts = '';
       Object.keys(userPins).forEach(name => {
         const isAdm = name.includes('VEDRAN');
@@ -649,17 +603,11 @@
       document.getElementById('newPinVal').focus();
     }
 
-    /* PIN FIX: deleteWorker() sad koristi savePins() umjesto
-       .update({[`pins.${name}`]: FieldValue.delete()}) */
     async function deleteWorker(name) {
-      if (!confirm(`Želite li obrisati radnika: ${name}?`)) return;
-
-      const pins = { ...userPins };
-      delete pins[name];
-
-      const ok = await savePins(pins);
-      if (!ok) {
-        alert('Greška: dokument PIN-ova nije pronađen. Radnik NIJE obrisan.');
+      if (confirm(`Želite li obrisati radnika: ${name}?`)) {
+        await db.collection("postavke").doc("pinovi").update({
+          [`pins.${name}`]: firebase.firestore.FieldValue.delete()
+        });
       }
     }
 
@@ -723,11 +671,11 @@
         openLoginModal();
       } else {
         document.getElementById('loginModal').style.display = 'none';
-
+        
         const isVedranAdmin = currentWorker.toUpperCase().trim() === 'VEDRAN VUKANOVIĆ';
         const isUred = currentWorker.toUpperCase().includes('ANKICA');
         const isSkladiste = currentWorker.toUpperCase().includes('BRANISLAV');
-
+        
         let icon = '👷 ';
         if (isVedranAdmin) icon = '👑 ';
         else if (isUred) icon = '💼 ';
@@ -762,7 +710,7 @@
         alert('❌ Pogrešan PIN!');
         return;
       }
-
+      
       currentWorker = selected;
       localStorage.setItem('teren_worker_name', currentWorker);
       checkWorkerAuth();
@@ -785,8 +733,6 @@
       document.getElementById('newPinVal').value = userPins[selected] || '';
     }
 
-    /* PIN FIX: saveUserPinChange() sad koristi savePins() umjesto
-       .update({[`pins.${target}`]: newPin}) */
     async function saveUserPinChange() {
       const target = document.getElementById('pinTargetDropdown').value;
       const newPin = document.getElementById('newPinVal').value.trim();
@@ -795,21 +741,13 @@
         return;
       }
 
-      const pins = { ...userPins };
-      pins[target] = newPin;
-
-      const ok = await savePins(pins);
-      if (!ok) {
-        alert('Greška: dokument PIN-ova nije pronađen. Promjena NIJE spremljena.');
-        return;
-      }
-
+      await db.collection("postavke").doc("pinovi").update({
+        [`pins.${target}`]: newPin
+      });
       alert(`✅ Uspješno postavljen novi PIN za: ${target} (${newPin})`);
       document.getElementById('newPinVal').value = '';
     }
 
-    /* PIN FIX: addNewWorkerWithPin() sad koristi savePins() umjesto
-       .update({[`pins.${name}`]: pin}) */
     async function addNewWorkerWithPin() {
       const name = document.getElementById('newWorkerName').value.trim().toUpperCase();
       const pin = document.getElementById('newWorkerPin').value.trim() || '1234';
@@ -819,15 +757,10 @@
         return;
       }
 
-      const pins = { ...userPins };
-      pins[name] = pin;
-
-      const ok = await savePins(pins);
-      if (!ok) {
-        alert('Greška: dokument PIN-ova nije pronađen. Novi radnik NIJE spremljen.');
-        return;
-      }
-
+      await db.collection("postavke").doc("pinovi").update({
+        [`pins.${name}`]: pin
+      });
+      
       document.getElementById('newWorkerName').value = '';
       document.getElementById('newWorkerPin').value = '';
       alert(`✅ Dodan: ${name} (PIN: ${pin})`);
@@ -847,7 +780,7 @@
       return new Promise(async (resolve) => {
         const isPdf = file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'));
         const rawBase64 = await readFileAsDataURL(file);
-
+        
         if (isPdf || !rawBase64) {
           resolve(rawBase64);
           return;
@@ -931,7 +864,7 @@
 
     async function cyclePositionStatus(index, fromSkladiste = false) {
       if (!selectedId) return;
-
+      
       if (fromSkladiste && !canEditSkladiste()) {
         alert('❌ Samo Branislav i Vedran mogu mijenjati status u skladištu.');
         return;
@@ -948,7 +881,7 @@
         }
       }
       let positions = p.positions || [];
-
+      
       if (positions.length === 0) {
         positions = [{ name: 'Cijeli nalog / Roba', status: 'proizvodnja' }];
       }
@@ -1241,12 +1174,15 @@
       if (p.isInvoiced) return 'fakturirano';
       const positions = p.positions || [];
       const total = positions.length;
-      const montirano = positions.filter(x => x.status === 'montirano').length;
-      const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
-      const skladiste = positions.filter(x => x.status === 'skladiste').length;
-      if (reklamacija > 0) return 'reklamacija';
-      if (total > 0 && montirano === total) return 'montirano';
-      if (skladiste > 0 || p.dateSkladiste) return 'skladiste';
+      if (total > 0) {
+        const montirano = positions.filter(x => x.status === 'montirano').length;
+        const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
+        const skladiste = positions.filter(x => x.status === 'skladiste').length;
+        if (reklamacija > 0) return 'reklamacija';
+        if (montirano === total) return 'montirano';
+        if (skladiste > 0) return 'skladiste';
+        return 'proizvodnja';
+      }
       if (p.rnDoc) return 'proizvodnja';
       if (p.offerDoc) return 'ponuda';
       return 'mjerenje';
@@ -1307,26 +1243,22 @@
         const reklamacija = positions.filter(x => x.status === 'reklamacija').length;
 
         const stage = getProjectStage(p);
-        let statusText = '';
-        if (total > 0 && (stage === 'skladiste' || stage === 'montirano' || stage === 'reklamacija')) {
-          if (montirano === total) {
-            statusText = `<span style="color:#10b981; font-weight:bold;">✅ Sve montirano (${montirano}/${total})</span>`;
-          } else {
-            let extra = reklamacija > 0 ? ` • <span style="color:#f87171; font-weight:bold;">⚠️ Reklamacija: ${reklamacija}</span>` : '';
-            statusText = `<span style="color:#38bdf8;">📦 Skladište: ${skladiste}</span> • <span style="color:#10b981;">🛠️ Montirano: ${montirano}</span>${extra}`;
-          }
-        } else {
-          const STAGE_LABELS = {
-            mjerenje: { text: '📐 Mjerenje', color: '#38bdf8' },
-            ponuda: { text: '📄 Ponuda', color: '#34d399' },
-            proizvodnja: { text: '🏭 U Proizvodnji', color: '#fbbf24' },
-            fakturirano: { text: '🏁 Fakturirano', color: '#a855f7' }
-          };
-          const label = STAGE_LABELS[stage] || STAGE_LABELS.mjerenje;
-          statusText = `<span style="color:${label.color}; font-weight:bold;">${label.text}</span>`;
+        const STAGE_LABELS = {
+          mjerenje: { text: '📐 Mjerenje', color: '#38bdf8' },
+          ponuda: { text: '📄 Ponuda', color: '#34d399' },
+          proizvodnja: { text: '🏭 U Proizvodnji', color: '#fbbf24' },
+          skladiste: { text: '📦 Skladište', color: '#06b6d4' },
+          montirano: { text: '✅ Montirano', color: '#10b981' },
+          reklamacija: { text: '⚠️ Reklamacija / Fali', color: '#ef4444' },
+          fakturirano: { text: '🏁 Fakturirano', color: '#a855f7' }
+        };
+        const label = STAGE_LABELS[stage];
+        let statusText = `<span style="color:${label.color}; font-weight:bold;">${label.text}</span>`;
+        if (total > 0 && (stage === 'skladiste' || stage === 'montirano')) {
+          statusText += ` <span style="color:#94a3b8; font-weight:normal;">(${montirano}/${total} montirano)</span>`;
         }
 
-        let fakturaBadge = p.isInvoiced
+        let fakturaBadge = p.isInvoiced 
           ? '<span style="color:#10b981; font-weight:bold; background:rgba(16,185,129,0.15); padding:2px 6px; border-radius:4px;">🏁 FAKTURIRANO</span>'
           : '';
 
@@ -1394,7 +1326,7 @@
       // 1. Skice
       const images = (p.images && p.images.length > 0) ? p.images : [];
       currentImageIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
-
+      
       const mainImg = document.getElementById('d-img');
       const btnDelSketch = document.getElementById('btnDeleteCurrentSketch');
 
@@ -1430,7 +1362,7 @@
         offUpload.style.display = 'none';
         offDisplay.style.display = 'block';
         btnDelOff.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
-
+        
         if (!canViewFinancialDocs()) {
           offBox.innerHTML = `
             <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
@@ -1476,7 +1408,7 @@
         rnUpload.style.display = 'none';
         rnDisplay.style.display = 'block';
         btnDelRn.style.display = canViewFinancialDocs() ? 'inline-block' : 'none';
-
+        
         if (!canViewFinancialDocs()) {
           rnBox.innerHTML = `
             <div style="text-align:center; padding: 30px; filter: blur(4px); opacity: 0.5; pointer-events: none;">
@@ -1899,7 +1831,7 @@
       const status = document.getElementById('upload-status');
       const modeEl = document.querySelector('input[name="imgMode"]:checked');
       const mode = modeEl ? modeEl.value : 'color';
-
+      
       for (let i = 0; i < files.length; i++) {
         status.innerText = `⏳ Učitavam sliku ${i+1}/${files.length}...`;
         const base64 = await processImageFile(files[i], mode);
@@ -1924,8 +1856,8 @@
       `).join('');
 
       const count = uploadedImages.length;
-      document.getElementById('upload-status').innerText = count > 0
-        ? `✅ Učitano: ${count} slika`
+      document.getElementById('upload-status').innerText = count > 0 
+        ? `✅ Učitano: ${count} slika` 
         : '📷 Dodaj fotografije bilježnice';
     }
 
