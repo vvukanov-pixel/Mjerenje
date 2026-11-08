@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.4</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.5</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1150,6 +1150,19 @@
       if (!/Sobna|Garažna/.test(v)) otvoriPredloske(i);
     }
 
+    const SOBNA_SIRINE = [682, 782, 882, 982];
+    const SOBNA_STOKOVI = [107, 130, 150, 230, 280];
+    function sobnaPodsjetnik(m) {
+      const d = parseFloat(String(m.dubina || '').replace(',', '.'));
+      const prep = d > 0 ? SOBNA_STOKOVI.find(x => x >= d) : null;
+      const chip = (v, on) => `<span style="display:inline-block;padding:2px 7px;margin:2px 3px 2px 0;border-radius:5px;font-weight:bold;${on ? 'background:#16a34a;color:#fff;' : 'background:#1e293b;color:#e2e8f0;border:1px solid #334155;'}">${v}</span>`;
+      return `<div class="sobna-pod" style="margin-top:6px;padding:8px 10px;border-radius:6px;background:#0b1730;border:1px dashed #38bdf8;font-size:12px;color:#cbd5e1;line-height:1.7;">
+        <div><b style="color:#38bdf8;">Vanjska širina dovratnika (mm):</b><br>${SOBNA_SIRINE.map(v => chip(v, false)).join('')}</div>
+        <div style="margin-top:4px;"><b style="color:#38bdf8;">Debljine štoka (mm):</b><br>${SOBNA_STOKOVI.map(v => chip(v, v === prep)).join('')}</div>
+        ${d > 0 ? (prep ? `<div style="margin-top:4px;color:#4ade80;">Za špaletu ${d} mm → štok <b>${prep}</b> mm</div>` : `<div style="margin-top:4px;color:#fbbf24;">Špaleta ${d} mm je deblja od najvećeg štoka (280 mm)</div>`) : ''}
+      </div>`;
+    }
+
     async function promijeniTip(i, tip) {
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[i]) return;
@@ -1273,6 +1286,7 @@
               ${m.roleta && !jeVrataTip(m.tip) ? `<div><label>Kutija rolete (u mjeri)</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.kutija)}" oninput="liveMjera(${i}, 'kutija', this.value)" onchange="saveMjera(${i}, 'kutija', this.value)" data-idx="${i}" data-key="kutija"></div>` : ''}
             </div>
             ${upozorenjaMjera(m, i)}
+            ${/Sobna/.test(m.tip || '') ? sobnaPodsjetnik(m) : ''}
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
           </div>`).join('');
       }
@@ -1437,6 +1451,7 @@
       arr[idx][key] = (typeof val === 'string') ? val.trim() : val;
       const done = mjSet(arr);
       renderCrtez();
+      if (key === 'dubina' && /Sobna/.test(arr[idx].tip || '')) { const row = document.querySelectorAll('#mjereList .mj-row')[idx]; const box = row ? row.querySelector('.sobna-pod') : null; if (box) box.outerHTML = sobnaPodsjetnik(arr[idx]); }
       if (['sirina', 'visina', 'dubina'].includes(key)) { const row = document.querySelectorAll('#mjereList .mj-row')[idx]; if (row) { const old = row.querySelector('.mj-warn'); const html = upozorenjaMjera(arr[idx], idx); if (old) old.outerHTML = html; } }
       await done;
     }
