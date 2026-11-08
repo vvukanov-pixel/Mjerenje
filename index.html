@@ -109,6 +109,11 @@
     .mj-row { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
     .mj-row .mj-head { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; }
     .mj-row select, .mj-row input { background:#111a33; color:#fff; border:1px solid var(--border-color); border-radius:6px; padding:8px; font-size:14px; }
+    .mj-krila { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:6px; }
+    .mj-lbl { font-size:11px; color:var(--text-muted); }
+    .kr-chip { background:#0c4a6e; color:#e0f2fe; border:1px solid #0369a1; border-radius:6px; padding:6px 9px; font-size:12px; font-weight:bold; cursor:pointer; min-width:44px; }
+    .kr-pm { background:#1e293b; color:#fff; border:1px solid #334155; border-radius:6px; width:30px; height:30px; font-size:16px; font-weight:bold; cursor:pointer; }
+    .mj-krila select { padding:5px; font-size:12px; }
     .mj-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; }
     .mj-grid label { font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px; }
     .mj-grid input { width:100%; font-size:18px; font-weight:bold; text-align:center; }
@@ -357,6 +362,8 @@
               </div>
               <div id="laserStatus" style="font-size:11px; color:var(--text-muted); margin:6px 0;">Laser nije spojen</div>
               <div id="mjereList"></div>
+              <datalist id="bojeLista"><option>Bijelo</option><option>Orah</option><option>Zlatni hrast</option><option>Antracit</option><option>Bijelo/Antracit</option><option>Bijelo/Orah</option><option>Bijelo/Zlatni hrast</option></datalist>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Krila: F fiksno · O okretno · ON okretno-nagibno · N nagibno · K klizno (→ smjer) · G grilje · L/D strana kvake. Dodirni krilo za promjenu.</div>
             </div><span id="mjereAnchor"></span>
           </div>
 
@@ -948,11 +955,52 @@
 
 
     // ================= MJERE OTVORA + BOSCH LASER =================
-    const TIPOVI_OTVORA = ['Fiksni prozor', 'Jednokrilni prozor', 'Dvokrilni prozor', 'Klizna stijena Smart-Slide', 'HST stijena', 'Balkonska jednokrilna vrata', 'Balkonska dvokrilna vrata', 'Alu stijena', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
-    function imaStranu(tip) { return !/Fiksni|Alu stijena|Garažna|Ostalo/.test(tip || ''); }
+    const TIPOVI_OTVORA = ['Fiksni prozor', 'Jednokrilni prozor', 'Dvokrilni prozor', 'Trokrilni prozor', 'Klizna stijena Smart-Slide', 'HST stijena', 'Balkonska jednokrilna vrata', 'Balkonska dvokrilna vrata', 'Alu stijena', 'Grilje', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
+    const BOJE = ['Bijelo', 'Orah', 'Zlatni hrast', 'Antracit', 'Bijelo/Antracit', 'Bijelo/Orah', 'Bijelo/Zlatni hrast'];
+    // krilo: F fiksno, O okretno, ON okretno-nagibno, N nagibno, K klizno, G grilje; -L/-D = strana kvake (kod K smjer klizanja)
+    const KRILA_CIKLUS = ['F', 'ON-L', 'ON-D', 'O-L', 'O-D', 'N', 'K-D', 'K-L', 'G'];
+    function jeVrataTip(tip) { return /Sobna|Ulazna|Garažna/.test(tip || ''); }
+    function imaStranu(tip) { return /Sobna|Ulazna/.test(tip || ''); }
+    function defaultKrila(tip, strana) {
+      const s = strana === 'D' ? 'D' : 'L', o = s === 'L' ? 'D' : 'L';
+      if (/Fiksni|Alu stijena|Ostalo/.test(tip)) return ['F'];
+      if (/Jednokrilni|jednokrilna/.test(tip)) return ['ON-' + s];
+      if (/Dvokrilni|dvokrilna/.test(tip)) return s === 'L' ? ['ON-D', 'O-L'] : ['O-D', 'ON-L'];
+      if (/Trokrilni/.test(tip)) return ['ON-D', 'F', 'ON-L'];
+      if (/Klizna|HST/.test(tip)) return s === 'L' ? ['K-D', 'F'] : ['F', 'K-L'];
+      if (/Grilje/.test(tip)) return ['G', 'G'];
+      if (tip === 'Prozor') return ['ON-' + s];
+      if (tip === 'Balkonska vrata') return ['ON-' + s];
+      return ['F'];
+    }
+    function krilaOf(m) { return (Array.isArray(m.krila) && m.krila.length) ? m.krila : defaultKrila(m.tip, m.strana); }
+    function krLabel(c) { return c.replace('K-D', 'K →').replace('K-L', 'K ←'); }
     function opcijeTipa(cur) {
       const lista = TIPOVI_OTVORA.includes(cur) || !cur ? TIPOVI_OTVORA : [cur].concat(TIPOVI_OTVORA);
       return lista.map(t => `<option ${t === cur ? 'selected' : ''}>${t}</option>`).join('');
+    }
+    async function promijeniTip(i, tip) {
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!arr[i]) return;
+      arr[i].tip = tip;
+      arr[i].krila = defaultKrila(tip, arr[i].strana);
+      const done = mjSet(arr); renderMjere(true); await done;
+    }
+    async function promijeniKrila(i, akcija, k) {
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!arr[i]) return;
+      let kr = krilaOf(arr[i]).slice();
+      if (akcija === 'dodaj') kr.push(kr.length ? kr[kr.length - 1] : 'F');
+      else if (akcija === 'makni') { if (kr.length > 1) kr.pop(); }
+      else if (akcija === 'ciklus') { const pos = KRILA_CIKLUS.indexOf(kr[k]); kr[k] = KRILA_CIKLUS[(pos + 1) % KRILA_CIKLUS.length]; }
+      arr[i].krila = kr;
+      const done = mjSet(arr); renderMjere(true); await done;
+    }
+    async function postaviPolje(i, key, val) {
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!arr[i]) return;
+      arr[i][key] = val;
+      const done = mjSet(arr); renderMjere(true); await done;
     }
     let mjereRenderedFor = null;
     let mjMode = 'detail';      // 'detail' = otvoreni nalog, 'new' = Novo mjerenje
@@ -1006,16 +1054,40 @@
           <div class="mj-row">
             <div class="mj-head">
               <b style="font-size:13px;">${i + 1}.</b>
-              <select style="flex:1; min-width:0;" onchange="saveMjera(${i}, 'tip', this.value); renderMjere(true);">
+              <select style="flex:1; min-width:0;" onchange="promijeniTip(${i}, this.value)">
                 ${opcijeTipa(m.tip)}
               </select>
               ${imaStranu(m.tip) ? `<select style="width:auto;" onchange="saveMjera(${i}, 'strana', this.value)">
-                <option value="L" ${m.strana !== 'D' ? 'selected' : ''}>${/Klizna|HST/.test(m.tip) ? 'Klizi' : 'Kvaka'} L</option>
-                <option value="D" ${m.strana === 'D' ? 'selected' : ''}>${/Klizna|HST/.test(m.tip) ? 'Klizi' : 'Kvaka'} D</option>
+                <option value="L" ${m.strana !== 'D' ? 'selected' : ''}>Kvaka L</option>
+                <option value="D" ${m.strana === 'D' ? 'selected' : ''}>Kvaka D</option>
               </select>` : ''}
               <button type="button" onclick="deleteOtvor(${i})" style="background:none;border:none;color:#f87171;font-size:14px;cursor:pointer;" title="Obriši otvor">🗑️</button>
             </div>
-            <input style="width:100%; margin-bottom:6px;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" oninput="liveMjera(${i}, 'prostorija', this.value)" onchange="saveMjera(${i}, 'prostorija', this.value)">
+            <div style="display:flex; gap:6px; margin-bottom:6px;">
+              <input style="flex:1.4; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" oninput="liveMjera(${i}, 'prostorija', this.value)" onchange="saveMjera(${i}, 'prostorija', this.value)">
+              <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
+            </div>
+            ${jeVrataTip(m.tip) ? '' : `
+            <div class="mj-krila">
+              <span class="mj-lbl">Krila:</span>
+              ${krilaOf(m).map((c, k) => `<button type="button" class="kr-chip" onclick="promijeniKrila(${i}, 'ciklus', ${k})" title="Dodirni za promjenu">${krLabel(c)}</button>`).join('')}
+              <button type="button" class="kr-pm" onclick="promijeniKrila(${i}, 'makni')">−</button>
+              <button type="button" class="kr-pm" onclick="promijeniKrila(${i}, 'dodaj')">+</button>
+            </div>
+            <div class="mj-krila">
+              <span class="mj-lbl">Gore:</span>
+              <select onchange="postaviPolje(${i}, 'nadsvjetlo', this.value)">
+                <option value="" ${!m.nadsvjetlo ? 'selected' : ''}>ništa</option>
+                <option value="F" ${m.nadsvjetlo === 'F' ? 'selected' : ''}>fiksno nadsvjetlo</option>
+                <option value="N" ${m.nadsvjetlo === 'N' ? 'selected' : ''}>nagibno nadsvjetlo</option>
+              </select>
+              <span class="mj-lbl">Dolje:</span>
+              <select onchange="postaviPolje(${i}, 'donje', this.value)">
+                <option value="" ${!m.donje ? 'selected' : ''}>ništa</option>
+                <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
+              </select>
+              <label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
+            </div>`}
             <div class="mj-grid">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
@@ -1050,73 +1122,86 @@
       const H = parseFloat(String(m.visina).replace(',', '.'));
       if (!(W > 0 && H > 0)) return '';
       const fullOn = document.querySelector('.mj-full') !== null;
-      const maxS = fullOn ? Math.min(320, window.innerWidth - 90) : 150, sc = Math.min(maxS / W, maxS / H);
-      const w = Math.max(W * sc, 20), h = Math.max(H * sc, 20);
-      const x0 = 34, y0 = 26, svgH = h + 64;
-      let svgW = Math.max(w + 54, 190);
+      const maxS = fullOn ? Math.min(340, window.innerWidth - 90) : 160, sc = Math.min(maxS / W, maxS / H);
+      const w = Math.max(W * sc, 24), h = Math.max(H * sc, 24);
       const tip = m.tip || 'Jednokrilni prozor';
-      const strana = m.strana === 'D' ? 'D' : 'L';
-      const naslov = `${i + 1}. ${tip}${imaStranu(tip) ? ' ' + strana : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
-      svgW = Math.max(svgW, naslov.length * 6.3 + 10);
-      const plava = '#1e3a8a', okvir = 5;
-      let unutra = `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e0f2fe" stroke="${plava}" stroke-width="3"/>`;
-      // krilo: x,y,w,h; kvaka: 'L'|'D'|null (strana kvake); šarke su na suprotnoj strani -> vrh trokuta
-      const krilo = (kx, ky, kw, kh, kvaka) => {
-        let o = `<rect x="${kx}" y="${ky}" width="${kw}" height="${kh}" fill="#bae6fd" stroke="#0369a1" stroke-width="1.2"/>`;
-        if (kvaka) {
-          const sarkeX = kvaka === 'L' ? kx + kw : kx, kvakaX = kvaka === 'L' ? kx : kx + kw;
-          o += `<polyline points="${kvakaX},${ky} ${sarkeX},${ky + kh / 2} ${kvakaX},${ky + kh}" fill="none" stroke="#475569" stroke-width="0.8" stroke-dasharray="4 3"/>`;
-          const hx = kvaka === 'L' ? kx + 5 : kx + kw - 5;
-          o += `<rect x="${hx - 1.5}" y="${ky + kh / 2 - 7}" width="3" height="14" rx="1.5" fill="${plava}"/>`;
+      const rol = !!m.roleta && !jeVrataTip(tip);
+      const x0 = 34, y0 = 26 + (rol ? 12 : 0);
+      const naslov = `${i + 1}. ${tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
+      const podnaslov = [m.boja, rol ? 'roleta' : ''].filter(Boolean).join(' · ');
+      let svgW = Math.max(w + 54, 190, naslov.length * 6.3 + 10);
+      const svgH = h + (y0 - 26) + 64 + (podnaslov ? 12 : 0);
+      const plava = '#1e3a8a', crt = '#475569';
+      let o = '';
+      if (rol) o += `<rect x="${x0}" y="${y0 - 12}" width="${w}" height="11" fill="#67e8f9" stroke="${plava}" stroke-width="1"/>`;
+
+      const pasivnoO = !jeVrataTip(tip) && krilaOf(m).some(c => c.startsWith('ON'));
+      const crtaj = (c, x, y, cw, ch) => {
+        let r = '';
+        const [t, k] = c.split('-');
+        if (t === 'G') {
+          r += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="#f1f5f9" stroke="#0369a1" stroke-width="1.2"/>`;
+          for (let yy = y + 5; yy < y + ch - 2; yy += 5) r += `<line x1="${x + 3}" y1="${yy}" x2="${x + cw - 3}" y2="${yy}" stroke="#94a3b8" stroke-width="0.8"/>`;
+          return r;
         }
-        return o;
+        if (t === 'F') {
+          r += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="#bae6fd" stroke="#0369a1" stroke-width="0.8"/>`;
+          r += `<text x="${x + cw / 2}" y="${y + ch / 2 + 4}" text-anchor="middle" font-size="${Math.min(13, cw / 3)}" font-weight="bold" fill="#0369a1">F</text>`;
+          return r;
+        }
+        // pokretno krilo: okvir krila
+        const p = 3, sx = x + p, sy = y + p, sw = cw - 2 * p, sh = ch - 2 * p;
+        r += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="#e0f2fe" stroke="#0369a1" stroke-width="0.8"/>`;
+        r += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="#bae6fd" stroke="${plava}" stroke-width="1.4"/>`;
+        const dash = 'fill="none" stroke="' + crt + '" stroke-width="0.8" stroke-dasharray="4 3"';
+        if (t === 'O' || t === 'ON') {
+          const kv = k === 'D' ? 'D' : 'L';
+          const kvX = kv === 'L' ? sx : sx + sw, sarX = kv === 'L' ? sx + sw : sx;
+          r += `<polyline points="${kvX},${sy} ${sarX},${sy + sh / 2} ${kvX},${sy + sh}" ${dash}/>`;
+          if (t === 'ON') r += `<polyline points="${sx},${sy} ${sx + sw / 2},${sy + sh} ${sx + sw},${sy}" ${dash}/>`;
+          const hx = kv === 'L' ? sx + 4 : sx + sw - 4;
+          if (!(t === 'O' && pasivnoO)) r += `<rect x="${hx - 1.5}" y="${sy + sh / 2 - 7}" width="3" height="14" rx="1.5" fill="${plava}"/>`;
+        } else if (t === 'N') {
+          r += `<polyline points="${sx},${sy} ${sx + sw / 2},${sy + sh} ${sx + sw},${sy}" ${dash}/>`;
+          r += `<rect x="${sx + sw / 2 - 7}" y="${sy + 3}" width="14" height="3" rx="1.5" fill="${plava}"/>`;
+        } else if (t === 'K') {
+          const dir = k === 'L' ? -1 : 1, ay = sy + sh * 0.6;
+          const a1 = sx + sw / 2 - dir * sw * 0.3, a2 = sx + sw / 2 + dir * sw * 0.3;
+          r += `<line x1="${a1}" y1="${ay}" x2="${a2}" y2="${ay}" stroke="${plava}" stroke-width="2"/>`;
+          r += `<polygon points="${a2},${ay} ${a2 - 7 * dir},${ay - 4} ${a2 - 7 * dir},${ay + 4}" fill="${plava}"/>`;
+        }
+        return r;
       };
-      const ix = x0 + okvir, iy = y0 + okvir, iw = w - 2 * okvir, ih = h - 2 * okvir;
+
       if (/Garažna/.test(tip)) {
-        unutra = `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e2e8f0" stroke="${plava}" stroke-width="3"/>`;
-        for (let k = 1; k < 5; k++) unutra += `<line x1="${x0}" y1="${y0 + h * k / 5}" x2="${x0 + w}" y2="${y0 + h * k / 5}" stroke="#64748b" stroke-width="1"/>`;
+        o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e2e8f0" stroke="${plava}" stroke-width="3"/>`;
+        for (let k = 1; k < 5; k++) o += `<line x1="${x0}" y1="${y0 + h * k / 5}" x2="${x0 + w}" y2="${y0 + h * k / 5}" stroke="#64748b" stroke-width="1"/>`;
       } else if (/Sobna|Ulazna/.test(tip)) {
-        unutra = `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#f1f5f9" stroke="${plava}" stroke-width="3"/>`;
-        const kx = strana === 'L' ? x0 + 10 : x0 + w - 10;
-        unutra += `<polyline points="${strana === 'L' ? x0 : x0 + w},${y0} ${strana === 'L' ? x0 + w : x0},${y0 + h / 2} ${strana === 'L' ? x0 : x0 + w},${y0 + h}" fill="none" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="4 3"/>`;
-        unutra += `<rect x="${kx - 1.5}" y="${y0 + h * 0.52 - 7}" width="3" height="14" rx="1.5" fill="${plava}"/>`;
-      } else if (/Fiksni/.test(tip)) {
-        unutra += `<rect x="${ix}" y="${iy}" width="${iw}" height="${ih}" fill="#bae6fd" stroke="#0369a1" stroke-width="1"/>`;
-        unutra += `<text x="${x0 + w / 2}" y="${y0 + h / 2 - 8}" text-anchor="middle" font-size="14" font-weight="bold" fill="#0369a1">F</text>`;
-      } else if (/Jednokrilni|jednokrilna/.test(tip)) {
-        unutra += krilo(ix, iy, iw, ih, strana);
-      } else if (/Dvokrilni|dvokrilna/.test(tip)) {
-        const pw = iw / 2;
-        // aktivno krilo (s kvakom) je na odabranoj strani; kvaka uz sredinu
-        if (strana === 'L') { unutra += krilo(ix, iy, pw, ih, 'D') + krilo(ix + pw, iy, pw, ih, null); }
-        else { unutra += krilo(ix, iy, pw, ih, null) + krilo(ix + pw, iy, pw, ih, 'L'); }
-        // pasivno krilo: samo trokut otvaranja
-        const pasX = strana === 'L' ? ix + pw : ix;
-        const sar = strana === 'L' ? ix + iw : ix, sred = ix + pw;
-        unutra += `<polyline points="${sred},${iy} ${sar},${iy + ih / 2} ${sred},${iy + ih}" fill="none" stroke="#475569" stroke-width="0.8" stroke-dasharray="4 3"/>`;
-      } else if (/Klizna|HST/.test(tip)) {
-        const pw = iw / 2;
-        unutra += `<rect x="${ix}" y="${iy}" width="${pw}" height="${ih}" fill="#bae6fd" stroke="#0369a1" stroke-width="1.2"/>`;
-        unutra += `<rect x="${ix + pw}" y="${iy}" width="${pw}" height="${ih}" fill="#bae6fd" stroke="#0369a1" stroke-width="1.2"/>`;
-        // klizno krilo je na odabranoj strani, strelica pokazuje smjer otvaranja (prema sredini)
-        const ay = iy + ih * 0.6;
-        const ax1 = strana === 'L' ? ix + pw * 0.2 : ix + iw - pw * 0.2;
-        const ax2 = strana === 'L' ? ix + pw * 0.9 : ix + iw - pw * 0.9;
-        const dir = ax2 > ax1 ? 1 : -1;
-        unutra += `<line x1="${ax1}" y1="${ay}" x2="${ax2}" y2="${ay}" stroke="${plava}" stroke-width="2"/>`;
-        unutra += `<polygon points="${ax2},${ay} ${ax2 - 7 * dir},${ay - 4} ${ax2 - 7 * dir},${ay + 4}" fill="${plava}"/>`;
-        const fx = strana === 'L' ? ix + pw * 1.5 : ix + pw * 0.5;
-        unutra += `<text x="${fx}" y="${iy + ih * 0.35}" text-anchor="middle" font-size="12" font-weight="bold" fill="#0369a1">F</text>`;
-      } else if (/Alu stijena/.test(tip)) {
-        const kr = W > 1500 ? 2 : 1;
-        for (let k = 0; k < kr; k++) unutra += `<rect x="${ix + k * iw / kr}" y="${iy}" width="${iw / kr}" height="${ih}" fill="#bae6fd" stroke="#0369a1" stroke-width="1"/>`;
+        const st = m.strana === 'D' ? 'D' : 'L';
+        o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#f1f5f9" stroke="${plava}" stroke-width="3"/>`;
+        o += `<polyline points="${st === 'L' ? x0 : x0 + w},${y0} ${st === 'L' ? x0 + w : x0},${y0 + h / 2} ${st === 'L' ? x0 : x0 + w},${y0 + h}" fill="none" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="4 3"/>`;
+        const kx = st === 'L' ? x0 + 10 : x0 + w - 10;
+        o += `<rect x="${kx - 1.5}" y="${y0 + h * 0.52 - 7}" width="3" height="14" rx="1.5" fill="${plava}"/>`;
       } else {
-        // stari zapisi ('Prozor', 'Balkonska vrata') i Ostalo
-        const kr = W > 1200 ? 2 : 1;
-        for (let k = 0; k < kr; k++) unutra += `<rect x="${ix + k * iw / kr}" y="${iy}" width="${iw / kr}" height="${ih}" fill="#bae6fd" stroke="#0369a1" stroke-width="1"/>`;
+        o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e0f2fe" stroke="${plava}" stroke-width="3"/>`;
+        const ok = 4, ix = x0 + ok, iw = w - 2 * ok;
+        let iy = y0 + ok, ih = h - 2 * ok;
+        if (m.nadsvjetlo) {
+          const fh = Math.max(ih * 0.22, 12);
+          o += crtaj(m.nadsvjetlo === 'N' ? 'N' : 'F', ix, iy, iw, fh);
+          iy += fh + 2; ih -= fh + 2;
+        }
+        if (m.donje) {
+          const dh = Math.max(ih * 0.22, 12);
+          o += crtaj('F', ix, iy + ih - dh, iw, dh);
+          ih -= dh + 2;
+        }
+        const kr = krilaOf(m), n = kr.length, gap = 2, cw = (iw - gap * (n - 1)) / n;
+        kr.forEach((c, k) => { o += crtaj(c, ix + k * (cw + gap), iy, cw, ih); });
       }
+
       const yd = y0 + h + 12;
-      const kote = `
+      o += `
         <line x1="${x0}" y1="${yd}" x2="${x0 + w}" y2="${yd}" stroke="#dc2626" stroke-width="1"/>
         <line x1="${x0}" y1="${yd - 4}" x2="${x0}" y2="${yd + 4}" stroke="#dc2626"/>
         <line x1="${x0 + w}" y1="${yd - 4}" x2="${x0 + w}" y2="${yd + 4}" stroke="#dc2626"/>
@@ -1125,10 +1210,11 @@
         <line x1="${x0 - 16}" y1="${y0}" x2="${x0 - 8}" y2="${y0}" stroke="#dc2626"/>
         <line x1="${x0 - 16}" y1="${y0 + h}" x2="${x0 - 8}" y2="${y0 + h}" stroke="#dc2626"/>
         <text x="${x0 - 17}" y="${y0 + h / 2}" text-anchor="middle" font-size="13" font-weight="bold" fill="#dc2626" transform="rotate(-90 ${x0 - 17} ${y0 + h / 2})">${escAttr(m.visina)}</text>`;
-      const spal = m.dubina ? `<text x="${x0 + w / 2}" y="${y0 + h / 2 + 4}" text-anchor="middle" font-size="10" fill="#334155">špaleta ${escAttr(m.dubina)}</text>` : '';
+      if (m.dubina) o += `<text x="${x0 + w + 4}" y="${y0 + h - 2}" font-size="9" fill="#334155" transform="rotate(-90 ${x0 + w + 10} ${y0 + h - 2})">špaleta ${escAttr(m.dubina)}</text>`;
+      if (podnaslov) o += `<text x="4" y="${svgH - 4}" font-size="10" fill="#334155">${escAttr(podnaslov)}</text>`;
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
         <text x="4" y="14" font-size="11" font-weight="bold" fill="#0f172a">${escAttr(naslov)}</text>
-        ${unutra}${spal}${kote}
+        ${o}
       </svg>`;
     }
 
@@ -1159,7 +1245,7 @@
       const arr = mjGet().map(x => Object.assign({}, x));
       const last = arr.length ? arr[arr.length - 1] : null;
       const lastTip = last ? last.tip : 'Jednokrilni prozor';
-      arr.push({ tip: lastTip, strana: last ? (last.strana || 'L') : 'L', prostorija: '', sirina: '', visina: '', dubina: '', napomena: '' });
+      arr.push({ tip: lastTip, strana: last ? (last.strana || 'L') : 'L', krila: last ? krilaOf(last).slice() : ['ON-L'], nadsvjetlo: last ? (last.nadsvjetlo || '') : '', donje: last ? (last.donje || '') : '', roleta: last ? !!last.roleta : false, boja: last ? (last.boja || '') : '', prostorija: '', sirina: '', visina: '', dubina: '', napomena: '' });
       const done = mjSet(arr);
       renderMjere(true);
       const rows = document.querySelectorAll('#mjereList .mj-row');
