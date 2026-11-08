@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.12</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.13</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1219,7 +1219,7 @@
         const [x, y] = GARAZA_POZ[k];
         const v = m[k] || '';
         o += `<g style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')">
-          <rect id="gbr_${i}_${k}" x="${x}" y="${y}" width="${k === 'h' ? 90 : 120}" height="62" rx="6" fill="${v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#ffffff')}" stroke="${nuzno ? '#d97706' : '#64748b'}" stroke-width="${nuzno ? 4 : 2}"/>
+          <rect id="gbr_${i}_${k}" x="${x}" y="${y}" width="${k === 'h' ? 90 : 120}" height="62" rx="6" fill="${v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')}" stroke="${nuzno ? '#d97706' : '#0284c7'}" stroke-width="${nuzno ? 4 : 3}"/>
           <text x="${x + 6}" y="${y + 18}" font-size="17" font-weight="bold" fill="#0f172a">${lab}</text>
           <text id="gb_${i}_${k}" x="${x + (k === 'h' ? 45 : 60)}" y="${y + 52}" text-anchor="middle" font-size="30" font-weight="bold" fill="#0f172a">${escAttr(v)}</text>
         </g>`;
@@ -1233,13 +1233,13 @@
     function garazaOsvjeziKucicu(i, k, v) {
       const t = document.getElementById(`gb_${i}_${k}`); if (t) t.textContent = v || '';
       const r = document.getElementById(`gbr_${i}_${k}`);
-      if (r) { const nuzno = (GARAZA_POLJA.find(x => x[0] === k) || [])[3]; r.setAttribute('fill', v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#ffffff')); }
+      if (r) { const nuzno = (GARAZA_POLJA.find(x => x[0] === k) || [])[3]; r.setAttribute('fill', v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')); }
     }
     function garazaPanel(m, i) {
       const radio = (key, opts) => opts.map(([val, txt]) => `<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:13px;color:#e2e8f0;"><input type="radio" style="width:auto;" name="${key}_${i}" ${m[key] === val ? 'checked' : ''} onchange="postaviPolje(${i}, '${key}', '${val}')"> ${txt}</label>`).join('');
       const polje = ([k, lab, opis, nuzno]) => `<div><label style="${nuzno ? 'color:#fbbf24;' : ''}">${lab} – ${opis}${nuzno ? ' *' : ''}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); garazaOsvjeziKucicu(${i}, '${k}', this.value)" onchange="saveMjera(${i}, '${k}', this.value)" onfocus="this.closest('.mj-row').querySelectorAll('rect[id^=gbr_]').forEach(r=>r.setAttribute('stroke-dasharray',''));const r=document.getElementById('gbr_${i}_${k}');if(r)r.setAttribute('stroke-dasharray','10 5');" data-idx="${i}" data-key="${k}"></div>`;
       return `<div style="margin:6px 0;">
-        <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Dodirni kućicu na shemi pa mjeri laserom. Žute (*) su obavezne. Sve mjere u mm.</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Dodirni bilo koju kućicu na shemi pa mjeri laserom – sve kućice rade. Žute (*) se mjere uvijek, plave po potrebi. Sve mjere u mm.</div>
         ${garazaShema(m, i)}
         <div class="mj-grid" style="grid-template-columns:1fr 1fr; margin-top:8px;">${GARAZA_POLJA.map(polje).join('')}</div>
         <div style="margin-top:8px;display:grid;gap:6px;font-size:13px;">
