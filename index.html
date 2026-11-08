@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.8</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.9</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -325,6 +325,7 @@
           <div class="btn-action-group">
             <button onclick="deleteCurrent()" class="btn-action btn-delete">🗑️ Izbriši</button>
             <button onclick="window.print()" class="btn-action btn-print">🖨️ Ispiši</button>
+            <button onclick="spremiShemePDF()" id="btnShemePdf" class="btn-action btn-print" style="background:#059669;">📤 Spremi sheme</button>
           </div>
         </div>
 
@@ -1376,7 +1377,7 @@
       const H = parseFloat(String(m.visina).replace(',', '.'));
       if (!(W > 0 && H > 0)) return '';
       const fullOn = document.querySelector('.mj-full') !== null;
-      const maxS = mini ? (opts.size || 70) : (fullOn ? Math.min(340, window.innerWidth - 90) : 160), sc = Math.min(maxS / W, maxS / H);
+      const maxS = mini ? (opts.size || 70) : (opts && opts.size) ? opts.size : (fullOn ? Math.min(340, window.innerWidth - 90) : 160), sc = Math.min(maxS / W, maxS / H);
       const w = Math.max(W * sc, mini ? 14 : 24), h = Math.max(H * sc, mini ? 14 : 24);
       const tip = m.tip || 'Jednokrilni prozor';
       const rol = !!m.roleta && !jeVrataTip(tip);
@@ -1538,6 +1539,126 @@
       renderMjere(true);
       await done;
     }
+
+    // ================= PDF SHEMA (za iCloud / Datoteke / mail) =================
+    let jsPdfPromise = null;
+    function ucitajJsPDF() {
+      if (window.jspdf) return Promise.resolve();
+      if (!jsPdfPromise) jsPdfPromise = new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        sc.onload = () => res(); sc.onerror = () => { jsPdfPromise = null; rej(new Error('Ne mogu učitati PDF modul (provjeri internet).')); };
+        document.head.appendChild(sc);
+      });
+      return jsPdfPromise;
+    }
+    function svgUSliku(svg) {
+      return new Promise((res, rej) => {
+        const img = new Image();
+        img.onload = () => res(img); img.onerror = () => rej(new Error('Crtež se ne može pretvoriti'));
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      });
+    }
+    function prelomi(ctx, txt, maxW) {
+      const rijeci = String(txt).split(' '); const out = []; let red = '';
+      rijeci.forEach(r => { const t = red ? red + ' ' + r : r; if (ctx.measureText(t).width > maxW && red) { out.push(red); red = r; } else red = t; });
+      if (red) out.push(red); return out;
+    }
+    let pdfSpreman = null;
+    async function spremiShemePDF() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      const mjere = p.mjere || [];
+      if (!mjere.length) { alert('Ovaj nalog nema upisanih mjera otvora.'); return; }
+      const btn = document.getElementById('btnShemePdf');
+      const staro = btn ? btn.textContent : '';
+      try {
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Izrađujem PDF...'; }
+        await ucitajJsPDF();
+        const W = 1240, H = 1754, M = 60, colW = (W - 2 * M - 40) / 2;
+        const stranice = [];
+        let ctx, y;
+        const novaStranica = () => {
+          const c = document.createElement('canvas'); c.width = W; c.height = H;
+          ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+          stranice.push(c); y = M;
+          ctx.fillStyle = '#64748b'; ctx.font = '22px Helvetica, Arial, sans-serif';
+          ctx.fillText(`${p.name || ''} – stranica ${stranice.length}`, M, H - 30);
+          ctx.fillText('Portal Montaža i Servis – TerenRad', W - M - ctx.measureText('Portal Montaža i Servis – TerenRad').width, H - 30);
+        };
+        novaStranica();
+        // zaglavlje
+        ctx.fillStyle = '#0f172a'; ctx.font = 'bold 44px Helvetica, Arial, sans-serif';
+        ctx.fillText('Sheme mjerenja', M, y + 40); y += 70;
+        ctx.font = 'bold 32px Helvetica, Arial, sans-serif'; ctx.fillText(p.name || '', M, y + 30); y += 48;
+        ctx.font = '24px Helvetica, Arial, sans-serif'; ctx.fillStyle = '#334155';
+        [`Lokacija: ${p.loc || '-'}    Tel: ${p.phone || '-'}`, `Datum: ${p.date || '-'}    Mjernik: ${p.worker || '-'}    Otvora: ${mjere.length}`].forEach(t => { ctx.fillText(t, M, y + 24); y += 34; });
+        if (p.notes) prelomi(ctx, 'Napomena: ' + p.notes, W - 2 * M).forEach(t => { ctx.fillText(t, M, y + 24); y += 32; });
+        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(M, y + 10); ctx.lineTo(W - M, y + 10); ctx.stroke(); y += 30;
+
+        let col = 0, redVisina = 0;
+        for (let i = 0; i < mjere.length; i++) {
+          const m = mjere[i];
+          const svg = crtezOtvora(m, i, { size: 230 });
+          let img = null; try { if (svg) img = await svgUSliku(svg); } catch (e) {}
+          ctx.font = '22px Helvetica, Arial, sans-serif';
+          const info = [];
+          info.push(`${i + 1}. ${vrstaOf(m) || m.tip || ''}${m.prostorija ? ' – ' + m.prostorija : ''}`);
+          info.push(`Š ${m.sirina || '?'} × V ${m.visina || '?'} mm`);
+          if (m.roleta) info.push(`Roleta${m.kutija ? ', kutija ' + m.kutija + ' mm (u mjeri)' : ''}`);
+          if (/Sobna/.test(m.tip || '')) { info.push(krilaOf(m)[0] === 'V-L' ? 'Desno otvaranje' : 'Lijevo otvaranje'); if (m.dubina) { const d = parseFloat(m.dubina); const pr = SOBNA_STOKOVI.find(x => x >= d); info.push(`Debljina špalete ${m.dubina} mm${pr ? ' → štok ' + pr : ''}`); } }
+          if (m.boja) info.push('Boja: ' + m.boja);
+          let lines = [];
+          info.forEach(t => lines = lines.concat(prelomi(ctx, t, colW)));
+          if (m.napomena) lines = lines.concat(prelomi(ctx, 'Napomena: ' + m.napomena, colW));
+          const sc = img ? Math.min(2, colW / img.width) : 0;
+          const ih = img ? img.height * sc : 0;
+          const blokH = ih + lines.length * 30 + 30;
+          if (col === 0 && y + blokH > H - M - 40) { novaStranica(); }
+          if (col === 1 && y + blokH > H - M - 40) { col = 0; y += redVisina; redVisina = 0; if (y + blokH > H - M - 40) novaStranica(); }
+          const x = M + col * (colW + 40);
+          let yy = y;
+          if (img) { ctx.drawImage(img, x, yy, img.width * sc, ih); yy += ih + 6; }
+          lines.forEach((t, k) => { ctx.fillStyle = k === 0 ? '#0f172a' : '#334155'; ctx.font = (k === 0 ? 'bold ' : '') + '22px Helvetica, Arial, sans-serif'; ctx.fillText(t, x, yy + 22); yy += 30; });
+          redVisina = Math.max(redVisina, blokH);
+          if (col === 0) col = 1; else { col = 0; y += redVisina; redVisina = 0; }
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        stranice.forEach((c, k) => { if (k) doc.addPage(); doc.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297); });
+        const ime = `Sheme_${(p.name || 'nalog').replace(/[^\wčćšžđČĆŠŽĐ -]/g, '').trim().replace(/\s+/g, '_')}_${(p.date || '').replace(/\./g, '-').replace(/-$/, '')}.pdf`;
+        const blob = doc.output('blob');
+        pdfSpreman = { blob, ime, file: new File([blob], ime, { type: 'application/pdf' }) };
+        await podijeliPDF(true);
+      } catch (e) {
+        alert('Greška pri izradi PDF-a: ' + ((e && e.message) || e));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = staro || '📤 Spremi sheme'; }
+      }
+    }
+    async function podijeliPDF(prviPut) {
+      if (!pdfSpreman) return;
+      const { file, blob, ime } = pdfSpreman;
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: ime }); zatvoriPdfModal(); return; }
+        catch (e) { if (e && e.name === 'AbortError') { zatvoriPdfModal(); return; } if (!prviPut) { alert('Dijeljenje nije uspjelo: ' + e.message); } }
+      } else if (!prviPut) {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ime; document.body.appendChild(a); a.click(); a.remove(); zatvoriPdfModal(); return;
+      }
+      // prikaži prozor s gumbom (novi dodir je potreban za dijeljenje na iPhoneu)
+      let mo = document.getElementById('pdfModal');
+      if (!mo) { mo = document.createElement('div'); mo.id = 'pdfModal'; mo.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(2,6,23,.85);display:flex;align-items:center;justify-content:center;padding:16px;'; document.body.appendChild(mo); }
+      const url = URL.createObjectURL(blob);
+      mo.innerHTML = `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:18px;max-width:420px;width:100%;text-align:center;color:#fff;">
+        <div style="font-size:16px;font-weight:bold;margin-bottom:6px;">✅ PDF je spreman</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:14px;">${ime}</div>
+        <button type="button" onclick="podijeliPDF(false)" style="width:100%;padding:14px;border:none;border-radius:8px;background:#059669;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:8px;">📤 Podijeli / Spremi u Datoteke</button>
+        <a href="${url}" download="${ime}" target="_blank" style="display:block;padding:12px;border-radius:8px;background:#1e293b;color:#e2e8f0;text-decoration:none;font-weight:bold;margin-bottom:8px;">⬇️ Otvori / preuzmi PDF</a>
+        <button type="button" onclick="zatvoriPdfModal()" style="background:none;border:none;color:#94a3b8;cursor:pointer;">Zatvori</button>
+      </div>`;
+      mo.style.display = 'flex';
+    }
+    function zatvoriPdfModal() { const mo = document.getElementById('pdfModal'); if (mo) mo.style.display = 'none'; }
 
     // --- Bosch GLM laser preko Web Bluetootha (Android Chrome; iPhone/iPad samo u Bluefy pregledniku) ---
     const BOSCH_SERVICE = '02a6c0d0-0451-4000-b000-fb3210111989';
@@ -2016,6 +2137,7 @@
       document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
       document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
       renderMjere();
+      if (p.mjere && p.mjere.length) { try { ucitajJsPDF().catch(() => {}); } catch (e) {} }
 
       // 1. Skice
       const images = (p.images && p.images.length > 0) ? p.images : [];
