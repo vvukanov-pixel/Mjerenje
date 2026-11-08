@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerenRad – Test lasera</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 16px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h1 span { color: #38bdf8; }
+  .sub { color: #94a3b8; font-size: 13px; margin-bottom: 16px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  button { width: 100%; padding: 16px; font-size: 17px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; margin-bottom: 8px; }
+  .btn-main { background: #0284c7; color: #fff; }
+  .btn-alt { background: #334155; color: #e2e8f0; font-size: 14px; padding: 12px; }
+  .btn-back { background: #1e293b; color: #94a3b8; border: 1px solid #334155; font-size: 14px; padding: 10px; }
+  #status { font-size: 15px; font-weight: bold; padding: 10px; border-radius: 8px; background: #0f172a; text-align: center; }
+  .ok { color: #34d399; } .err { color: #f87171; } .wait { color: #fbbf24; }
+  #last { font-size: 48px; font-weight: bold; text-align: center; color: #34d399; padding: 10px 0; }
+  #last small { font-size: 20px; color: #94a3b8; }
+  label { display: block; font-size: 14px; color: #94a3b8; margin: 10px 0 4px; }
+  input { width: 100%; padding: 14px; font-size: 24px; font-weight: bold; background: #0f172a; color: #fff; border: 2px solid #334155; border-radius: 8px; }
+  input:focus { border-color: #38bdf8; outline: none; }
+  #log { font-family: monospace; font-size: 11px; color: #94a3b8; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .hint { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<h1>TEREN<span>RAD</span> – test lasera</h1>
+<div class="sub">Probno spajanje Bosch GLM lasera (Chrome na Androidu)</div>
+
+<div class="card">
+  <div class="hint">
+    1. Na laseru uključi Bluetooth (izbornik → Bluetooth).<br>
+    2. Dodirni <b>SPOJI LASER</b> i s popisa odaberi laser (GLM...).<br>
+    3. Klikni u polje Širina i izmjeri – mjera upada sama i kursor ide dalje.
+  </div>
+</div>
+
+<div class="card">
+  <button class="btn-main" onclick="connect(false)">📡 SPOJI LASER</button>
+  <button class="btn-alt" onclick="connect(true)">Ne vidim laser – prikaži sve uređaje</button>
+  <div id="status" class="wait">Nije spojeno</div>
+</div>
+
+<div class="card">
+  <div style="text-align:center; color:#94a3b8; font-size:13px;">Zadnja mjera</div>
+  <div id="last">—</div>
+
+  <label>Širina (mm)</label>
+  <input class="mjera" inputmode="numeric" id="f1">
+  <label>Visina (mm)</label>
+  <input class="mjera" inputmode="numeric" id="f2">
+  <label>Dubina špalete (mm)</label>
+  <input class="mjera" inputmode="numeric" id="f3">
+  <button class="btn-alt" style="margin-top:12px" onclick="clearFields()">Obriši polja</button>
+</div>
+
+<div class="card">
+  <div style="font-size:13px; color:#94a3b8; margin-bottom:6px;">Tehnički zapis (ako ne radi, pošalji screenshot ovoga)</div>
+  <div id="log"></div>
+</div>
+
+<button class="btn-back" onclick="location.href='index.html'">← Natrag u TerenRad</button>
+
+<script>
+const BOSCH_SERVICE = '02a6c0d0-0451-4000-b000-fb3210111989';
+const BOSCH_CHAR    = '02a6c0d1-0451-4000-b000-fb3210111989';
+const BOSCH_NEW_SVC = '3ab10100-f831-4395-b29d-570977d5bf94';
+const ENABLE_SYNC   = new Uint8Array([0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A]);
+
+let device = null;
+let lastFocused = null;
+let lastValue = null, lastTime = 0;
+
+document.querySelectorAll('.mjera').forEach(el => el.addEventListener('focus', () => lastFocused = el));
+
+function log(msg) {
+  const el = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('hr-HR');
+  el.textContent = `[${t}] ${msg}\n` + el.textContent;
+}
+function setStatus(txt, cls) {
+  const s = document.getElementById('status');
+  s.textContent = txt; s.className = cls;
+}
+function hex(dv) {
+  return Array.from(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength))
+    .map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+}
+function clearFields() {
+  document.querySelectorAll('.mjera').forEach(el => el.value = '');
+  document.getElementById('f1').focus();
+}
+
+async function connect(showAll) {
+  if (!navigator.bluetooth) {
+    setStatus('Ovaj preglednik ne podržava Bluetooth. Otvori stranicu u Chromeu.', 'err');
+    log('navigator.bluetooth ne postoji (iPhone/Safari ili Samsung Internet?)');
+    return;
+  }
+  try {
+    setStatus('Tražim laser...', 'wait');
+    const opts = {
+      optionalServices: [BOSCH_SERVICE, BOSCH_NEW_SVC, 'device_information', 'battery_service']
+    };
+    if (showAll) opts.acceptAllDevices = true;
+    else opts.filters = [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { services: [BOSCH_SERVICE] }];
+
+    device = await navigator.bluetooth.requestDevice(opts);
+    log('Odabran uređaj: ' + (device.name || '(bez imena)'));
+    device.addEventListener('gattserverdisconnected', () => {
+      setStatus('Laser se odspojio – dodirni SPOJI LASER', 'err');
+      log('Odspojeno');
+    });
+
+    setStatus('Spajam...', 'wait');
+    const server = await device.gatt.connect();
+    log('GATT spojen');
+
+    const services = await server.getPrimaryServices();
+    let subscribed = 0;
+    let boschChar = null;
+
+    for (const svc of services) {
+      log('Servis: ' + svc.uuid);
+      let chars = [];
+      try { chars = await svc.getCharacteristics(); } catch (e) { log('  ne mogu čitati karakteristike: ' + e.message); }
+      for (const ch of chars) {
+        const p = ch.properties;
+        log(`  Kar: ${ch.uuid} [${p.notify ? 'notify ' : ''}${p.indicate ? 'indicate ' : ''}${p.write ? 'write ' : ''}${p.writeWithoutResponse ? 'writeNR ' : ''}${p.read ? 'read' : ''}]`);
+        if (p.notify || p.indicate) {
+          try {
+            await ch.startNotifications();
+            ch.addEventListener('characteristicvaluechanged', e => onData(e.target.value, ch.uuid));
+            subscribed++;
+          } catch (e) { log('  pretplata nije uspjela: ' + e.message); }
+        }
+        if (ch.uuid === BOSCH_CHAR) boschChar = ch;
+      }
+    }
+
+    if (boschChar) {
+      try {
+        await boschChar.writeValue(ENABLE_SYNC);
+        log('Poslana naredba za automatski prijenos mjera');
+      } catch (e) { log('Naredba nije uspjela: ' + e.message); }
+    } else {
+      log('Nije nađena poznata Bosch karakteristika – pratim sve što stigne');
+    }
+
+    if (subscribed === 0) {
+      setStatus('Spojeno, ali laser ne šalje podatke – pošalji mi screenshot zapisa', 'err');
+    } else {
+      setStatus('✅ Spojeno: ' + (device.name || 'laser') + ' – izmjeri nešto', 'ok');
+      if (!lastFocused) document.getElementById('f1').focus();
+    }
+  } catch (e) {
+    if (e.name === 'NotFoundError') setStatus('Nije odabran uređaj', 'wait');
+    else setStatus('Greška: ' + e.message, 'err');
+    log('Greška: ' + e.name + ' – ' + e.message);
+  }
+}
+
+function onData(dv, uuid) {
+  log('Stiglo (' + uuid.slice(0, 8) + '): ' + hex(dv));
+  const len = dv.byteLength;
+  // Bosch format: C0 55 10 .. .. .. .. [float32 LE metri na poziciji 7]
+  if (len >= 11 && dv.getUint8(0) === 0xC0 && dv.getUint8(1) === 0x55 && dv.getUint8(2) === 0x10) {
+    const m = dv.getFloat32(7, true);
+    if (m > 0.01 && m < 250) { useMeasurement(m); return; }
+  }
+  log('  (format nije prepoznat)');
+}
+
+function useMeasurement(m) {
+  const mm = Math.round(m * 1000);
+  const now = Date.now();
+  if (mm === lastValue && now - lastTime < 1500) return; // duplikat
+  lastValue = mm; lastTime = now;
+
+  document.getElementById('last').innerHTML = mm + ' <small>mm</small>';
+  log('  ➜ MJERA: ' + mm + ' mm');
+  if (navigator.vibrate) navigator.vibrate(80);
+
+  const fields = Array.from(document.querySelectorAll('.mjera'));
+  let target = (lastFocused && fields.includes(lastFocused)) ? lastFocused : fields.find(f => !f.value) || fields[0];
+  target.value = mm;
+  const idx = fields.indexOf(target);
+  const next = fields[idx + 1];
+  if (next) { next.focus(); lastFocused = next; }
+  else { target.blur(); lastFocused = null; }
+}
+</script>
+</body>
+</html>
