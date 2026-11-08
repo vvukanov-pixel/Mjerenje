@@ -97,6 +97,15 @@
     .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); padding: 8px; }
     .doc-preview img { width: 100%; max-height: 340px; object-fit: contain; }
 
+    .mj-full { position: fixed !important; inset: 0; z-index: 9000; overflow-y: auto; margin: 0 !important; border-radius: 0 !important; padding: 14px !important; background: var(--panel-dark) !important; }
+    .mj-full .main-sketch { max-height: 45vh; }
+    .mj-full .mj-grid input { font-size: 26px; padding: 14px 6px; }
+    .mj-full .mj-row select, .mj-full .mj-row input { font-size: 17px; padding: 11px; }
+    .mj-full #mjereBox h4 { font-size: 16px; }
+    .mj-full #mjereBox button { font-size: 14px !important; padding: 9px 14px !important; }
+    .mj-full #laserStatus { font-size: 14px !important; }
+    .crtez-box { background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:8px; margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+    .crtez-box svg { flex: 0 0 auto; }
     .mj-row { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
     .mj-row .mj-head { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; }
     .mj-row select, .mj-row input { background:#111a33; color:#fff; border:1px solid var(--border-color); border-radius:6px; padding:8px; font-size:14px; }
@@ -322,9 +331,10 @@
               <input type="file" id="addSketchFileInput" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
             </div>
 
-            <div class="main-sketch" onclick="openSketchFull()">
+            <div class="main-sketch" id="mainSketchBox" onclick="openSketchFull()">
               <img id="d-img" src="" alt="Skica" title="Klik za Zoom">
             </div>
+            <div id="crtezBox" class="crtez-box" style="display:none;"></div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
               <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
@@ -340,6 +350,7 @@
                 <h4 style="color:#38bdf8; font-size:13px;">📏 Mjere otvora (mm)</h4>
                 <div style="display:flex; gap:6px;">
                   <button onclick="laserConnect()" id="btnLaser" style="background:#1e293b; color:#fbbf24; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">📡 Spoji laser</button>
+                  <button onclick="toggleMjFull()" id="btnMjFull" style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">⛶ Cijeli ekran</button>
                   <button onclick="addOtvor()" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">+ Otvor</button>
                 </div>
               </div>
@@ -944,6 +955,7 @@
     function renderMjere(force) {
       const list = document.getElementById('mjereList');
       if (!list) return;
+      renderCrtez();
       const box = document.getElementById('mjereBox');
       if (!force && mjereRenderedFor === selectedId && box.contains(document.activeElement)) return;
       const p = projects.find(item => item.id === selectedId);
@@ -958,18 +970,94 @@
               <select style="flex:1; min-width:0;" onchange="saveMjera(${i}, 'tip', this.value)">
                 ${TIPOVI_OTVORA.map(t => `<option ${t === m.tip ? 'selected' : ''}>${t}</option>`).join('')}
               </select>
-              <input style="flex:1.3; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" onchange="saveMjera(${i}, 'prostorija', this.value)">
+              <input style="flex:1.3; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" oninput="liveMjera(${i}, 'prostorija', this.value)" onchange="saveMjera(${i}, 'prostorija', this.value)">
               <button onclick="deleteOtvor(${i})" style="background:none;border:none;color:#f87171;font-size:14px;cursor:pointer;" title="Obriši otvor">🗑️</button>
             </div>
             <div class="mj-grid">
-              <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
-              <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
-              <div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>
+              <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
+              <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
+              <div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>
             </div>
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
           </div>`).join('');
       }
       mjereRenderedFor = selectedId;
+    }
+
+    function toggleMjFull() {
+      const card = document.getElementById('mjereBox').closest('.card');
+      const on = !card.classList.contains('mj-full');
+      card.classList.toggle('mj-full', on);
+      document.body.style.overflow = on ? 'hidden' : '';
+      document.getElementById('btnMjFull').textContent = on ? '✕ Zatvori' : '⛶ Cijeli ekran';
+      renderCrtez();
+    }
+
+    function liveMjera(idx, key, val) {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p || !p.mjere || !p.mjere[idx]) return;
+      p.mjere = p.mjere.map(x => Object.assign({}, x));
+      p.mjere[idx][key] = val;
+      renderCrtez();
+    }
+
+    function crtezOtvora(m, i) {
+      const W = parseFloat(String(m.sirina).replace(',', '.'));
+      const H = parseFloat(String(m.visina).replace(',', '.'));
+      if (!(W > 0 && H > 0)) return '';
+      const fullOn = document.querySelector('.mj-full') !== null;
+      const maxS = fullOn ? Math.min(320, window.innerWidth - 90) : 150, sc = Math.min(maxS / W, maxS / H);
+      const w = Math.max(W * sc, 20), h = Math.max(H * sc, 20);
+      const x0 = 34, y0 = 26, svgW = Math.max(w + 54, 190), svgH = h + 64;
+      const tip = m.tip || 'Prozor';
+      const naslov = `${i + 1}. ${tip}${m.prostorija ? ' – ' + m.prostorija : ''}`;
+      const plava = '#1e3a8a';
+      let unutra = '';
+      const isVrata = /vrata/i.test(tip) && !/Balkonska|Garažna/.test(tip);
+      if (/Garažna/.test(tip)) {
+        unutra += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e2e8f0" stroke="${plava}" stroke-width="3"/>`;
+        for (let k = 1; k < 5; k++) unutra += `<line x1="${x0}" y1="${y0 + h * k / 5}" x2="${x0 + w}" y2="${y0 + h * k / 5}" stroke="#64748b" stroke-width="1"/>`;
+      } else if (isVrata) {
+        unutra += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#f1f5f9" stroke="${plava}" stroke-width="3"/>`;
+        unutra += `<rect x="${x0 + 6}" y="${y0 + 6}" width="${w - 12}" height="${h - 6}" fill="none" stroke="#94a3b8" stroke-width="1"/>`;
+        unutra += `<circle cx="${x0 + w - 12}" cy="${y0 + h * 0.55}" r="3" fill="${plava}"/>`;
+      } else {
+        unutra += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e0f2fe" stroke="${plava}" stroke-width="3"/>`;
+        const krila = (/Alu stijena/.test(tip) && W > 1500) || (tip === 'Prozor' && W > 1200) || (/Balkonska/.test(tip) && W > 1500) ? 2 : 1;
+        for (let k = 0; k < krila; k++) {
+          const kx = x0 + 5 + k * (w - 10) / krila, kw = (w - 10) / krila;
+          unutra += `<rect x="${kx}" y="${y0 + 5}" width="${kw}" height="${h - 10}" fill="#bae6fd" stroke="#0369a1" stroke-width="1"/>`;
+        }
+        if (/Balkonska/.test(tip)) unutra += `<circle cx="${x0 + w - 12}" cy="${y0 + h * 0.5}" r="2.5" fill="${plava}"/>`;
+      }
+      const yd = y0 + h + 12;
+      const kote = `
+        <line x1="${x0}" y1="${yd}" x2="${x0 + w}" y2="${yd}" stroke="#dc2626" stroke-width="1"/>
+        <line x1="${x0}" y1="${yd - 4}" x2="${x0}" y2="${yd + 4}" stroke="#dc2626"/>
+        <line x1="${x0 + w}" y1="${yd - 4}" x2="${x0 + w}" y2="${yd + 4}" stroke="#dc2626"/>
+        <text x="${x0 + w / 2}" y="${yd + 15}" text-anchor="middle" font-size="13" font-weight="bold" fill="#dc2626">${escAttr(m.sirina)}</text>
+        <line x1="${x0 - 12}" y1="${y0}" x2="${x0 - 12}" y2="${y0 + h}" stroke="#dc2626" stroke-width="1"/>
+        <line x1="${x0 - 16}" y1="${y0}" x2="${x0 - 8}" y2="${y0}" stroke="#dc2626"/>
+        <line x1="${x0 - 16}" y1="${y0 + h}" x2="${x0 - 8}" y2="${y0 + h}" stroke="#dc2626"/>
+        <text x="${x0 - 17}" y="${y0 + h / 2}" text-anchor="middle" font-size="13" font-weight="bold" fill="#dc2626" transform="rotate(-90 ${x0 - 17} ${y0 + h / 2})">${escAttr(m.visina)}</text>`;
+      const spal = m.dubina ? `<text x="${x0 + w / 2}" y="${y0 + h / 2 + 4}" text-anchor="middle" font-size="10" fill="#334155">špaleta ${escAttr(m.dubina)}</text>` : '';
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+        <text x="4" y="14" font-size="11" font-weight="bold" fill="#0f172a">${escAttr(naslov)}</text>
+        ${unutra}${spal}${kote}
+      </svg>`;
+    }
+
+    function renderCrtez() {
+      const box = document.getElementById('crtezBox');
+      const sketch = document.getElementById('mainSketchBox');
+      if (!box) return;
+      const p = projects.find(item => item.id === selectedId);
+      const mjere = (p && p.mjere) ? p.mjere : [];
+      const svgs = mjere.map((m, i) => crtezOtvora(m, i)).filter(Boolean);
+      const hasImages = p && p.images && p.images.length > 0;
+      if (svgs.length) { box.innerHTML = svgs.join(''); box.style.display = 'flex'; }
+      else { box.innerHTML = ''; box.style.display = 'none'; }
+      if (sketch) sketch.style.display = (hasImages || !svgs.length) ? 'flex' : 'none';
     }
 
     async function saveMjera(idx, key, val) {
@@ -979,6 +1067,7 @@
       if (!arr[idx]) return;
       arr[idx][key] = (typeof val === 'string') ? val.trim() : val;
       p.mjere = arr;
+      renderCrtez();
       try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
       catch (e) { alert('Greška pri spremanju mjere: ' + e.message); }
     }
