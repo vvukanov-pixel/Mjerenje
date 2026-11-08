@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.1</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.2</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1094,7 +1094,7 @@
     function upozorenjaMjera(m, i) {
       const n = v => parseFloat(String(v || '').replace(',', '.'));
       const msgs = [];
-      if (n(m.dubina) > 600) msgs.push(`Dubina špalete ${m.dubina} mm? Vjerojatno je to visina. <button type="button" onclick="prebaciMjeru(${i}, 'dubina', 'visina')" style="background:#f59e0b;color:#0f172a;border:none;border-radius:5px;padding:4px 8px;font-weight:bold;cursor:pointer;">Prebaci u visinu</button>`);
+      if (/Sobna/.test(m.tip || '') && n(m.dubina) > 600) msgs.push(`Dubina špalete ${m.dubina} mm? Vjerojatno je to visina. <button type="button" onclick="prebaciMjeru(${i}, 'dubina', 'visina')" style="background:#f59e0b;color:#0f172a;border:none;border-radius:5px;padding:4px 8px;font-weight:bold;cursor:pointer;">Prebaci u visinu</button>`);
       ['sirina', 'visina'].forEach(k => { const v = n(m[k]); if (v > 0 && v < 300) msgs.push(`${k === 'sirina' ? 'Širina' : 'Visina'} ${m[k]} – je li upisano u cm? Polja su u mm.`); });
       if (!msgs.length) return '<div class="mj-warn"></div>';
       return `<div class="mj-warn" style="margin-top:6px;padding:7px 9px;border-radius:6px;background:rgba(245,158,11,.15);border:1px solid #f59e0b;color:#fbbf24;font-size:12px;line-height:1.6;">⚠️ ${msgs.join('<br>⚠️ ')}</div>`;
@@ -1223,10 +1223,10 @@
                 <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
               </select>
             </div>`}
-            <div class="mj-grid" style="${m.roleta && !jeVrataTip(m.tip) ? 'grid-template-columns:1fr 1fr 1fr 1fr;' : ''}">
+            <div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
-              <div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>
+              ${/Sobna/.test(m.tip || '') ? `<div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>` : ''}
               ${m.roleta && !jeVrataTip(m.tip) ? `<div><label>Kutija rolete (u mjeri)</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.kutija)}" oninput="liveMjera(${i}, 'kutija', this.value)" onchange="saveMjera(${i}, 'kutija', this.value)" data-idx="${i}" data-key="kutija"></div>` : ''}
             </div>
             ${upozorenjaMjera(m, i)}
