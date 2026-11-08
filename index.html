@@ -97,6 +97,13 @@
     .doc-preview { width: 100%; min-height: 220px; max-height: 360px; border-radius: 6px; overflow: hidden; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border-color); padding: 8px; }
     .doc-preview img { width: 100%; max-height: 340px; object-fit: contain; }
 
+    .mj-row { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+    .mj-row .mj-head { display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; }
+    .mj-row select, .mj-row input { background:#111a33; color:#fff; border:1px solid var(--border-color); border-radius:6px; padding:8px; font-size:14px; }
+    .mj-grid { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; }
+    .mj-grid label { font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px; }
+    .mj-grid input { width:100%; font-size:18px; font-weight:bold; text-align:center; }
+    .mj-grid input:focus, .mj-row input:focus { border-color:#38bdf8; outline:none; box-shadow:0 0 0 2px rgba(56,189,248,.3); }
     .positions-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
     .pos-item { display: flex; align-items: center; justify-content: space-between; background: var(--panel-dark); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.05); gap: 6px; }
     .pos-name { font-size: 13px; font-weight: bold; flex: 1; color: white; }
@@ -216,7 +223,6 @@
     <div class="logo">TEREN<span>RAD</span></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
-      <button onclick="location.href='laser.html'" style="background:#1e293b; color:#fbbf24; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📏 Laser</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
       <div class="user-tag" id="userBadge" onclick="openLoginModal()">👷 Učitavanje...</div>
       <div class="view-toggle">
@@ -327,6 +333,19 @@
 
             <div class="gallery-thumbs" id="d-thumbs" style="margin-top:6px;"></div>
             <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
+
+            <!-- MJERE OTVORA (laser) -->
+            <div id="mjereBox" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                <h4 style="color:#38bdf8; font-size:13px;">📏 Mjere otvora (mm)</h4>
+                <div style="display:flex; gap:6px;">
+                  <button onclick="laserConnect()" id="btnLaser" style="background:#1e293b; color:#fbbf24; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">📡 Spoji laser</button>
+                  <button onclick="addOtvor()" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">+ Otvor</button>
+                </div>
+              </div>
+              <div id="laserStatus" style="font-size:11px; color:var(--text-muted); margin:6px 0;">Laser nije spojen</div>
+              <div id="mjereList"></div>
+            </div>
           </div>
 
           <!-- 2. MAPA: PONUDA -->
@@ -915,6 +934,147 @@
       await db.collection("nalozi").doc(selectedId).update({ positions: positions });
     }
 
+
+    // ================= MJERE OTVORA + BOSCH LASER =================
+    const TIPOVI_OTVORA = ['Prozor', 'Balkonska vrata', 'Alu stijena', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
+    let mjereRenderedFor = null;
+
+    function escAttr(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+    function renderMjere(force) {
+      const list = document.getElementById('mjereList');
+      if (!list) return;
+      const box = document.getElementById('mjereBox');
+      if (!force && mjereRenderedFor === selectedId && box.contains(document.activeElement)) return;
+      const p = projects.find(item => item.id === selectedId);
+      const mjere = (p && p.mjere) ? p.mjere : [];
+      if (mjere.length === 0) {
+        list.innerHTML = '<div style="font-size:12px; color:var(--text-muted);">Nema upisanih mjera. Dodaj otvor s "+ Otvor".</div>';
+      } else {
+        list.innerHTML = mjere.map((m, i) => `
+          <div class="mj-row">
+            <div class="mj-head">
+              <b style="font-size:13px;">${i + 1}.</b>
+              <select style="flex:1;" onchange="saveMjera(${i}, 'tip', this.value)">
+                ${TIPOVI_OTVORA.map(t => `<option ${t === m.tip ? 'selected' : ''}>${t}</option>`).join('')}
+              </select>
+              <button onclick="deleteOtvor(${i})" style="background:none;border:none;color:#f87171;font-size:14px;cursor:pointer;" title="Obriši otvor">🗑️</button>
+            </div>
+            <div class="mj-grid">
+              <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
+              <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
+              <div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>
+            </div>
+            <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
+          </div>`).join('');
+      }
+      mjereRenderedFor = selectedId;
+    }
+
+    async function saveMjera(idx, key, val) {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      const arr = (p.mjere || []).map(x => Object.assign({}, x));
+      if (!arr[idx]) return;
+      arr[idx][key] = (typeof val === 'string') ? val.trim() : val;
+      p.mjere = arr;
+      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
+      catch (e) { alert('Greška pri spremanju mjere: ' + e.message); }
+    }
+
+    async function addOtvor() {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      const arr = (p.mjere || []).map(x => Object.assign({}, x));
+      const lastTip = arr.length ? arr[arr.length - 1].tip : 'Prozor';
+      arr.push({ tip: lastTip, sirina: '', visina: '', dubina: '', napomena: '' });
+      p.mjere = arr;
+      renderMjere(true);
+      const first = document.querySelector(`#mjereList .mj-num[data-idx="${arr.length - 1}"][data-key="sirina"]`);
+      if (first) first.focus();
+      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
+      catch (e) { alert('Greška pri spremanju: ' + e.message); }
+    }
+
+    async function deleteOtvor(idx) {
+      const p = projects.find(item => item.id === selectedId);
+      if (!p || !p.mjere || !p.mjere[idx]) return;
+      if (!confirm(`Obrisati otvor ${idx + 1}?`)) return;
+      const arr = p.mjere.map(x => Object.assign({}, x));
+      arr.splice(idx, 1);
+      p.mjere = arr;
+      renderMjere(true);
+      await db.collection("nalozi").doc(selectedId).update({ mjere: arr });
+    }
+
+    // --- Bosch GLM laser preko Web Bluetootha (Android Chrome; iPhone/iPad samo u Bluefy pregledniku) ---
+    const BOSCH_SERVICE = '02a6c0d0-0451-4000-b000-fb3210111989';
+    const BOSCH_CHAR    = '02a6c0d1-0451-4000-b000-fb3210111989';
+    let laserDevice = null, laserLastMm = null, laserLastTime = 0;
+
+    function setLaserStatus(txt, color) {
+      const el = document.getElementById('laserStatus');
+      if (el) { el.textContent = txt; el.style.color = color || 'var(--text-muted)'; }
+      const b = document.getElementById('btnLaser');
+      if (b) b.textContent = (laserDevice && laserDevice.gatt && laserDevice.gatt.connected) ? '✅ Laser spojen' : '📡 Spoji laser';
+    }
+
+    async function laserConnect() {
+      if (!navigator.bluetooth) {
+        alert('Ovaj preglednik ne podržava spajanje lasera.\n\nAndroid: otvori TerenRad u Chromeu.\niPhone/iPad: otvori TerenRad u aplikaciji Bluefy.');
+        return;
+      }
+      try {
+        setLaserStatus('Tražim laser...', '#fbbf24');
+        laserDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { services: [BOSCH_SERVICE] }],
+          optionalServices: [BOSCH_SERVICE]
+        });
+        laserDevice.addEventListener('gattserverdisconnected', () => setLaserStatus('Laser se odspojio – dodirni "Spoji laser"', '#f87171'));
+        setLaserStatus('Spajam ' + (laserDevice.name || 'laser') + '...', '#fbbf24');
+        const server = await Promise.race([
+          laserDevice.gatt.connect(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Spajanje traje predugo. Zatvori MeasureOn i probaj opet.')), 15000))
+        ]).catch(e => { try { laserDevice.gatt.disconnect(); } catch (x) {} throw e; });
+        const svc = await server.getPrimaryService(BOSCH_SERVICE);
+        const ch = await svc.getCharacteristic(BOSCH_CHAR);
+        await ch.startNotifications();
+        ch.addEventListener('characteristicvaluechanged', e => laserOnData(e.target.value));
+        await ch.writeValue(new Uint8Array([0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A]));
+        setLaserStatus('Spojeno: ' + (laserDevice.name || 'laser') + ' – klikni u polje i mjeri', '#34d399');
+        const firstEmpty = Array.from(document.querySelectorAll('#mjereList .mj-num')).find(x => !x.value);
+        if (firstEmpty) firstEmpty.focus();
+      } catch (e) {
+        if (e && e.name === 'NotFoundError') setLaserStatus('Laser nije odabran', 'var(--text-muted)');
+        else setLaserStatus('Greška: ' + ((e && e.message) || e), '#f87171');
+      }
+    }
+
+    function laserOnData(dv) {
+      if (dv.byteLength < 11 || dv.getUint8(0) !== 0xC0 || dv.getUint8(1) !== 0x55 || dv.getUint8(2) !== 0x10) return;
+      const m = dv.getFloat32(7, true);
+      if (!(m > 0.01 && m < 250)) return;
+      const mm = Math.round(m * 1000);
+      const now = Date.now();
+      if (mm === laserLastMm && now - laserLastTime < 1500) return;
+      laserLastMm = mm; laserLastTime = now;
+      laserFill(mm);
+    }
+
+    function laserFill(mm) {
+      if (navigator.vibrate) navigator.vibrate(80);
+      const fields = Array.from(document.querySelectorAll('#mjereList .mj-num'));
+      if (fields.length === 0) { setLaserStatus('Izmjereno ' + mm + ' mm – prvo dodaj otvor (+ Otvor)', '#fbbf24'); return; }
+      const active = document.activeElement;
+      const target = fields.includes(active) ? active : (fields.find(f => !f.value) || null);
+      if (!target) { setLaserStatus('Izmjereno ' + mm + ' mm – sva polja su puna, klikni u polje ili dodaj otvor', '#fbbf24'); return; }
+      target.value = mm;
+      saveMjera(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm));
+      setLaserStatus('Zadnja mjera: ' + mm + ' mm', '#34d399');
+      const next = fields[fields.indexOf(target) + 1];
+      if (next) next.focus(); else target.blur();
+    }
+
     function renderPositions() {
       const boxRn = document.getElementById('positionsListRn');
       const boxSkl = document.getElementById('positionsListSkladiste');
@@ -1323,6 +1483,7 @@
       document.getElementById('d-name').innerText = p.name;
       document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
       document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
+      renderMjere();
 
       // 1. Skice
       const images = (p.images && p.images.length > 0) ? p.images : [];
