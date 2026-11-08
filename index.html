@@ -363,7 +363,7 @@
               <div id="laserStatus" style="font-size:11px; color:var(--text-muted); margin:6px 0;">Laser nije spojen</div>
               <div id="mjereList"></div>
               <datalist id="bojeLista"><option>Bijelo</option><option>Orah</option><option>Zlatni hrast</option><option>Antracit</option><option>Bijelo/Antracit</option><option>Bijelo/Orah</option><option>Bijelo/Zlatni hrast</option></datalist>
-              <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Krila: F fiksno · O okretno · ON okretno-nagibno · N nagibno · K klizno (→ smjer) · V vrata (puno krilo) · G grilje · L/D strana kvake. Dodirni krilo za promjenu.</div>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Krila: F fiksno · OZ otklopno-zaokretno · Z zaokretno · OT otklopno · K klizno (→ smjer) · V vrata · G grilje · L/D strana kvake (pogled iznutra). Dodirni krilo za promjenu.</div>
             </div><span id="mjereAnchor"></span>
           </div>
 
@@ -975,7 +975,13 @@
       return ['F'];
     }
     function krilaOf(m) { return (Array.isArray(m.krila) && m.krila.length) ? m.krila : defaultKrila(m.tip, m.strana); }
-    function krLabel(c) { return c.replace('K-D', 'K →').replace('K-L', 'K ←'); }
+    function krLabel(c) {
+      // interne oznake ostaju (ON/O/N), prikaz po našem nazivlju
+      const [t, k] = c.split('-');
+      const naziv = { ON: 'OZ', O: 'Z', N: 'OT', F: 'F', V: 'V', G: 'G' }[t];
+      if (t === 'K') return k === 'L' ? 'K ←' : 'K →';
+      return naziv + (k ? '-' + k : '');
+    }
     function opcijeTipa(cur) {
       const lista = TIPOVI_OTVORA.includes(cur) || !cur ? TIPOVI_OTVORA : [cur].concat(TIPOVI_OTVORA);
       return lista.map(t => `<option ${t === cur ? 'selected' : ''}>${t}</option>`).join('');
@@ -1080,7 +1086,7 @@
               <select onchange="postaviPolje(${i}, 'nadsvjetlo', this.value)">
                 <option value="" ${!m.nadsvjetlo ? 'selected' : ''}>ništa</option>
                 <option value="F" ${m.nadsvjetlo === 'F' ? 'selected' : ''}>fiksno nadsvjetlo</option>
-                <option value="N" ${m.nadsvjetlo === 'N' ? 'selected' : ''}>nagibno nadsvjetlo</option>
+                <option value="N" ${m.nadsvjetlo === 'N' ? 'selected' : ''}>otklopno nadsvjetlo</option>
               </select>
               <span class="mj-lbl">Dolje:</span>
               <select onchange="postaviPolje(${i}, 'donje', this.value)">
