@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.0 predlošci</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.1</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1091,6 +1091,22 @@
     let rucnoKrila = new Set();
     function toggleRucno(i) { rucnoKrila.has(i) ? rucnoKrila.delete(i) : rucnoKrila.add(i); renderMjere(true); }
 
+    function upozorenjaMjera(m, i) {
+      const n = v => parseFloat(String(v || '').replace(',', '.'));
+      const msgs = [];
+      if (n(m.dubina) > 600) msgs.push(`Dubina špalete ${m.dubina} mm? Vjerojatno je to visina. <button type="button" onclick="prebaciMjeru(${i}, 'dubina', 'visina')" style="background:#f59e0b;color:#0f172a;border:none;border-radius:5px;padding:4px 8px;font-weight:bold;cursor:pointer;">Prebaci u visinu</button>`);
+      ['sirina', 'visina'].forEach(k => { const v = n(m[k]); if (v > 0 && v < 300) msgs.push(`${k === 'sirina' ? 'Širina' : 'Visina'} ${m[k]} – je li upisano u cm? Polja su u mm.`); });
+      if (!msgs.length) return '<div class="mj-warn"></div>';
+      return `<div class="mj-warn" style="margin-top:6px;padding:7px 9px;border-radius:6px;background:rgba(245,158,11,.15);border:1px solid #f59e0b;color:#fbbf24;font-size:12px;line-height:1.6;">⚠️ ${msgs.join('<br>⚠️ ')}</div>`;
+    }
+    async function prebaciMjeru(i, iz, u) {
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!arr[i]) return;
+      if (!arr[i][u]) arr[i][u] = arr[i][iz]; else { const t = arr[i][u]; arr[i][u] = arr[i][iz]; arr[i][iz] = t; }
+      if (arr[i][iz] === arr[i][u]) arr[i][iz] = '';
+      const done = mjSet(arr); renderMjere(true); await done;
+    }
+
     async function promijeniTip(i, tip) {
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[i]) return;
@@ -1213,6 +1229,7 @@
               <div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>
               ${m.roleta && !jeVrataTip(m.tip) ? `<div><label>Kutija rolete (u mjeri)</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.kutija)}" oninput="liveMjera(${i}, 'kutija', this.value)" onchange="saveMjera(${i}, 'kutija', this.value)" data-idx="${i}" data-key="kutija"></div>` : ''}
             </div>
+            ${upozorenjaMjera(m, i)}
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
           </div>`).join('');
       }
@@ -1377,6 +1394,7 @@
       arr[idx][key] = (typeof val === 'string') ? val.trim() : val;
       const done = mjSet(arr);
       renderCrtez();
+      if (['sirina', 'visina', 'dubina'].includes(key)) { const row = document.querySelectorAll('#mjereList .mj-row')[idx]; if (row) { const old = row.querySelector('.mj-warn'); const html = upozorenjaMjera(arr[idx], idx); if (old) old.outerHTML = html; } }
       await done;
     }
 
