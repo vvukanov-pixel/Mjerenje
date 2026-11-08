@@ -955,9 +955,10 @@
           <div class="mj-row">
             <div class="mj-head">
               <b style="font-size:13px;">${i + 1}.</b>
-              <select style="flex:1;" onchange="saveMjera(${i}, 'tip', this.value)">
+              <select style="flex:1; min-width:0;" onchange="saveMjera(${i}, 'tip', this.value)">
                 ${TIPOVI_OTVORA.map(t => `<option ${t === m.tip ? 'selected' : ''}>${t}</option>`).join('')}
               </select>
+              <input style="flex:1.3; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" onchange="saveMjera(${i}, 'prostorija', this.value)">
               <button onclick="deleteOtvor(${i})" style="background:none;border:none;color:#f87171;font-size:14px;cursor:pointer;" title="Obriši otvor">🗑️</button>
             </div>
             <div class="mj-grid">
@@ -987,11 +988,12 @@
       if (!p) return;
       const arr = (p.mjere || []).map(x => Object.assign({}, x));
       const lastTip = arr.length ? arr[arr.length - 1].tip : 'Prozor';
-      arr.push({ tip: lastTip, sirina: '', visina: '', dubina: '', napomena: '' });
+      arr.push({ tip: lastTip, prostorija: '', sirina: '', visina: '', dubina: '', napomena: '' });
       p.mjere = arr;
       renderMjere(true);
-      const first = document.querySelector(`#mjereList .mj-num[data-idx="${arr.length - 1}"][data-key="sirina"]`);
-      if (first) first.focus();
+      const rows = document.querySelectorAll('#mjereList .mj-row');
+      const prost = rows.length ? rows[rows.length - 1].querySelector('input[placeholder^="Prostorija"]') : null;
+      if (prost) prost.focus();
       try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
       catch (e) { alert('Greška pri spremanju: ' + e.message); }
     }
