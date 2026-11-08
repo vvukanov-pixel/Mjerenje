@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.6</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.7</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1109,14 +1109,35 @@
     }
 
     // Sobna vrata: lijeva = šarke lijevo (kvaka desno), desna = šarke desno (kvaka lijevo), pogled sa strane otvaranja
+    function tlocrtVrata(lijevo) {
+      // tlocrt: dva štoka (U profil), krilo zakrenuto prema strani B, šarka i kvaka
+      const W = 170, H = 100, g = '#94a3b8', d = '#334155';
+      const stok = (x, flip) => {
+        const s = flip ? -1 : 1;
+        return `<path d="M${x},12 h${18 * s} v26 h${-18 * s}" fill="none" stroke="${g}" stroke-width="2.5"/><rect x="${flip ? x - 9 : x + 3}" y="14" width="6" height="22" fill="${d}" opacity=".55"/>`;
+      };
+      const lx = 20, rx = W - 20;
+      let o = stok(lx, false) + stok(rx, true);
+      const hx = lijevo ? lx + 9 : rx - 9, hy = 40;
+      const ang = lijevo ? 17 : -17, len = 112;
+      o += `<g transform="rotate(${ang} ${hx} ${hy})">
+        <rect x="${lijevo ? hx : hx - len}" y="${hy - 4}" width="${len}" height="8" fill="#e2e8f0" stroke="${d}" stroke-width="1"/>
+        <rect x="${lijevo ? hx + len - 16 : hx - len + 6}" y="${hy - 11}" width="10" height="3" fill="${d}"/>
+        <rect x="${lijevo ? hx + len - 16 : hx - len + 6}" y="${hy + 8}" width="10" height="3" fill="${d}"/>
+        <text x="${lijevo ? hx + 40 : hx - 78}" y="${hy - 7}" font-size="7" fill="${d}">strana A</text>
+        <text x="${lijevo ? hx + 40 : hx - 78}" y="${hy + 15}" font-size="7" fill="${d}">strana B</text>
+      </g>`;
+      o += `<circle cx="${hx}" cy="${hy}" r="3" fill="#fff" stroke="${d}"/>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${o}</svg>`;
+    }
     function sobnaStrana(m, i) {
       const cur = krilaOf(m)[0];
-      const btn = (kod, txt) => {
+      const btn = (kod, txt, lijevo) => {
         const on = cur === kod;
-        const svg = crtezOtvora({ tip: 'Sobna vrata', krila: [kod], sirina: 800, visina: 2000 }, i, { mini: true, size: 40 });
-        return `<button type="button" onclick="postaviPolje(${i}, 'krila', ['${kod}'])" style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:8px;cursor:pointer;background:${on ? '#0284c7' : '#1e293b'};border:2px solid ${on ? '#38bdf8' : '#334155'};color:#fff;font-weight:bold;font-size:14px;"><span style="background:#e5e7eb;border-radius:4px;display:flex;">${svg}</span>${txt}</button>`;
+        return `<button type="button" onclick="postaviPolje(${i}, 'krila', ['${kod}'])" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border-radius:10px;cursor:pointer;background:${on ? '#0284c7' : '#1e293b'};border:3px solid ${on ? '#38bdf8' : '#334155'};color:#fff;font-weight:bold;font-size:13px;">
+          <span style="background:#fff;border-radius:6px;display:flex;padding:2px;">${tlocrtVrata(lijevo)}</span>${on ? '✓ ' : ''}${txt}</button>`;
       };
-      return `<span class="mj-lbl">Otvaranje:</span>${btn('V-D', 'Lijeva')}${btn('V-L', 'Desna')}`;
+      return `<div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;">${btn('V-D', 'LIJEVO OTVARANJE', true)}${btn('V-L', 'DESNO OTVARANJE', false)}</div>`;
     }
 
     const VRSTE = ['Prozor', 'Balkonska vrata', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Ostalo'];
@@ -1257,10 +1278,10 @@
               <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
             </div>
             ${!vrstaOf(m) ? '<div class="mj-lbl" style="margin-bottom:6px;color:#fbbf24;">↑ Prvo odaberi proizvod</div>' : `<div class="mj-krila">
-              <button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
+              ${/Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
                 ${crtezOtvora(Object.assign({}, m, { sirina: m.sirina || predlozakVelicina('', krilaOf(m).length)[0], visina: m.visina || 1300 }), i, { mini: true, size: 44 })}
                 <b style="color:#0f172a;font-size:13px;">🖼 Predložak</b>
-              </button>
+              </button>`}
               ${/Sobna/.test(m.tip || '') ? sobnaStrana(m, i) : jeVrataTip(m.tip) ? '' : `<label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
               <button type="button" onclick="toggleRucno(${i})" style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;text-decoration:underline;">${rucnoKrila.has(i) ? 'sakrij ručno' : 'ručno uredi'}</button>`}
             </div>`}
