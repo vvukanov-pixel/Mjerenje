@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.5</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.6</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1042,8 +1042,7 @@
       const cur = mjGet()[i];
       if (cur) {
         const t = cur.tip || '';
-        const vr = vrstaOf(cur);
-        predlozakKat = vr === 'Smart-Slide' ? 'Smart-Slide' : vr === 'HST' ? 'HST' : vr === 'Grilje' ? 'Grilje' : /vrata/.test(vr) && vr !== 'Garažna vrata' ? 'Vrata' : vr === 'Garažna vrata' ? 'Garažna' : /Balkonska/.test(t) ? 'Balkonska vrata' : /Smart/.test(t) ? 'Smart-Slide' : /HST/.test(t) ? 'HST' : /Grilje/.test(t) ? 'Grilje' : /Sobna|Ulazna/.test(t) ? 'Vrata' : /Garažna/.test(t) ? 'Garažna' : 'Prozori';
+        predlozakKat = katZaVrstu(vrstaOf(cur));
       }
       let modal = document.getElementById('predlosciModal');
       if (!modal) {
@@ -1082,7 +1081,7 @@
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!p || !arr[i]) return;
       arr[i].tip = p[0]; arr[i].krila = p[1].slice();
-      if (/Sobna/.test(p[0])) arr[i].vrsta = 'Sobna vrata'; else if (/Ulazna/.test(p[0])) arr[i].vrsta = 'Ulazna vrata'; else if (/Garažna/.test(p[0])) arr[i].vrsta = 'Garažna vrata'; else if (/Grilje/.test(p[0])) arr[i].vrsta = 'Grilje'; else if (/Smart/.test(p[0])) arr[i].vrsta = 'Smart-Slide'; else if (/HST/.test(p[0])) arr[i].vrsta = 'HST'; else if (!/PVC|ALU/.test(arr[i].vrsta || '')) arr[i].vrsta = 'PVC stolarija'; arr[i].nadsvjetlo = p[2] || ''; arr[i].donje = p[3] || '';
+      arr[i].vrsta = predlozakKat === 'Vrata' ? (/Sobna/.test(p[0]) ? 'Sobna vrata' : 'Ulazna vrata') : ({ 'Prozori': 'Prozor', 'Balkonska vrata': 'Balkonska vrata', 'Smart-Slide': 'Smart-Slide', 'HST': 'HST', 'Grilje': 'Grilje', 'Garažna': 'Garažna vrata' }[predlozakKat] || 'Prozor');
       zatvoriPredloske();
       const done = mjSet(arr); renderMjere(true);
       const prost = document.querySelectorAll('#mjereList .mj-row')[i];
@@ -1120,32 +1119,37 @@
       return `<span class="mj-lbl">Otvaranje:</span>${btn('V-D', 'Lijeva')}${btn('V-L', 'Desna')}`;
     }
 
-    const VRSTE = ['PVC stolarija', 'ALU stolarija', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Ostalo'];
+    const VRSTE = ['Prozor', 'Balkonska vrata', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Ostalo'];
     function vrstaOf(m) {
-      if (m.vrsta) return m.vrsta;
+      if (m.vrsta && VRSTE.includes(m.vrsta)) return m.vrsta;
       const t = m.tip || '';
+      if (!t && !m.vrsta) return '';
       if (/Sobna/.test(t)) return 'Sobna vrata';
       if (/Ulazna/.test(t)) return 'Ulazna vrata';
       if (/Garažna/.test(t)) return 'Garažna vrata';
       if (/Grilje/.test(t)) return 'Grilje';
       if (/Smart/.test(t)) return 'Smart-Slide';
       if (/HST/.test(t)) return 'HST';
-      if (/Alu/.test(t)) return 'ALU stolarija';
-      return 'PVC stolarija';
+      if (/Balkonska/.test(t)) return 'Balkonska vrata';
+      return 'Prozor';
+    }
+    function katZaVrstu(v) {
+      return { 'Prozor': 'Prozori', 'Balkonska vrata': 'Balkonska vrata', 'Smart-Slide': 'Smart-Slide', 'HST': 'HST', 'Grilje': 'Grilje', 'Ulazna vrata': 'Vrata', 'Sobna vrata': 'Vrata', 'Garažna vrata': 'Garažna', 'Ostalo': 'Prozori' }[v] || 'Prozori';
     }
     async function promijeniVrstu(i, v) {
       const arr = mjGet().map(x => Object.assign({}, x));
       const m = arr[i]; if (!m) return;
       m.vrsta = v;
-      const jeProzorTip = !/Sobna|Ulazna|Garažna|Grilje|Smart|HST/.test(m.tip || '');
       const set = (tip, krila) => { m.tip = tip; m.krila = krila; m.nadsvjetlo = ''; m.donje = ''; };
-      if (v === 'Sobna vrata') set('Sobna vrata', ['V-D']);
+      if (v === 'Prozor') set('Jednokrilni prozor', ['ON-L']);
+      else if (v === 'Balkonska vrata') set('Balkonska jednokrilna vrata', ['ON-L']);
+      else if (v === 'Sobna vrata') set('Sobna vrata', ['V-D']);
       else if (v === 'Ulazna vrata') set('Ulazna vrata', ['V-L']);
       else if (v === 'Garažna vrata') set('Garažna vrata', ['F']);
       else if (v === 'Grilje') set('Grilje', ['G', 'G']);
       else if (v === 'Smart-Slide') set('Klizna stijena Smart-Slide', ['K-D', 'F']);
       else if (v === 'HST') set('HST stijena', ['K-D', 'F']);
-      else if (!jeProzorTip) set('Jednokrilni prozor', ['ON-L']);
+      else set('Ostalo', ['F']);
       const done = mjSet(arr); renderMjere(true); await done;
       if (!/Sobna|Garažna/.test(v)) otvoriPredloske(i);
     }
@@ -1238,7 +1242,8 @@
           <div class="mj-row">
             <div class="mj-head">
               <b style="font-size:13px;">${i + 1}.</b>
-              <select style="flex:1; min-width:0;" onchange="promijeniVrstu(${i}, this.value)">
+              <select style="flex:1; min-width:0; ${vrstaOf(m) ? '' : 'border-color:#f59e0b; color:#fbbf24;'}" onchange="promijeniVrstu(${i}, this.value)">
+                ${vrstaOf(m) ? '' : '<option value="" selected disabled>— Proizvod —</option>'}
                 ${VRSTE.map(v => `<option ${v === vrstaOf(m) ? 'selected' : ''}>${v}</option>`).join('')}
               </select>
               ${imaStranu(m.tip) ? `<select style="width:auto;" onchange="saveMjera(${i}, 'strana', this.value)">
@@ -1251,14 +1256,14 @@
               <input style="flex:1.4; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" oninput="liveMjera(${i}, 'prostorija', this.value)" onchange="saveMjera(${i}, 'prostorija', this.value)">
               <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
             </div>
-            <div class="mj-krila">
+            ${!vrstaOf(m) ? '<div class="mj-lbl" style="margin-bottom:6px;color:#fbbf24;">↑ Prvo odaberi proizvod</div>' : `<div class="mj-krila">
               <button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
                 ${crtezOtvora(Object.assign({}, m, { sirina: m.sirina || predlozakVelicina('', krilaOf(m).length)[0], visina: m.visina || 1300 }), i, { mini: true, size: 44 })}
                 <b style="color:#0f172a;font-size:13px;">🖼 Predložak</b>
               </button>
               ${/Sobna/.test(m.tip || '') ? sobnaStrana(m, i) : jeVrataTip(m.tip) ? '' : `<label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
               <button type="button" onclick="toggleRucno(${i})" style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;text-decoration:underline;">${rucnoKrila.has(i) ? 'sakrij ručno' : 'ručno uredi'}</button>`}
-            </div>
+            </div>`}
             ${jeVrataTip(m.tip) || /Sobna/.test(m.tip || '') || !rucnoKrila.has(i) ? '' : `
             <div class="mj-krila">
               <span class="mj-lbl">Krila:</span>
@@ -1325,7 +1330,7 @@
       const K = parseFloat(String(m.kutija || '').replace(',', '.'));
       const kb = rol ? Math.min(Math.max((K > 0 ? K : H * 0.1) * sc, 9), h * 0.5) : 0;
       const fy = y0 + kb, fh = h - kb;
-      const naslov = `${i + 1}. ${/stolarija/.test(m.vrsta || '') ? (m.vrsta === 'ALU stolarija' ? 'ALU ' : 'PVC ') : ''}${tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
+      const naslov = `${i + 1}. ${tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
       const podnaslov = [m.boja, rol ? ('roleta' + (K > 0 ? ' – kutija ' + K + ' u mjeri' : '')) : '', m.dubina ? 'špaleta ' + m.dubina : ''].filter(Boolean).join(' · ');
       let svgW = Math.max(w + 54 + (rol ? 34 : 0), 190, naslov.length * 6.3 + 10);
       svgW = Math.max(svgW, podnaslov.length * 5.6 + 10);
@@ -1461,13 +1466,12 @@
       const arr = mjGet().map(x => Object.assign({}, x));
       const last = arr.length ? arr[arr.length - 1] : null;
       const lastTip = last ? last.tip : 'Jednokrilni prozor';
-      arr.push({ vrsta: last ? vrstaOf(last) : 'PVC stolarija', tip: lastTip, strana: last ? (last.strana || 'L') : 'L', krila: last ? krilaOf(last).slice() : ['ON-L'], nadsvjetlo: last ? (last.nadsvjetlo || '') : '', donje: last ? (last.donje || '') : '', roleta: last ? !!last.roleta : false, boja: last ? (last.boja || '') : '', prostorija: '', sirina: '', visina: '', dubina: '', napomena: '' });
+      arr.push({ vrsta: '', tip: '', strana: 'L', krila: [], nadsvjetlo: '', donje: '', roleta: false, boja: last ? (last.boja || '') : '', prostorija: '', sirina: '', visina: '', dubina: '', napomena: '' });
       const done = mjSet(arr);
       renderMjere(true);
       const rows = document.querySelectorAll('#mjereList .mj-row');
       const prost = rows.length ? rows[rows.length - 1].querySelector('input[placeholder^="Prostorija"]') : null;
       await done;
-      otvoriPredloske(arr.length - 1);
     }
 
     async function deleteOtvor(idx) {
