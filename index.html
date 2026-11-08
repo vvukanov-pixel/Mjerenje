@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.13</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.14</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1199,7 +1199,7 @@
     ];
     // položaj kućica na shemi (viewBox 1000 x 860)
     const GARAZA_POZ = { sirina: [330, 500], visina: [520, 330], c1: [195, 610], c2: [705, 610], d: [530, 175], h: [710, 290], e1: [440, 95], e2: [440, 10], f1: [815, 330], f2: [880, 520], g: [20, 420] };
-    function garazaShema(m, i) {
+    function garazaShema(m, i, staticno) {
       const L = '#475569', st = 'stroke="#334155" stroke-width="3" fill="none" marker-start="url(#ga)" marker-end="url(#ga)"';
       let o = `<defs><marker id="ga" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker></defs>`;
       o += `<rect x="0" y="0" width="1000" height="860" fill="#d1d5db"/>`;
@@ -1218,13 +1218,15 @@
       GARAZA_POLJA.forEach(([k, lab, , nuzno]) => {
         const [x, y] = GARAZA_POZ[k];
         const v = m[k] || '';
-        o += `<g style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')">
-          <rect id="gbr_${i}_${k}" x="${x}" y="${y}" width="${k === 'h' ? 90 : 120}" height="62" rx="6" fill="${v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')}" stroke="${nuzno ? '#d97706' : '#0284c7'}" stroke-width="${nuzno ? 4 : 3}"/>
+        o += `<g ${staticno ? '' : `style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')"`}>
+          <rect ${staticno ? '' : `id="gbr_${i}_${k}"`} x="${x}" y="${y}" width="${k === 'h' ? 90 : 120}" height="62" rx="6" fill="${v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')}" stroke="${nuzno ? '#d97706' : '#0284c7'}" stroke-width="${nuzno ? 4 : 3}"/>
           <text x="${x + 6}" y="${y + 18}" font-size="17" font-weight="bold" fill="#0f172a">${lab}</text>
-          <text id="gb_${i}_${k}" x="${x + (k === 'h' ? 45 : 60)}" y="${y + 52}" text-anchor="middle" font-size="30" font-weight="bold" fill="#0f172a">${escAttr(v)}</text>
+          <text ${staticno ? '' : `id="gb_${i}_${k}"`} x="${x + (k === 'h' ? 45 : 60)}" y="${y + 52}" text-anchor="middle" font-size="30" font-weight="bold" fill="#0f172a">${escAttr(v)}</text>
         </g>`;
       });
-      return `<svg viewBox="0 0 1000 860" style="width:100%;height:auto;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+      return staticno === 'pdf'
+        ? `<svg viewBox="0 0 1000 860" width="1000" height="860" xmlns="http://www.w3.org/2000/svg">${o}</svg>`
+        : `<svg viewBox="0 0 1000 860" style="width:100%;height:auto;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
     }
     function garazaKlik(i, k) {
       const inp = document.querySelector(`#mjereList .mj-num[data-idx="${i}"][data-key="${k}"]`);
@@ -1559,7 +1561,12 @@
       const sketch = document.getElementById('mainSketchBox');
       if (!box) return;
       const mjere = mjGet();
-      const svgs = mjere.map((m, i) => crtezOtvora(m, i)).filter(Boolean);
+      const svgs = mjere.map((m, i) => {
+        if (/Garažna/.test(m.tip || '') && (m.sirina || m.visina)) {
+          return `<div style="width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Garažna vrata${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${garazaShema(m, i, true)}</div>`;
+        }
+        return crtezOtvora(m, i);
+      }).filter(Boolean);
       const p = projects.find(item => item.id === selectedId);
       const hasImages = p && p.images && p.images.length > 0;
       if (svgs.length) { box.innerHTML = svgs.join(''); box.style.display = 'flex'; }
@@ -1661,8 +1668,29 @@
         let col = 0, redVisina = 0;
         for (let i = 0; i < mjere.length; i++) {
           const m = mjere[i];
-          const svg = crtezOtvora(m, i, { size: 230 });
+          const garaza = /Garažna/.test(m.tip || '');
+          const svg = garaza ? garazaShema(m, i, 'pdf') : crtezOtvora(m, i, { size: 230 });
           let img = null; try { if (svg) img = await svgUSliku(svg); } catch (e) {}
+          if (garaza) {
+            if (col === 1) { col = 0; y += redVisina; redVisina = 0; }
+            const fw = W - 2 * M, gs = img ? fw / img.width : 0, gh = img ? img.height * gs : 0;
+            ctx.font = '22px Helvetica, Arial, sans-serif';
+            const ginfo = [`${i + 1}. Garažna vrata${m.prostorija ? ' – ' + m.prostorija : ''}`];
+            const op = [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
+            let gl = [ginfo[0]].concat(op ? prelomi(ctx, op, fw) : []);
+            if (m.napomena) gl = gl.concat(prelomi(ctx, 'Napomena: ' + m.napomena, fw));
+            const leg = 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
+            gl = gl.concat(prelomi(ctx, leg, fw));
+            const bh = gh + gl.length * 30 + 40;
+            if (y + bh > H - M - 40) novaStranica();
+            let yy = y;
+            gl.slice(0, 1 + (op ? prelomi(ctx, op, fw).length : 0)).forEach((t, k) => { ctx.fillStyle = k === 0 ? '#0f172a' : '#334155'; ctx.font = (k === 0 ? 'bold ' : '') + '22px Helvetica, Arial, sans-serif'; ctx.fillText(t, M, yy + 22); yy += 30; });
+            if (img) { ctx.drawImage(img, M, yy + 4, fw, gh); yy += gh + 10; }
+            ctx.font = '19px Helvetica, Arial, sans-serif'; ctx.fillStyle = '#475569';
+            gl.slice(1 + (op ? prelomi(ctx, op, fw).length : 0)).forEach(t => { ctx.fillText(t, M, yy + 20); yy += 28; });
+            y = yy + 20; col = 0; redVisina = 0;
+            continue;
+          }
           ctx.font = '22px Helvetica, Arial, sans-serif';
           const info = [];
           info.push(`${i + 1}. ${vrstaOf(m) || m.tip || ''}${m.prostorija ? ' – ' + m.prostorija : ''}`);
