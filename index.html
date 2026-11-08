@@ -1089,10 +1089,11 @@
               </select>
               <label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
             </div>`}
-            <div class="mj-grid">
+            <div class="mj-grid" style="${m.roleta && !jeVrataTip(m.tip) ? 'grid-template-columns:1fr 1fr 1fr 1fr;' : ''}">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
               <div><label>Dubina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>
+              ${m.roleta && !jeVrataTip(m.tip) ? `<div><label>Kutija rolete (u mjeri)</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.kutija)}" oninput="liveMjera(${i}, 'kutija', this.value)" onchange="saveMjera(${i}, 'kutija', this.value)" data-idx="${i}" data-key="kutija"></div>` : ''}
             </div>
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
           </div>`).join('');
@@ -1127,14 +1128,29 @@
       const w = Math.max(W * sc, 24), h = Math.max(H * sc, 24);
       const tip = m.tip || 'Jednokrilni prozor';
       const rol = !!m.roleta && !jeVrataTip(tip);
-      const x0 = 34, y0 = 26 + (rol ? 12 : 0);
+      const x0 = 34, y0 = 26;
+      const K = parseFloat(String(m.kutija || '').replace(',', '.'));
+      const kb = rol ? Math.min(Math.max((K > 0 ? K : H * 0.1) * sc, 9), h * 0.5) : 0;
+      const fy = y0 + kb, fh = h - kb;
       const naslov = `${i + 1}. ${tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
-      const podnaslov = [m.boja, rol ? 'roleta' : ''].filter(Boolean).join(' · ');
-      let svgW = Math.max(w + 54, 190, naslov.length * 6.3 + 10);
-      const svgH = h + (y0 - 26) + 64 + (podnaslov ? 12 : 0);
+      const podnaslov = [m.boja, rol ? ('roleta' + (K > 0 ? ' – kutija ' + K + ' u mjeri' : '')) : '', m.dubina ? 'špaleta ' + m.dubina : ''].filter(Boolean).join(' · ');
+      let svgW = Math.max(w + 54 + (rol ? 34 : 0), 190, naslov.length * 6.3 + 10);
+      svgW = Math.max(svgW, podnaslov.length * 5.6 + 10);
+      const svgH = h + 64 + (podnaslov ? 12 : 0);
       const plava = '#1e3a8a', crt = '#475569';
       let o = '';
-      if (rol) o += `<rect x="${x0}" y="${y0 - 12}" width="${w}" height="11" fill="#67e8f9" stroke="${plava}" stroke-width="1"/>`;
+      if (rol) {
+        o += `<rect x="${x0}" y="${y0}" width="${w}" height="${kb}" fill="#67e8f9" stroke="${plava}" stroke-width="1.5"/>`;
+        if (kb >= 11) o += `<text x="${x0 + w / 2}" y="${y0 + kb / 2 + 4}" text-anchor="middle" font-size="${Math.min(11, kb - 2)}" fill="#0f172a">kutija${K > 0 ? ' ' + K : ''}</text>`;
+        // desne kote: kutija + prozor
+        const xr = x0 + w + 10;
+        o += `<line x1="${xr}" y1="${y0}" x2="${xr}" y2="${y0 + h}" stroke="#0891b2" stroke-width="1"/>`;
+        [y0, y0 + kb, y0 + h].forEach(yy => { o += `<line x1="${xr - 4}" y1="${yy}" x2="${xr + 4}" y2="${yy}" stroke="#0891b2"/>`; });
+        if (K > 0) {
+          o += `<text x="${xr + 6}" y="${y0 + kb / 2 + 4}" font-size="10" fill="#0891b2">${K}</text>`;
+          if (H > K) o += `<text x="${xr + 15}" y="${fy + fh / 2}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0891b2" transform="rotate(-90 ${xr + 15} ${fy + fh / 2})">${Math.round(H - K)}</text>`;
+        }
+      }
 
       const pasivnoO = !jeVrataTip(tip) && krilaOf(m).some(c => c.startsWith('ON'));
       const crtaj = (c, x, y, cw, ch) => {
@@ -1186,9 +1202,9 @@
         o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e2e8f0" stroke="${plava}" stroke-width="3"/>`;
         for (let k = 1; k < 5; k++) o += `<line x1="${x0}" y1="${y0 + h * k / 5}" x2="${x0 + w}" y2="${y0 + h * k / 5}" stroke="#64748b" stroke-width="1"/>`;
       } else {
-        o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e0f2fe" stroke="${plava}" stroke-width="3"/>`;
+        o += `<rect x="${x0}" y="${fy}" width="${w}" height="${fh}" fill="#e0f2fe" stroke="${plava}" stroke-width="3"/>`;
         const ok = 4, ix = x0 + ok, iw = w - 2 * ok;
-        let iy = y0 + ok, ih = h - 2 * ok;
+        let iy = fy + ok, ih = fh - 2 * ok;
         if (m.nadsvjetlo) {
           const fh = Math.max(ih * 0.22, 12);
           o += crtaj(m.nadsvjetlo === 'N' ? 'N' : 'F', ix, iy, iw, fh);
@@ -1213,7 +1229,6 @@
         <line x1="${x0 - 16}" y1="${y0}" x2="${x0 - 8}" y2="${y0}" stroke="#dc2626"/>
         <line x1="${x0 - 16}" y1="${y0 + h}" x2="${x0 - 8}" y2="${y0 + h}" stroke="#dc2626"/>
         <text x="${x0 - 17}" y="${y0 + h / 2}" text-anchor="middle" font-size="13" font-weight="bold" fill="#dc2626" transform="rotate(-90 ${x0 - 17} ${y0 + h / 2})">${escAttr(m.visina)}</text>`;
-      if (m.dubina) o += `<text x="${x0 + w + 4}" y="${y0 + h - 2}" font-size="9" fill="#334155" transform="rotate(-90 ${x0 + w + 10} ${y0 + h - 2})">špaleta ${escAttr(m.dubina)}</text>`;
       if (podnaslov) o += `<text x="4" y="${svgH - 4}" font-size="10" fill="#334155">${escAttr(podnaslov)}</text>`;
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
         <text x="4" y="14" font-size="11" font-weight="bold" fill="#0f172a">${escAttr(naslov)}</text>
