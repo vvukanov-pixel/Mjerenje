@@ -263,6 +263,7 @@
           </div>
 
           <div class="preview-grid" id="previewGrid"></div>
+          <div id="mjNewSlot" style="margin-bottom:12px;"></div>
 
           <div class="form-group">
             <label>Klijent / Objekt</label>
@@ -334,7 +335,7 @@
             <div class="main-sketch" id="mainSketchBox" onclick="openSketchFull()">
               <img id="d-img" src="" alt="Skica" title="Klik za Zoom">
             </div>
-            <div id="crtezBox" class="crtez-box" style="display:none;"></div>
+            <div id="crtezBox" class="crtez-box" style="display:none;"></div><span id="crtezAnchor"></span>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
               <span id="d-page" style="font-size: 11px; color: var(--text-muted);">1 / 1</span>
@@ -345,18 +346,18 @@
             <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
 
             <!-- MJERE OTVORA (laser) -->
-            <div id="mjereBox" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
+            <div id="mjereBox" onkeydown="if(event.key==='Enter'){event.preventDefault();}" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                 <h4 style="color:#38bdf8; font-size:13px;">📏 Mjere otvora (mm)</h4>
                 <div style="display:flex; gap:6px;">
-                  <button onclick="laserConnect()" id="btnLaser" style="background:#1e293b; color:#fbbf24; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">📡 Spoji laser</button>
-                  <button onclick="toggleMjFull()" id="btnMjFull" style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">⛶ Cijeli ekran</button>
-                  <button onclick="addOtvor()" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">+ Otvor</button>
+                  <button type="button" onclick="laserConnect()" id="btnLaser" style="background:#1e293b; color:#fbbf24; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">📡 Spoji laser</button>
+                  <button type="button" onclick="toggleMjFull()" id="btnMjFull" style="background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">⛶ Cijeli ekran</button>
+                  <button type="button" onclick="addOtvor()" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">+ Otvor</button>
                 </div>
               </div>
               <div id="laserStatus" style="font-size:11px; color:var(--text-muted); margin:6px 0;">Laser nije spojen</div>
               <div id="mjereList"></div>
-            </div>
+            </div><span id="mjereAnchor"></span>
           </div>
 
           <!-- 2. MAPA: PONUDA -->
@@ -949,6 +950,39 @@
     // ================= MJERE OTVORA + BOSCH LASER =================
     const TIPOVI_OTVORA = ['Prozor', 'Balkonska vrata', 'Alu stijena', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
     let mjereRenderedFor = null;
+    let mjMode = 'detail';      // 'detail' = otvoreni nalog, 'new' = Novo mjerenje
+    let draftMjere = [];
+
+    function mjGet() {
+      if (mjMode === 'new') return draftMjere;
+      const p = projects.find(item => item.id === selectedId);
+      return (p && p.mjere) ? p.mjere : [];
+    }
+    async function mjSet(arr) {
+      if (mjMode === 'new') { draftMjere = arr; return; }
+      const p = projects.find(item => item.id === selectedId);
+      if (!p) return;
+      p.mjere = arr;
+      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
+      catch (e) { alert('Greška pri spremanju mjera: ' + e.message); }
+    }
+    function mjMoveTo(mode) {
+      mjMode = mode;
+      const box = document.getElementById('mjereBox'), crt = document.getElementById('crtezBox');
+      if (!box || !crt) return;
+      if (mode === 'new') {
+        const slot = document.getElementById('mjNewSlot');
+        slot.appendChild(crt); slot.appendChild(box);
+      } else {
+        const a1 = document.getElementById('crtezAnchor'), a2 = document.getElementById('mjereAnchor');
+        a1.parentNode.insertBefore(crt, a1); a2.parentNode.insertBefore(box, a2);
+      }
+      const card = box.closest('.card');
+      document.querySelectorAll('.mj-full').forEach(c => c.classList.remove('mj-full'));
+      document.body.style.overflow = '';
+      const bf = document.getElementById('btnMjFull'); if (bf) bf.textContent = '⛶ Cijeli ekran';
+      renderMjere(true);
+    }
 
     function escAttr(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
@@ -957,9 +991,9 @@
       if (!list) return;
       renderCrtez();
       const box = document.getElementById('mjereBox');
-      if (!force && mjereRenderedFor === selectedId && box.contains(document.activeElement)) return;
-      const p = projects.find(item => item.id === selectedId);
-      const mjere = (p && p.mjere) ? p.mjere : [];
+      const key = mjMode === 'new' ? '__new' : selectedId;
+      if (!force && mjereRenderedFor === key && box.contains(document.activeElement)) return;
+      const mjere = mjGet();
       if (mjere.length === 0) {
         list.innerHTML = '<div style="font-size:12px; color:var(--text-muted);">Nema upisanih mjera. Dodaj otvor s "+ Otvor".</div>';
       } else {
@@ -971,7 +1005,7 @@
                 ${TIPOVI_OTVORA.map(t => `<option ${t === m.tip ? 'selected' : ''}>${t}</option>`).join('')}
               </select>
               <input style="flex:1.3; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" oninput="liveMjera(${i}, 'prostorija', this.value)" onchange="saveMjera(${i}, 'prostorija', this.value)">
-              <button onclick="deleteOtvor(${i})" style="background:none;border:none;color:#f87171;font-size:14px;cursor:pointer;" title="Obriši otvor">🗑️</button>
+              <button type="button" onclick="deleteOtvor(${i})" style="background:none;border:none;color:#f87171;font-size:14px;cursor:pointer;" title="Obriši otvor">🗑️</button>
             </div>
             <div class="mj-grid">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
@@ -981,7 +1015,7 @@
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
           </div>`).join('');
       }
-      mjereRenderedFor = selectedId;
+      mjereRenderedFor = key;
     }
 
     function toggleMjFull() {
@@ -994,10 +1028,11 @@
     }
 
     function liveMjera(idx, key, val) {
-      const p = projects.find(item => item.id === selectedId);
-      if (!p || !p.mjere || !p.mjere[idx]) return;
-      p.mjere = p.mjere.map(x => Object.assign({}, x));
-      p.mjere[idx][key] = val;
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!arr[idx]) return;
+      arr[idx][key] = val;
+      if (mjMode === 'new') draftMjere = arr;
+      else { const p = projects.find(item => item.id === selectedId); if (p) p.mjere = arr; }
       renderCrtez();
     }
 
@@ -1051,9 +1086,9 @@
       const box = document.getElementById('crtezBox');
       const sketch = document.getElementById('mainSketchBox');
       if (!box) return;
-      const p = projects.find(item => item.id === selectedId);
-      const mjere = (p && p.mjere) ? p.mjere : [];
+      const mjere = mjGet();
       const svgs = mjere.map((m, i) => crtezOtvora(m, i)).filter(Boolean);
+      const p = projects.find(item => item.id === selectedId);
       const hasImages = p && p.images && p.images.length > 0;
       if (svgs.length) { box.innerHTML = svgs.join(''); box.style.display = 'flex'; }
       else { box.innerHTML = ''; box.style.display = 'none'; }
@@ -1061,41 +1096,36 @@
     }
 
     async function saveMjera(idx, key, val) {
-      const p = projects.find(item => item.id === selectedId);
-      if (!p) return;
-      const arr = (p.mjere || []).map(x => Object.assign({}, x));
+      const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[idx]) return;
       arr[idx][key] = (typeof val === 'string') ? val.trim() : val;
-      p.mjere = arr;
+      const done = mjSet(arr);
       renderCrtez();
-      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
-      catch (e) { alert('Greška pri spremanju mjere: ' + e.message); }
+      await done;
     }
 
     async function addOtvor() {
-      const p = projects.find(item => item.id === selectedId);
-      if (!p) return;
-      const arr = (p.mjere || []).map(x => Object.assign({}, x));
+      if (mjMode === 'detail' && !projects.find(item => item.id === selectedId)) return;
+      const arr = mjGet().map(x => Object.assign({}, x));
       const lastTip = arr.length ? arr[arr.length - 1].tip : 'Prozor';
       arr.push({ tip: lastTip, prostorija: '', sirina: '', visina: '', dubina: '', napomena: '' });
-      p.mjere = arr;
+      const done = mjSet(arr);
       renderMjere(true);
       const rows = document.querySelectorAll('#mjereList .mj-row');
       const prost = rows.length ? rows[rows.length - 1].querySelector('input[placeholder^="Prostorija"]') : null;
       if (prost) prost.focus();
-      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
-      catch (e) { alert('Greška pri spremanju: ' + e.message); }
+      await done;
     }
 
     async function deleteOtvor(idx) {
-      const p = projects.find(item => item.id === selectedId);
-      if (!p || !p.mjere || !p.mjere[idx]) return;
+      const cur = mjGet();
+      if (!cur[idx]) return;
       if (!confirm(`Obrisati otvor ${idx + 1}?`)) return;
-      const arr = p.mjere.map(x => Object.assign({}, x));
+      const arr = cur.map(x => Object.assign({}, x));
       arr.splice(idx, 1);
-      p.mjere = arr;
+      const done = mjSet(arr);
       renderMjere(true);
-      await db.collection("nalozi").doc(selectedId).update({ mjere: arr });
+      await done;
     }
 
     // --- Bosch GLM laser preko Web Bluetootha (Android Chrome; iPhone/iPad samo u Bluefy pregledniku) ---
@@ -2069,6 +2099,7 @@
       document.getElementById('admin-view').classList.remove('active');
       document.getElementById('tab-monter').classList.add('active');
       document.getElementById('tab-admin').classList.remove('active');
+      mjMoveTo('new');
     }
 
     function showAdminView() {
@@ -2076,6 +2107,7 @@
       document.getElementById('admin-view').classList.add('active');
       document.getElementById('tab-monter').classList.remove('active');
       document.getElementById('tab-admin').classList.add('active');
+      if (mjMode !== 'detail') mjMoveTo('detail');
       backToSidebar();
     }
 
@@ -2133,6 +2165,7 @@
         date: formattedDate,
         timestamp: Date.now(),
         notes: document.getElementById('cNotes').value,
+        mjere: draftMjere.map(x => Object.assign({}, x)),
         images: [],
         offerDoc: null,
         rnDoc: null,
@@ -2160,6 +2193,7 @@
           await db.collection("nalozi").doc(nalogId).update({ images: imageUrls });
         }
         uploadedImages = [];
+        draftMjere = [];
         renderPreviews();
         document.querySelector('form').reset();
         showAdminView();
