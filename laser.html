@@ -117,7 +117,10 @@ async function connect(showAll) {
     });
 
     setStatus('Spajam...', 'wait');
-    const server = await device.gatt.connect();
+    const server = await Promise.race([
+      device.gatt.connect(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Spajanje traje predugo (15 s). Zatvori MeasureOn i druge aplikacije, pa probaj opet.')), 15000))
+    ]).catch(e => { try { device.gatt.disconnect(); } catch (x) {} throw e; });
     log('GATT spojen');
 
     const services = await server.getPrimaryServices();
