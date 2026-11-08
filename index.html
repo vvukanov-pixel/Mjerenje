@@ -1158,8 +1158,8 @@
         if (t === 'O' || t === 'ON') {
           const kv = k === 'D' ? 'D' : 'L';
           const kvX = kv === 'L' ? sx : sx + sw, sarX = kv === 'L' ? sx + sw : sx;
-          r += `<polyline points="${kvX},${sy} ${sarX},${sy + sh / 2} ${kvX},${sy + sh}" ${dash}/>`;
-          if (t === 'ON') r += `<polyline points="${sx},${sy} ${sx + sw / 2},${sy + sh} ${sx + sw},${sy}" ${dash}/>`;
+          r += `<polyline points="${sarX},${sy} ${kvX},${sy + sh / 2} ${sarX},${sy + sh}" ${dash}/>`;
+          if (t === 'ON') r += `<polyline points="${sx},${sy + sh} ${sx + sw / 2},${sy} ${sx + sw},${sy + sh}" ${dash}/>`;
           const hx = kv === 'L' ? sx + 4 : sx + sw - 4;
           if (!(t === 'O' && pasivnoO)) r += `<rect x="${hx - 1.5}" y="${sy + sh / 2 - 7}" width="3" height="14" rx="1.5" fill="${plava}"/>`;
         } else if (t === 'V') {
@@ -1167,11 +1167,11 @@
           r += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="#f8fafc" stroke="${plava}" stroke-width="1.4"/>`;
           const kv = k === 'D' ? 'D' : 'L';
           const kvX = kv === 'L' ? sx : sx + sw, sarX = kv === 'L' ? sx + sw : sx;
-          r += `<polyline points="${kvX},${sy} ${sarX},${sy + sh / 2} ${kvX},${sy + sh}" ${dash}/>`;
+          r += `<polyline points="${sarX},${sy} ${kvX},${sy + sh / 2} ${sarX},${sy + sh}" ${dash}/>`;
           const hx = kv === 'L' ? sx + 5 : sx + sw - 5;
           r += `<rect x="${hx - 1.5}" y="${sy + sh * 0.52 - 8}" width="3" height="16" rx="1.5" fill="${plava}"/>`;
         } else if (t === 'N') {
-          r += `<polyline points="${sx},${sy} ${sx + sw / 2},${sy + sh} ${sx + sw},${sy}" ${dash}/>`;
+          r += `<polyline points="${sx},${sy + sh} ${sx + sw / 2},${sy} ${sx + sw},${sy + sh}" ${dash}/>`;
           r += `<rect x="${sx + sw / 2 - 7}" y="${sy + 3}" width="14" height="3" rx="1.5" fill="${plava}"/>`;
         } else if (t === 'K') {
           const dir = k === 'L' ? -1 : 1, ay = sy + sh * 0.6;
