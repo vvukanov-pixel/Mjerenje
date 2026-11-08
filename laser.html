@@ -104,7 +104,7 @@ async function connect(showAll) {
   try {
     setStatus('Tražim laser...', 'wait');
     const opts = {
-      optionalServices: [BOSCH_SERVICE, BOSCH_NEW_SVC, 'device_information', 'battery_service']
+      optionalServices: [BOSCH_SERVICE, BOSCH_NEW_SVC]
     };
     if (showAll) opts.acceptAllDevices = true;
     else opts.filters = [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { services: [BOSCH_SERVICE] }];
@@ -158,9 +158,10 @@ async function connect(showAll) {
       if (!lastFocused) document.getElementById('f1').focus();
     }
   } catch (e) {
-    if (e.name === 'NotFoundError') setStatus('Nije odabran uređaj', 'wait');
-    else setStatus('Greška: ' + e.message, 'err');
-    log('Greška: ' + e.name + ' – ' + e.message);
+    const msg = (e && (e.message || e.name)) ? (e.name + ': ' + e.message) : String(e);
+    if (e && e.name === 'NotFoundError') setStatus('Nije odabran uređaj', 'wait');
+    else setStatus('Greška: ' + msg, 'err');
+    log('Greška: ' + msg + ' | ' + (function(){ try { return JSON.stringify(e); } catch(x) { return ''; } })());
   }
 }
 
