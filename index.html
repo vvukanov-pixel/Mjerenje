@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.15</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.16</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1562,6 +1562,30 @@
       </svg>`;
     }
 
+    function uvecajCrtez(i) {
+      const m = mjGet()[i]; if (!m) return;
+      const vw = Math.min(window.innerWidth, 1100), vh = window.innerHeight;
+      let svg;
+      if (/Garažna/.test(m.tip || '')) svg = garazaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
+      else svg = crtezOtvora(m, i, { size: Math.max(200, Math.min(vw - 120, vh - 220)) });
+      let mo = document.getElementById('crtezZoom');
+      if (!mo) {
+        mo = document.createElement('div'); mo.id = 'crtezZoom';
+        mo.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(2,6,23,.92);overflow:auto;-webkit-overflow-scrolling:touch;padding:14px;';
+        mo.onclick = e => { if (e.target === mo) mo.style.display = 'none'; };
+        document.body.appendChild(mo);
+      }
+      const n = mjGet().length;
+      mo.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;">
+          <button type="button" onclick="uvecajCrtez(${(i - 1 + n) % n})" style="background:#334155;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:16px;" ${n < 2 ? 'disabled' : ''}>‹</button>
+          <b style="color:#fff;font-size:14px;">${i + 1} / ${n} – dvoprstom možeš još povećati</b>
+          <button type="button" onclick="uvecajCrtez(${(i + 1) % n})" style="background:#334155;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:16px;" ${n < 2 ? 'disabled' : ''}>›</button>
+          <button type="button" onclick="document.getElementById('crtezZoom').style.display='none'" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:16px;font-weight:bold;">✕</button>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:10px;display:flex;justify-content:center;">${svg || '<div style="padding:30px;color:#334155;">Za crtež upiši širinu i visinu.</div>'}</div>`;
+      mo.style.display = 'block';
+    }
+
     function renderCrtez() {
       const box = document.getElementById('crtezBox');
       const sketch = document.getElementById('mainSketchBox');
@@ -1569,9 +1593,10 @@
       const mjere = mjGet();
       const svgs = mjere.map((m, i) => {
         if (/Garažna/.test(m.tip || '') && (m.sirina || m.visina)) {
-          return `<div style="width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Garažna vrata${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${garazaShema(m, i, true)}</div>`;
+          return `<div onclick="uvecajCrtez(${i})" style="cursor:zoom-in;width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Garažna vrata${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${garazaShema(m, i, true)}</div>`;
         }
-        return crtezOtvora(m, i);
+        const c = crtezOtvora(m, i);
+        return c ? `<div onclick="uvecajCrtez(${i})" style="cursor:zoom-in;">${c}</div>` : '';
       }).filter(Boolean);
       const p = projects.find(item => item.id === selectedId);
       const hasImages = p && p.images && p.images.length > 0;
