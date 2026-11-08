@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.11</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.12</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1190,6 +1190,68 @@
       </div>`;
     }
 
+    // ================= GARAŽNA VRATA – izmjera po shemi =================
+    const GARAZA_POLJA = [
+      ['sirina', 'A', 'Svjetla širina', true], ['visina', 'B', 'Svjetla visina od OFF', true],
+      ['c1', 'C1', 'Bočni prostor lijevo', true], ['c2', 'C2', 'Bočni prostor desno', true], ['d', 'D', 'Visina nadvoja', true],
+      ['h', 'H', 'Debljina zida', false], ['e1', 'E1', 'Unutr. širina garaže ispred', false], ['e2', 'E2', 'Unutr. širina garaže otraga', false],
+      ['f1', 'F1', 'Visina stropa od OFF ispred', false], ['f2', 'F2', 'Visina stropa od OFF otraga', false], ['g', 'G', 'Dubina garaže', false]
+    ];
+    // položaj kućica na shemi (viewBox 1000 x 860)
+    const GARAZA_POZ = { sirina: [330, 500], visina: [520, 330], c1: [195, 610], c2: [705, 610], d: [530, 175], h: [710, 290], e1: [440, 95], e2: [440, 10], f1: [815, 330], f2: [880, 520], g: [20, 420] };
+    function garazaShema(m, i) {
+      const L = '#475569', st = 'stroke="#334155" stroke-width="3" fill="none" marker-start="url(#ga)" marker-end="url(#ga)"';
+      let o = `<defs><marker id="ga" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker></defs>`;
+      o += `<rect x="0" y="0" width="1000" height="860" fill="#d1d5db"/>`;
+      o += `<polygon points="0,0 1000,0 800,160 200,160" fill="#cbd5e1"/><polygon points="0,860 1000,860 800,680 200,680" fill="#c7cdd6"/>`;
+      o += `<polygon points="0,0 200,160 200,680 0,860" fill="#dfe3e8"/><polygon points="1000,0 800,160 800,680 1000,860" fill="#dfe3e8"/>`;
+      o += `<rect x="200" y="160" width="600" height="520" fill="#e5e7eb" stroke="${L}" stroke-width="2"/>`;
+      o += `<rect x="300" y="270" width="400" height="410" fill="#ffffff" stroke="${L}" stroke-width="3"/>`;
+      o += `<polygon points="700,270 730,250 730,680 700,680" fill="#9ca3af"/>`;
+      o += `<line x1="0" y1="0" x2="200" y2="160" stroke="${L}"/><line x1="1000" y1="0" x2="800" y2="160" stroke="${L}"/><line x1="0" y1="860" x2="200" y2="680" stroke="${L}"/><line x1="1000" y1="860" x2="800" y2="680" stroke="${L}"/>`;
+      o += `<line x1="305" y1="560" x2="695" y2="560" ${st}/><line x1="500" y1="275" x2="500" y2="675" ${st}/>`;
+      o += `<line x1="205" y1="595" x2="295" y2="595" ${st}/><line x1="705" y1="595" x2="795" y2="595" ${st}/>`;
+      o += `<line x1="520" y1="165" x2="520" y2="265" ${st}/><line x1="205" y1="140" x2="795" y2="140" ${st}/><line x1="25" y1="40" x2="975" y2="40" ${st}/>`;
+      o += `<line x1="830" y1="170" x2="830" y2="670" ${st}/><line x1="965" y1="40" x2="965" y2="830" ${st}/><line x1="10" y1="480" x2="190" y2="480" ${st}/>`;
+      o += `<line x1="705" y1="240" x2="725" y2="240" ${st}/>`;
+      o += `<text x="500" y="720" text-anchor="middle" font-size="26" font-weight="bold" fill="#334155">OFF ▽</text><text x="500" y="800" text-anchor="middle" font-size="30" font-weight="bold" fill="#334155">UNUTRA</text>`;
+      GARAZA_POLJA.forEach(([k, lab, , nuzno]) => {
+        const [x, y] = GARAZA_POZ[k];
+        const v = m[k] || '';
+        o += `<g style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')">
+          <rect id="gbr_${i}_${k}" x="${x}" y="${y}" width="${k === 'h' ? 90 : 120}" height="62" rx="6" fill="${v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#ffffff')}" stroke="${nuzno ? '#d97706' : '#64748b'}" stroke-width="${nuzno ? 4 : 2}"/>
+          <text x="${x + 6}" y="${y + 18}" font-size="17" font-weight="bold" fill="#0f172a">${lab}</text>
+          <text id="gb_${i}_${k}" x="${x + (k === 'h' ? 45 : 60)}" y="${y + 52}" text-anchor="middle" font-size="30" font-weight="bold" fill="#0f172a">${escAttr(v)}</text>
+        </g>`;
+      });
+      return `<svg viewBox="0 0 1000 860" style="width:100%;height:auto;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+    }
+    function garazaKlik(i, k) {
+      const inp = document.querySelector(`#mjereList .mj-num[data-idx="${i}"][data-key="${k}"]`);
+      if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest' }); }
+    }
+    function garazaOsvjeziKucicu(i, k, v) {
+      const t = document.getElementById(`gb_${i}_${k}`); if (t) t.textContent = v || '';
+      const r = document.getElementById(`gbr_${i}_${k}`);
+      if (r) { const nuzno = (GARAZA_POLJA.find(x => x[0] === k) || [])[3]; r.setAttribute('fill', v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#ffffff')); }
+    }
+    function garazaPanel(m, i) {
+      const radio = (key, opts) => opts.map(([val, txt]) => `<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:13px;color:#e2e8f0;"><input type="radio" style="width:auto;" name="${key}_${i}" ${m[key] === val ? 'checked' : ''} onchange="postaviPolje(${i}, '${key}', '${val}')"> ${txt}</label>`).join('');
+      const polje = ([k, lab, opis, nuzno]) => `<div><label style="${nuzno ? 'color:#fbbf24;' : ''}">${lab} – ${opis}${nuzno ? ' *' : ''}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); garazaOsvjeziKucicu(${i}, '${k}', this.value)" onchange="saveMjera(${i}, '${k}', this.value)" onfocus="this.closest('.mj-row').querySelectorAll('rect[id^=gbr_]').forEach(r=>r.setAttribute('stroke-dasharray',''));const r=document.getElementById('gbr_${i}_${k}');if(r)r.setAttribute('stroke-dasharray','10 5');" data-idx="${i}" data-key="${k}"></div>`;
+      return `<div style="margin:6px 0;">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">Dodirni kućicu na shemi pa mjeri laserom. Žute (*) su obavezne. Sve mjere u mm.</div>
+        ${garazaShema(m, i)}
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr; margin-top:8px;">${GARAZA_POLJA.map(polje).join('')}</div>
+        <div style="margin-top:8px;display:grid;gap:6px;font-size:13px;">
+          <div><span class="mj-lbl">Mjere su: </span>${radio('g_mjere', [['grube', 'Grube građevinske'], ['gotove', 'Gotove']])}</div>
+          <div><span class="mj-lbl">Spušteni strop: </span>${radio('g_strop', [['da', 'Da'], ['ne', 'Ne']])}</div>
+          <div><span class="mj-lbl">Drugi ulaz u garažu: </span>${radio('g_ulaz', [['da', 'Da'], ['ne', 'Ne']])}</div>
+          <div><span class="mj-lbl">Ugradnja: </span>${radio('g_ugradnja', [['u', 'U otvor'], ['iza', 'Iza otvora']])}</div>
+          <input placeholder="Tip vrata (npr. LPU 42, M-rebra, Woodgrain)" value="${escAttr(m.g_tip)}" onchange="saveMjera(${i}, 'g_tip', this.value)">
+        </div>
+      </div>`;
+    }
+
     async function promijeniTip(i, tip) {
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[i]) return;
@@ -1339,12 +1401,12 @@
                 <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
               </select>
             </div>`}
-            <div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
+            ${/Garažna/.test(m.tip || '') ? garazaPanel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
               ${/Sobna/.test(m.tip || '') ? `<div><label>Debljina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>` : ''}
               ${m.roleta && !jeVrataTip(m.tip) ? `<div><label>Kutija rolete (u mjeri)</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.kutija)}" oninput="liveMjera(${i}, 'kutija', this.value)" onchange="saveMjera(${i}, 'kutija', this.value)" data-idx="${i}" data-key="kutija"></div>` : ''}
-            </div>
+            </div>`}
             ${upozorenjaMjera(m, i)}
             ${/Sobna/.test(m.tip || '') ? sobnaPodsjetnik(m) : ''}
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
@@ -1386,7 +1448,7 @@
       const kb = rol ? Math.min(Math.max((K > 0 ? K : H * 0.1) * sc, 9), h * 0.5) : 0;
       const fy = y0 + kb, fh = h - kb;
       const naslov = `${i + 1}. ${tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
-      const podnaslov = [m.boja, rol ? ('roleta' + (K > 0 ? ' – kutija ' + K + ' u mjeri' : '')) : '', m.dubina ? 'špaleta ' + m.dubina : ''].filter(Boolean).join(' · ');
+      const podnaslov = [/Garažna/.test(tip) ? ['c1', 'c2', 'd'].filter(k => m[k] !== undefined && m[k] !== '').map(k => k.toUpperCase() + ' ' + m[k]).join('  ') : '', m.boja, rol ? ('roleta' + (K > 0 ? ' – kutija ' + K + ' u mjeri' : '')) : '', m.dubina ? 'špaleta ' + m.dubina : ''].filter(Boolean).join(' · ');
       let svgW = Math.max(w + 54 + (rol ? 34 : 0), 190, naslov.length * 6.3 + 10);
       svgW = Math.max(svgW, podnaslov.length * 5.6 + 10);
       const svgH = h + 64 + (podnaslov ? 12 : 0);
@@ -1607,6 +1669,12 @@
           info.push(`Š ${m.sirina || '?'} × V ${m.visina || '?'} mm`);
           if (m.roleta) info.push(`Roleta${m.kutija ? ', kutija ' + m.kutija + ' mm (u mjeri)' : ''}`);
           if (/Sobna/.test(m.tip || '')) { info.push(krilaOf(m)[0] === 'V-L' ? 'Desno otvaranje' : 'Lijevo otvaranje'); if (m.dubina) { const d = parseFloat(m.dubina); const pr = SOBNA_STOKOVI.find(x => x >= d); info.push(`Debljina špalete ${m.dubina} mm${pr ? ' → štok ' + pr : ''}`); } }
+          if (/Garažna/.test(m.tip || '')) {
+            const g = GARAZA_POLJA.slice(2).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · ');
+            if (g) info.push(g);
+            const op = [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip: ' + m.g_tip : ''].filter(Boolean).join(' · ');
+            if (op) info.push(op);
+          }
           if (m.boja) info.push('Boja: ' + m.boja);
           let lines = [];
           info.forEach(t => lines = lines.concat(prelomi(ctx, t, colW)));
@@ -1742,6 +1810,7 @@
       if (!target) { setLaserStatus('Izmjereno ' + mm + ' mm – sva polja su puna, klikni u polje ili dodaj otvor', '#fbbf24'); return; }
       target.value = mm;
       saveMjera(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm));
+      try { garazaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); } catch (e) {}
       setLaserStatus('Zadnja mjera: ' + mm + ' mm', '#34d399');
       const next = fields[fields.indexOf(target) + 1];
       if (next) next.focus(); else target.blur();
