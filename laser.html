@@ -43,6 +43,7 @@
   <button class="btn-main" onclick="connect(false)">📡 SPOJI LASER</button>
   <button class="btn-alt" onclick="connect(true)">Ne vidim laser – prikaži sve uređaje</button>
   <div id="status" class="wait">Nije spojeno</div>
+  <button class="btn-alt" style="margin-top:8px" onclick="triggerMeasure()">🔴 Izmjeri s mobitela (test)</button>
 </div>
 
 <div class="card">
@@ -72,6 +73,7 @@ const BOSCH_NEW_SVC = '3ab10100-f831-4395-b29d-570977d5bf94';
 const ENABLE_SYNC   = new Uint8Array([0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A]);
 
 let device = null;
+let boschCharG = null;
 let lastFocused = null;
 let lastValue = null, lastTime = 0;
 
@@ -145,6 +147,7 @@ async function connect(showAll) {
       }
     }
 
+    boschCharG = boschChar;
     if (boschChar) {
       try {
         await boschChar.writeValue(ENABLE_SYNC);
@@ -166,6 +169,15 @@ async function connect(showAll) {
     else setStatus('Greška: ' + msg, 'err');
     log('Greška: ' + msg + ' | ' + (function(){ try { return JSON.stringify(e); } catch(x) { return ''; } })());
   }
+}
+
+async function triggerMeasure() {
+  if (!boschCharG) { log('Nema Bosch karakteristike – laser nije spojen ili ima drugi protokol'); return; }
+  try {
+    await boschCharG.writeValue(ENABLE_SYNC);
+    await boschCharG.writeValue(new Uint8Array([0xC0, 0x56, 0x01, 0x00, 0x1E]));
+    log('Poslana naredba za mjerenje (C0 56 01 00 1E)');
+  } catch (e) { log('Naredba za mjerenje nije uspjela: ' + (e && e.message)); }
 }
 
 function onData(dv, uuid) {
