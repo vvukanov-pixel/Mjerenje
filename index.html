@@ -363,7 +363,7 @@
               <div id="laserStatus" style="font-size:11px; color:var(--text-muted); margin:6px 0;">Laser nije spojen</div>
               <div id="mjereList"></div>
               <datalist id="bojeLista"><option>Bijelo</option><option>Orah</option><option>Zlatni hrast</option><option>Antracit</option><option>Bijelo/Antracit</option><option>Bijelo/Orah</option><option>Bijelo/Zlatni hrast</option></datalist>
-              <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Krila: F fiksno · OZ otklopno-zaokretno · Z zaokretno · OT otklopno · K klizno (→ smjer) · V vrata · G grilje · L/D strana kvake (pogled iznutra). Dodirni krilo za promjenu.</div>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Dodirni 🖼 Predložak za odabir sheme otvora (pogled iznutra). "ručno uredi" služi samo za posebne slučajeve. Dodirni krilo za promjenu.</div>
             </div><span id="mjereAnchor"></span>
           </div>
 
@@ -986,6 +986,111 @@
       const lista = TIPOVI_OTVORA.includes(cur) || !cur ? TIPOVI_OTVORA : [cur].concat(TIPOVI_OTVORA);
       return lista.map(t => `<option ${t === cur ? 'selected' : ''}>${t}</option>`).join('');
     }
+    // ================= PREDLOŠCI (kao tipske stijene) =================
+    const PREDLOSCI = {
+      'Prozori': [
+        ['Jednokrilni prozor', ['ON-L']], ['Jednokrilni prozor', ['ON-D']],
+        ['Dvokrilni prozor', ['ON-D', 'O-L']], ['Dvokrilni prozor', ['O-D', 'ON-L']], ['Dvokrilni prozor', ['ON-D', 'ON-L']],
+        ['Trokrilni prozor', ['ON-D', 'O-L', 'ON-L']], ['Trokrilni prozor', ['ON-D', 'O-D', 'ON-L']], ['Trokrilni prozor', ['ON-D', 'F', 'ON-L']],
+        ['Fiksni prozor', ['F']], ['Ostalo', ['N']],
+        ['Jednokrilni prozor', ['ON-L'], 'F'], ['Jednokrilni prozor', ['ON-D'], 'F'],
+        ['Jednokrilni prozor', ['ON-L'], '', 'F'], ['Jednokrilni prozor', ['ON-D'], '', 'F'],
+        ['Dvokrilni prozor', ['ON-D', 'O-L'], 'F'], ['Dvokrilni prozor', ['O-D', 'ON-L'], 'F'],
+        ['Dvokrilni prozor', ['ON-D', 'O-L'], '', 'F'], ['Dvokrilni prozor', ['O-D', 'ON-L'], '', 'F'],
+        ['Jednokrilni prozor', ['ON-L'], 'N'], ['Dvokrilni prozor', ['ON-D', 'O-L'], 'N'], ['Fiksni prozor', ['F'], 'N'],
+        ['Ostalo', ['F', 'ON-L']], ['Ostalo', ['ON-D', 'F']], ['Ostalo', ['F', 'ON-L', 'F']],
+        ['Ostalo', ['F', 'ON-D', 'O-L', 'F']], ['Ostalo', ['F', 'ON-L'], 'F'], ['Ostalo', ['ON-D', 'F'], 'F']
+      ],
+      'Balkonska vrata': [
+        ['Balkonska jednokrilna vrata', ['ON-L']], ['Balkonska jednokrilna vrata', ['ON-D']],
+        ['Balkonska dvokrilna vrata', ['ON-D', 'O-L']], ['Balkonska dvokrilna vrata', ['O-D', 'ON-L']], ['Balkonska dvokrilna vrata', ['ON-D', 'ON-L']],
+        ['Balkonska jednokrilna vrata', ['ON-L'], 'F'], ['Balkonska jednokrilna vrata', ['ON-D'], 'F'],
+        ['Balkonska dvokrilna vrata', ['ON-D', 'O-L'], 'F'], ['Balkonska dvokrilna vrata', ['O-D', 'ON-L'], 'F'],
+        ['Ostalo', ['F', 'ON-L']], ['Ostalo', ['ON-D', 'F']], ['Ostalo', ['ON-D', 'F', 'ON-L']], ['Ostalo', ['F', 'ON-L', 'F']],
+        ['Balkonska jednokrilna vrata', ['ON-L'], '', 'F'], ['Balkonska jednokrilna vrata', ['ON-D'], '', 'F'],
+        ['Balkonska dvokrilna vrata', ['ON-D', 'O-L'], '', 'F'], ['Balkonska dvokrilna vrata', ['O-D', 'ON-L'], '', 'F']
+      ],
+      'Smart-Slide': [
+        ['Klizna stijena Smart-Slide', ['K-D', 'F']], ['Klizna stijena Smart-Slide', ['F', 'K-L']],
+        ['Klizna stijena Smart-Slide', ['F', 'K-L', 'K-D', 'F']], ['Klizna stijena Smart-Slide', ['F']]
+      ],
+      'HST': [
+        ['HST stijena', ['K-D', 'F']], ['HST stijena', ['F', 'K-L']], ['HST stijena', ['K-D', 'K-L']],
+        ['HST stijena', ['F', 'K-L', 'K-D', 'F']], ['HST stijena', ['F']]
+      ],
+      'Grilje': [
+        ['Grilje', ['G']], ['Grilje', ['G', 'G']], ['Grilje', ['G', 'G', 'G']], ['Grilje', ['G', 'G', 'G', 'G']]
+      ],
+      'Vrata': [
+        ['Sobna vrata', ['V-L']], ['Sobna vrata', ['V-D']], ['Ulazna vrata', ['V-L']], ['Ulazna vrata', ['V-D']],
+        ['Ulazna vrata', ['V-L', 'F']], ['Ulazna vrata', ['F', 'V-D']], ['Ulazna vrata', ['F', 'V-L', 'F']],
+        ['Ulazna vrata', ['V-L'], 'F'], ['Ulazna vrata', ['V-D'], 'F'], ['Ulazna vrata', ['V-D', 'V-L']], ['Ulazna vrata', ['V-D', 'V-L'], 'F']
+      ],
+      'Garažna': [['Garažna vrata', ['F']]]
+    };
+    function predlozakVelicina(kat, n) {
+      if (kat === 'Balkonska vrata') return [800 * n, 2200];
+      if (kat === 'Smart-Slide' || kat === 'HST') return [n >= 4 ? 4200 : (n === 1 ? 1100 : 2600), 2200];
+      if (kat === 'Grilje') return [550 * n, 1300];
+      if (kat === 'Vrata') return [900 * n, 2100];
+      if (kat === 'Garažna') return [2500, 2125];
+      return [650 * n, 1300];
+    }
+    let predlozakZa = null, predlozakKat = 'Prozori';
+    function otvoriPredloske(i) {
+      predlozakZa = i;
+      const cur = mjGet()[i];
+      if (cur) {
+        const t = cur.tip || '';
+        predlozakKat = /Balkonska/.test(t) ? 'Balkonska vrata' : /Smart/.test(t) ? 'Smart-Slide' : /HST/.test(t) ? 'HST' : /Grilje/.test(t) ? 'Grilje' : /Sobna|Ulazna/.test(t) ? 'Vrata' : /Garažna/.test(t) ? 'Garažna' : 'Prozori';
+      }
+      let modal = document.getElementById('predlosciModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'predlosciModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.85);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:12px;';
+        modal.onclick = e => { if (e.target === modal) zatvoriPredloske(); };
+        document.body.appendChild(modal);
+      }
+      renderPredloske();
+      modal.style.display = 'flex';
+    }
+    function zatvoriPredloske() { const m = document.getElementById('predlosciModal'); if (m) m.style.display = 'none'; }
+    function renderPredloske() {
+      const modal = document.getElementById('predlosciModal');
+      const tabs = Object.keys(PREDLOSCI).map(k => `<button type="button" onclick="predlozakKat='${k}';renderPredloske()" style="padding:9px 12px;border-radius:7px;border:1px solid #334155;font-weight:bold;font-size:13px;cursor:pointer;background:${k === predlozakKat ? '#0284c7' : '#1e293b'};color:#fff;">${k}</button>`).join('');
+      const items = PREDLOSCI[predlozakKat].map((p, idx) => {
+        const [tip, krila, nad, dol] = p;
+        const [W, H] = predlozakVelicina(predlozakKat, krila.length);
+        const svg = crtezOtvora({ tip, krila, nadsvjetlo: nad || '', donje: dol || '', sirina: W, visina: H }, 0, { mini: true, size: 76 });
+        return `<button type="button" onclick="primijeniPredlozak(${idx})" style="background:#e5e7eb;border:2px solid #64748b;border-radius:8px;width:96px;height:96px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:2px;">${svg}</button>`;
+      }).join('');
+      modal.innerHTML = `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:14px;max-width:760px;width:100%;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <b style="color:#fff;font-size:16px;">🖼 Odaberi predložak – otvor ${predlozakZa + 1}</b>
+          <button type="button" onclick="zatvoriPredloske()" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:14px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${tabs}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">${items}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:10px;">Pogled iznutra. Roletu, boju i mjere upisuješ nakon odabira.</div>
+      </div>`;
+    }
+    async function primijeniPredlozak(idx) {
+      const p = PREDLOSCI[predlozakKat][idx];
+      const i = predlozakZa;
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!p || !arr[i]) return;
+      arr[i].tip = p[0]; arr[i].krila = p[1].slice(); arr[i].nadsvjetlo = p[2] || ''; arr[i].donje = p[3] || '';
+      zatvoriPredloske();
+      const done = mjSet(arr); renderMjere(true);
+      const prost = document.querySelectorAll('#mjereList .mj-row')[i];
+      const inp = prost ? prost.querySelector('input[placeholder^="Prostorija"]') : null;
+      if (inp && !inp.value) inp.focus();
+      await done;
+    }
+    let rucnoKrila = new Set();
+    function toggleRucno(i) { rucnoKrila.has(i) ? rucnoKrila.delete(i) : rucnoKrila.add(i); renderMjere(true); }
+
     async function promijeniTip(i, tip) {
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[i]) return;
@@ -1074,7 +1179,15 @@
               <input style="flex:1.4; min-width:0;" placeholder="Prostorija (npr. Dječja soba)" value="${escAttr(m.prostorija)}" oninput="liveMjera(${i}, 'prostorija', this.value)" onchange="saveMjera(${i}, 'prostorija', this.value)">
               <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
             </div>
-            ${jeVrataTip(m.tip) ? '' : `
+            <div class="mj-krila">
+              <button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
+                ${crtezOtvora(Object.assign({}, m, { sirina: m.sirina || predlozakVelicina('', krilaOf(m).length)[0], visina: m.visina || 1300 }), i, { mini: true, size: 44 })}
+                <b style="color:#0f172a;font-size:13px;">🖼 Predložak</b>
+              </button>
+              ${jeVrataTip(m.tip) ? '' : `<label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
+              <button type="button" onclick="toggleRucno(${i})" style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;text-decoration:underline;">${rucnoKrila.has(i) ? 'sakrij ručno' : 'ručno uredi'}</button>`}
+            </div>
+            ${jeVrataTip(m.tip) || !rucnoKrila.has(i) ? '' : `
             <div class="mj-krila">
               <span class="mj-lbl">Krila:</span>
               ${krilaOf(m).map((c, k) => `<button type="button" class="kr-chip" onclick="promijeniKrila(${i}, 'ciklus', ${k})" title="Dodirni za promjenu">${krLabel(c)}</button>`).join('')}
@@ -1093,7 +1206,6 @@
                 <option value="" ${!m.donje ? 'selected' : ''}>ništa</option>
                 <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
               </select>
-              <label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
             </div>`}
             <div class="mj-grid" style="${m.roleta && !jeVrataTip(m.tip) ? 'grid-template-columns:1fr 1fr 1fr 1fr;' : ''}">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
@@ -1125,16 +1237,17 @@
       renderCrtez();
     }
 
-    function crtezOtvora(m, i) {
+    function crtezOtvora(m, i, opts) {
+      const mini = !!(opts && opts.mini);
       const W = parseFloat(String(m.sirina).replace(',', '.'));
       const H = parseFloat(String(m.visina).replace(',', '.'));
       if (!(W > 0 && H > 0)) return '';
       const fullOn = document.querySelector('.mj-full') !== null;
-      const maxS = fullOn ? Math.min(340, window.innerWidth - 90) : 160, sc = Math.min(maxS / W, maxS / H);
-      const w = Math.max(W * sc, 24), h = Math.max(H * sc, 24);
+      const maxS = mini ? (opts.size || 70) : (fullOn ? Math.min(340, window.innerWidth - 90) : 160), sc = Math.min(maxS / W, maxS / H);
+      const w = Math.max(W * sc, mini ? 14 : 24), h = Math.max(H * sc, mini ? 14 : 24);
       const tip = m.tip || 'Jednokrilni prozor';
       const rol = !!m.roleta && !jeVrataTip(tip);
-      const x0 = 34, y0 = 26;
+      const x0 = mini ? 3 : 34, y0 = mini ? 3 : 26;
       const K = parseFloat(String(m.kutija || '').replace(',', '.'));
       const kb = rol ? Math.min(Math.max((K > 0 ? K : H * 0.1) * sc, 9), h * 0.5) : 0;
       const fy = y0 + kb, fh = h - kb;
@@ -1147,14 +1260,16 @@
       let o = '';
       if (rol) {
         o += `<rect x="${x0}" y="${y0}" width="${w}" height="${kb}" fill="#67e8f9" stroke="${plava}" stroke-width="1.5"/>`;
-        if (kb >= 11) o += `<text x="${x0 + w / 2}" y="${y0 + kb / 2 + 4}" text-anchor="middle" font-size="${Math.min(11, kb - 2)}" fill="#0f172a">kutija${K > 0 ? ' ' + K : ''}</text>`;
+        if (kb >= 11 && !mini) o += `<text x="${x0 + w / 2}" y="${y0 + kb / 2 + 4}" text-anchor="middle" font-size="${Math.min(11, kb - 2)}" fill="#0f172a">kutija${K > 0 ? ' ' + K : ''}</text>`;
         // desne kote: kutija + prozor
         const xr = x0 + w + 10;
+        if (!mini) {
         o += `<line x1="${xr}" y1="${y0}" x2="${xr}" y2="${y0 + h}" stroke="#0891b2" stroke-width="1"/>`;
         [y0, y0 + kb, y0 + h].forEach(yy => { o += `<line x1="${xr - 4}" y1="${yy}" x2="${xr + 4}" y2="${yy}" stroke="#0891b2"/>`; });
         if (K > 0) {
           o += `<text x="${xr + 6}" y="${y0 + kb / 2 + 4}" font-size="10" fill="#0891b2">${K}</text>`;
           if (H > K) o += `<text x="${xr + 15}" y="${fy + fh / 2}" text-anchor="middle" font-size="11" font-weight="bold" fill="#0891b2" transform="rotate(-90 ${xr + 15} ${fy + fh / 2})">${Math.round(H - K)}</text>`;
+        }
         }
       }
 
@@ -1225,6 +1340,7 @@
         kr.forEach((c, k) => { o += crtaj(c, ix + k * (cw + gap), iy, cw, ih); });
       }
 
+      if (mini) return `<svg xmlns="http://www.w3.org/2000/svg" width="${w + 6}" height="${h + 6}" viewBox="0 0 ${w + 6} ${h + 6}">${o}</svg>`;
       const yd = y0 + h + 12;
       o += `
         <line x1="${x0}" y1="${yd}" x2="${x0 + w}" y2="${yd}" stroke="#dc2626" stroke-width="1"/>
@@ -1274,8 +1390,8 @@
       renderMjere(true);
       const rows = document.querySelectorAll('#mjereList .mj-row');
       const prost = rows.length ? rows[rows.length - 1].querySelector('input[placeholder^="Prostorija"]') : null;
-      if (prost) prost.focus();
       await done;
+      otvoriPredloske(arr.length - 1);
     }
 
     async function deleteOtvor(idx) {
