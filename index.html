@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.9</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.10</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1626,10 +1626,11 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ unit: 'mm', format: 'a4' });
         stranice.forEach((c, k) => { if (k) doc.addPage(); doc.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297); });
-        const ime = `Sheme_${(p.name || 'nalog').replace(/[^\wčćšžđČĆŠŽĐ -]/g, '').trim().replace(/\s+/g, '_')}_${(p.date || '').replace(/\./g, '-').replace(/-$/, '')}.pdf`;
+        const asc = t => String(t || '').replace(/[čć]/g, 'c').replace(/[ČĆ]/g, 'C').replace(/š/g, 's').replace(/Š/g, 'S').replace(/ž/g, 'z').replace(/Ž/g, 'Z').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        const ime = `Sheme_${asc(p.name || 'nalog').replace(/[^\w -]/g, '').trim().replace(/\s+/g, '_')}_${(p.date || '').replace(/\./g, '-').replace(/-+$/, '')}.pdf`;
         const blob = doc.output('blob');
         pdfSpreman = { blob, ime, file: new File([blob], ime, { type: 'application/pdf' }) };
-        await podijeliPDF(true);
+        prikaziPdfModal();
       } catch (e) {
         alert('Greška pri izradi PDF-a: ' + ((e && e.message) || e));
       } finally {
@@ -1640,20 +1641,30 @@
       if (!pdfSpreman) return;
       const { file, blob, ime } = pdfSpreman;
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: ime }); zatvoriPdfModal(); return; }
+        try { await navigator.share({ files: [file] }); zatvoriPdfModal(); return; }
         catch (e) { if (e && e.name === 'AbortError') { zatvoriPdfModal(); return; } if (!prviPut) { alert('Dijeljenje nije uspjelo: ' + e.message); } }
       } else if (!prviPut) {
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ime; document.body.appendChild(a); a.click(); a.remove(); zatvoriPdfModal(); return;
       }
-      // prikaži prozor s gumbom (novi dodir je potreban za dijeljenje na iPhoneu)
+      prikaziPdfModal();
+    }
+    function otvoriPDF() {
+      if (!pdfSpreman) return;
+      const url = URL.createObjectURL(pdfSpreman.blob);
+      const w = window.open(url, '_blank');
+      if (!w) location.href = url;
+    }
+    function prikaziPdfModal() {
+      if (!pdfSpreman) return;
+      const { blob, ime } = pdfSpreman;
       let mo = document.getElementById('pdfModal');
       if (!mo) { mo = document.createElement('div'); mo.id = 'pdfModal'; mo.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(2,6,23,.85);display:flex;align-items:center;justify-content:center;padding:16px;'; document.body.appendChild(mo); }
-      const url = URL.createObjectURL(blob);
       mo.innerHTML = `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:18px;max-width:420px;width:100%;text-align:center;color:#fff;">
         <div style="font-size:16px;font-weight:bold;margin-bottom:6px;">✅ PDF je spreman</div>
         <div style="font-size:12px;color:#94a3b8;margin-bottom:14px;">${ime}</div>
-        <button type="button" onclick="podijeliPDF(false)" style="width:100%;padding:14px;border:none;border-radius:8px;background:#059669;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:8px;">📤 Podijeli / Spremi u Datoteke</button>
-        <a href="${url}" download="${ime}" target="_blank" style="display:block;padding:12px;border-radius:8px;background:#1e293b;color:#e2e8f0;text-decoration:none;font-weight:bold;margin-bottom:8px;">⬇️ Otvori / preuzmi PDF</a>
+        <button type="button" onclick="otvoriPDF()" style="width:100%;padding:14px;border:none;border-radius:8px;background:#059669;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:8px;">👁️ Otvori PDF</button>
+        <div style="font-size:11px;color:#94a3b8;margin:-2px 0 10px;">Otvara PDF – zatim ikona dijeljenja ⬆️ → Spremi u Datoteke</div>
+        <button type="button" onclick="podijeliPDF(false)" style="width:100%;padding:12px;border:none;border-radius:8px;background:#1e293b;color:#e2e8f0;font-size:14px;font-weight:bold;cursor:pointer;margin-bottom:8px;">📤 Podijeli izravno</button>
         <button type="button" onclick="zatvoriPdfModal()" style="background:none;border:none;color:#94a3b8;cursor:pointer;">Zatvori</button>
       </div>`;
       mo.style.display = 'flex';
