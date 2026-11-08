@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.14</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.15</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -362,7 +362,10 @@
                   <button type="button" onclick="addOtvor()" style="background:#0284c7; color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">+ Otvor</button>
                 </div>
               </div>
-              <div id="laserStatus" style="font-size:11px; color:var(--text-muted); margin:6px 0;">Laser nije spojen</div>
+              <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; margin:6px 0;">
+                <div id="laserStatus" style="font-size:11px; color:var(--text-muted);">Laser nije spojen</div>
+                <div id="mjSaveStatus" style="font-size:11px; font-weight:bold; color:#34d399;">Mjere se spremaju automatski</div>
+              </div>
               <div id="mjereList"></div>
               <datalist id="bojeLista"><option>Bijelo</option><option>Orah</option><option>Zlatni hrast</option><option>Antracit</option><option>Bijelo/Antracit</option><option>Bijelo/Orah</option><option>Bijelo/Zlatni hrast</option></datalist>
               <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Dodirni 🖼 Predložak za odabir sheme otvora (pogled iznutra). "ručno uredi" služi samo za posebne slučajeve. Dodirni krilo za promjenu.</div>
@@ -1319,12 +1322,15 @@
       return (p && p.mjere) ? p.mjere : [];
     }
     async function mjSet(arr) {
-      if (mjMode === 'new') { draftMjere = arr; spremiSkicu(); return; }
+      const stat = (t, c) => { const el = document.getElementById('mjSaveStatus'); if (el) { el.textContent = t; el.style.color = c; } };
+      const sad = () => new Date().toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+      if (mjMode === 'new') { draftMjere = arr; spremiSkicu(); stat('💾 Sačuvano na uređaju – na kraju pritisni SPREMI MJERENJE', '#fbbf24'); return; }
       const p = projects.find(item => item.id === selectedId);
       if (!p) return;
       p.mjere = arr;
-      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); }
-      catch (e) { alert('Greška pri spremanju mjera: ' + e.message); }
+      stat('⏳ Spremam...', '#94a3b8');
+      try { await db.collection("nalozi").doc(selectedId).update({ mjere: arr }); stat('✅ Spremljeno u nalog ' + sad(), '#34d399'); }
+      catch (e) { stat('❌ Nije spremljeno – provjeri internet', '#f87171'); alert('Greška pri spremanju mjera: ' + e.message); }
     }
     function mjMoveTo(mode) {
       mjMode = mode;
