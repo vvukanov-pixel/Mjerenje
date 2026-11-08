@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.7</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.8</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -268,27 +268,28 @@
           </div>
 
           <div class="preview-grid" id="previewGrid"></div>
+          <div id="draftInfo" style="display:none;margin:4px 0 10px;padding:8px 10px;border-radius:6px;background:rgba(56,189,248,.12);border:1px solid #38bdf8;color:#7dd3fc;font-size:12px;"></div>
           <div id="mjNewSlot" style="margin-bottom:12px;"></div>
 
           <div class="form-group">
             <label>Klijent / Objekt</label>
-            <input type="text" id="cName" required placeholder="npr. ELLABO IND ili Tomičić">
+            <input type="text" id="cName" oninput="spremiSkicu()" required placeholder="npr. ELLABO IND ili Tomičić">
           </div>
 
           <div style="display: flex; gap: 8px;">
             <div class="form-group" style="flex:1;">
               <label>Telefon</label>
-              <input type="text" id="cPhone" placeholder="095...">
+              <input type="text" id="cPhone" oninput="spremiSkicu()" placeholder="095...">
             </div>
             <div class="form-group" style="flex:1;">
               <label>Lokacija</label>
-              <input type="text" id="cLoc" placeholder="npr. Lapad">
+              <input type="text" id="cLoc" oninput="spremiSkicu()" placeholder="npr. Lapad">
             </div>
           </div>
 
           <div class="form-group">
             <label>Opće napomene s mjerenja</label>
-            <textarea id="cNotes" rows="3" placeholder="Boja, profil, staklo, situacija..."></textarea>
+            <textarea id="cNotes" oninput="spremiSkicu()" rows="3" placeholder="Boja, profil, staklo, situacija..."></textarea>
           </div>
 
           <button type="submit" id="btnSubmit" class="btn-submit">💾 SPREMI MJERENJE</button>
@@ -1214,6 +1215,38 @@
     let mjereRenderedFor = null;
     let mjMode = 'detail';      // 'detail' = otvoreni nalog, 'new' = Novo mjerenje
     let draftMjere = [];
+    // --- automatsko čuvanje nedovršenog mjerenja na uređaju (sve u try/catch – nikad ne smije blokirati aplikaciju) ---
+    const DRAFT_KEY = 'terenrad_nedovrseno_v1';
+    function spremiSkicu() {
+      try {
+        const f = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+        const data = { t: Date.now(), mjere: draftMjere, name: f('cName'), phone: f('cPhone'), loc: f('cLoc'), notes: f('cNotes') };
+        const prazno = !data.mjere.length && !data.name && !data.phone && !data.loc && !data.notes;
+        if (prazno) localStorage.removeItem(DRAFT_KEY); else localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      } catch (e) { /* bez memorije – samo nastavi */ }
+    }
+    function obrisiSkicu() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+    function vratiSkicu() {
+      try {
+        if (draftMjere.length) return;
+        const raw = localStorage.getItem(DRAFT_KEY); if (!raw) return;
+        const d = JSON.parse(raw); if (!d || typeof d !== 'object') return;
+        const set = (id, v) => { const el = document.getElementById(id); if (el && !el.value && v) el.value = v; };
+        set('cName', d.name); set('cPhone', d.phone); set('cLoc', d.loc); set('cNotes', d.notes);
+        if (Array.isArray(d.mjere)) draftMjere = d.mjere;
+        const kad = new Date(d.t || Date.now());
+        const st = document.getElementById('laserStatus');
+        const info = document.getElementById('draftInfo');
+        if (info) { info.style.display = 'block'; info.innerHTML = `↩️ Vraćeno nedovršeno mjerenje od ${kad.toLocaleString('hr-HR')}. <button type="button" onclick="odbaciSkicu()" style="background:#7f1d1d;color:#fff;border:none;border-radius:5px;padding:3px 8px;cursor:pointer;margin-left:6px;">Odbaci</button>`; }
+      } catch (e) { obrisiSkicu(); }
+    }
+    function odbaciSkicu() {
+      if (!confirm('Odbaciti nedovršeno mjerenje?')) return;
+      obrisiSkicu(); draftMjere = [];
+      ['cName', 'cPhone', 'cLoc', 'cNotes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const info = document.getElementById('draftInfo'); if (info) info.style.display = 'none';
+      renderMjere(true);
+    }
 
     function mjGet() {
       if (mjMode === 'new') return draftMjere;
@@ -1221,7 +1254,7 @@
       return (p && p.mjere) ? p.mjere : [];
     }
     async function mjSet(arr) {
-      if (mjMode === 'new') { draftMjere = arr; return; }
+      if (mjMode === 'new') { draftMjere = arr; spremiSkicu(); return; }
       const p = projects.find(item => item.id === selectedId);
       if (!p) return;
       p.mjere = arr;
@@ -1332,7 +1365,7 @@
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[idx]) return;
       arr[idx][key] = val;
-      if (mjMode === 'new') draftMjere = arr;
+      if (mjMode === 'new') { draftMjere = arr; clearTimeout(window.__skT); window.__skT = setTimeout(spremiSkicu, 600); }
       else { const p = projects.find(item => item.id === selectedId); if (p) p.mjere = arr; }
       renderCrtez();
     }
@@ -2477,6 +2510,7 @@
       document.getElementById('admin-view').classList.remove('active');
       document.getElementById('tab-monter').classList.add('active');
       document.getElementById('tab-admin').classList.remove('active');
+      vratiSkicu();
       mjMoveTo('new');
     }
 
@@ -2572,6 +2606,8 @@
         }
         uploadedImages = [];
         draftMjere = [];
+        obrisiSkicu();
+        { const info = document.getElementById('draftInfo'); if (info) info.style.display = 'none'; }
         renderPreviews();
         document.querySelector('form').reset();
         showAdminView();
