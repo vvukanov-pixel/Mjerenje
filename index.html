@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.20</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.21</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1173,6 +1173,7 @@
       return { 'Prozor': 'Prozori', 'ALU otvori': 'Prozori', 'Balkonska vrata': 'Balkonska vrata', 'Smart-Slide': 'Smart-Slide', 'HST': 'HST', 'Grilje': 'Grilje', 'Ulazna vrata': 'Vrata', 'Sobna vrata': 'Vrata', 'Garažna vrata': 'Garažna', 'Ostalo': 'Prozori' }[v] || 'Prozori';
     }
     async function promijeniVrstu(i, v) {
+      if (!v) return;
       const arr = mjGet().map(x => Object.assign({}, x));
       const m = arr[i]; if (!m) return;
       m.vrsta = v;
@@ -1311,6 +1312,7 @@
         if (draftMjere.length) return;
         const raw = localStorage.getItem(DRAFT_KEY); if (!raw) return;
         const d = JSON.parse(raw); if (!d || typeof d !== 'object') return;
+        if (d.t && Date.now() - d.t > 24 * 3600 * 1000) { obrisiSkicu(); return; }
         const set = (id, v) => { const el = document.getElementById(id); if (el && !el.value && v) el.value = v; };
         set('cName', d.name); set('cPhone', d.phone); set('cLoc', d.loc); set('cNotes', d.notes);
         if (Array.isArray(d.mjere)) draftMjere = d.mjere;
@@ -1380,7 +1382,7 @@
             <div class="mj-head">
               <b style="font-size:13px;">${i + 1}.</b>
               <select style="flex:1; min-width:0; ${vrstaOf(m) ? '' : 'border-color:#f59e0b; color:#fbbf24;'}" onchange="promijeniVrstu(${i}, this.value)">
-                ${vrstaOf(m) ? '' : '<option value="" selected disabled>— Proizvod —</option>'}
+                ${vrstaOf(m) ? '' : '<option value="" selected>— Proizvod —</option>'}
                 ${VRSTE.map(v => `<option ${v === vrstaOf(m) ? 'selected' : ''}>${v}</option>`).join('')}
               </select>
               ${imaStranu(m.tip) ? `<select style="width:auto;" onchange="saveMjera(${i}, 'strana', this.value)">
