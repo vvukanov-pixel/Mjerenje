@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.17</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.18</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1605,9 +1605,28 @@
       if (sketch) sketch.style.display = (hasImages || !svgs.length) ? 'flex' : 'none';
     }
 
+    // laseri u "keyboard" načinu (npr. Leica DISTO) mogu poslati "1.234 m", "1234 mm" ili "1,234" – sve pretvori u mm
+    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g'];
+    function normalizirajMjeru(v) {
+      const t = String(v || '').trim().toLowerCase();
+      if (!t) return '';
+      const broj = parseFloat(t.replace(',', '.').replace(/[^0-9.\-]/g, ''));
+      if (isNaN(broj)) return v;
+      let mm;
+      if (/mm/.test(t)) mm = broj;
+      else if (/cm/.test(t)) mm = broj * 10;
+      else if (/m\b|m$/.test(t) || (/[.,]/.test(t) && broj < 20)) mm = broj * 1000;
+      else mm = broj;
+      return String(Math.round(mm));
+    }
+
     async function saveMjera(idx, key, val) {
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!arr[idx]) return;
+      if (typeof val === 'string' && MJ_BROJCANA.includes(key)) {
+        const n = normalizirajMjeru(val);
+        if (n !== val) { val = n; const inp = document.querySelector(`#mjereList .mj-num[data-idx="${idx}"][data-key="${key}"]`); if (inp) inp.value = n; }
+      }
       arr[idx][key] = (typeof val === 'string') ? val.trim() : val;
       const done = mjSet(arr);
       renderCrtez();
