@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.16</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.17</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1786,8 +1786,8 @@
     function otvoriPDF() {
       if (!pdfSpreman) return;
       const url = pdfSpreman.url || URL.createObjectURL(pdfSpreman.blob);
-      const w = window.open(url, '_blank');
-      if (!w) location.href = url;
+      zatvoriPdfModal();
+      otvoriDokumentUnutra(url);
     }
     function prikaziPdfModal() {
       if (!pdfSpreman) return;
@@ -2262,8 +2262,31 @@
         openLightbox(docUrl);
         return;
       }
-      // PDF ili drugi dokument – otvori u novom tabu (preglednik ima svoj zoom)
-      window.open(docUrl, '_blank');
+      // PDF ili drugi dokument – prikaži unutar aplikacije s gumbom za zatvaranje (u Bluefyju novi tab nema izlaza)
+      otvoriDokumentUnutra(docUrl);
+    }
+    function otvoriDokumentUnutra(url) {
+      let mo = document.getElementById('docViewer');
+      if (!mo) {
+        mo = document.createElement('div'); mo.id = 'docViewer';
+        mo.style.cssText = 'position:fixed;inset:0;z-index:10003;background:#0f172a;display:flex;flex-direction:column;';
+        document.body.appendChild(mo);
+      }
+      mo.innerHTML = `<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;background:#1e293b;border-bottom:1px solid #334155;">
+          <b style="color:#fff;font-size:15px;">📄 Dokument</b>
+          <div style="display:flex;gap:8px;">
+            <a href="${url}" target="_blank" rel="noopener" style="background:#334155;color:#e2e8f0;text-decoration:none;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:bold;">↗ Zasebno</a>
+            <button type="button" onclick="zatvoriDokument()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:16px;font-weight:bold;cursor:pointer;">✕ Zatvori</button>
+          </div>
+        </div>
+        <iframe src="${url}" style="flex:1;width:100%;border:none;background:#fff;"></iframe>`;
+      mo.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    function zatvoriDokument() {
+      const mo = document.getElementById('docViewer');
+      if (mo) { mo.style.display = 'none'; mo.innerHTML = ''; }
+      document.body.style.overflow = '';
     }
 
     function openOfferFull() {
