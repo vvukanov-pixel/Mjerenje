@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.18</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.19</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1086,7 +1086,9 @@
       const arr = mjGet().map(x => Object.assign({}, x));
       if (!p || !arr[i]) return;
       arr[i].tip = p[0]; arr[i].krila = p[1].slice();
+      const biloAlu = arr[i].vrsta === 'ALU otvori';
       arr[i].vrsta = predlozakKat === 'Vrata' ? (/Sobna/.test(p[0]) ? 'Sobna vrata' : 'Ulazna vrata') : ({ 'Prozori': 'Prozor', 'Balkonska vrata': 'Balkonska vrata', 'Smart-Slide': 'Smart-Slide', 'HST': 'HST', 'Grilje': 'Grilje', 'Garažna': 'Garažna vrata' }[predlozakKat] || 'Prozor');
+      if (biloAlu && (predlozakKat === 'Prozori' || predlozakKat === 'Balkonska vrata')) arr[i].vrsta = 'ALU otvori';
       zatvoriPredloske();
       const done = mjSet(arr); renderMjere(true);
       const prost = document.querySelectorAll('#mjereList .mj-row')[i];
@@ -1145,7 +1147,8 @@
       return `<div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;">${btn('V-D', 'LIJEVO OTVARANJE', true)}${btn('V-L', 'DESNO OTVARANJE', false)}</div>`;
     }
 
-    const VRSTE = ['Prozor', 'Balkonska vrata', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Ostalo'];
+    const VRSTE = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Komarnik', 'Ostalo'];
+    const KOMARNICI = ['Fiksni (okvirni)', 'Rolo – okomiti', 'Rolo – vodoravni (vrata)', 'Plise', 'Krilni (vrata)', 'Klizni'];
     function vrstaOf(m) {
       if (m.vrsta && VRSTE.includes(m.vrsta)) return m.vrsta;
       const t = m.tip || '';
@@ -1160,7 +1163,7 @@
       return 'Prozor';
     }
     function katZaVrstu(v) {
-      return { 'Prozor': 'Prozori', 'Balkonska vrata': 'Balkonska vrata', 'Smart-Slide': 'Smart-Slide', 'HST': 'HST', 'Grilje': 'Grilje', 'Ulazna vrata': 'Vrata', 'Sobna vrata': 'Vrata', 'Garažna vrata': 'Garažna', 'Ostalo': 'Prozori' }[v] || 'Prozori';
+      return { 'Prozor': 'Prozori', 'ALU otvori': 'Prozori', 'Balkonska vrata': 'Balkonska vrata', 'Smart-Slide': 'Smart-Slide', 'HST': 'HST', 'Grilje': 'Grilje', 'Ulazna vrata': 'Vrata', 'Sobna vrata': 'Vrata', 'Garažna vrata': 'Garažna', 'Ostalo': 'Prozori' }[v] || 'Prozori';
     }
     async function promijeniVrstu(i, v) {
       const arr = mjGet().map(x => Object.assign({}, x));
@@ -1175,9 +1178,11 @@
       else if (v === 'Grilje') set('Grilje', ['G', 'G']);
       else if (v === 'Smart-Slide') set('Klizna stijena Smart-Slide', ['K-D', 'F']);
       else if (v === 'HST') set('HST stijena', ['K-D', 'F']);
+      else if (v === 'ALU otvori') set('Jednokrilni prozor', ['ON-L']);
+      else if (v === 'Komarnik') { set('Komarnik', ['F']); m.komarnik = m.komarnik || KOMARNICI[0]; m.roleta = false; }
       else set('Ostalo', ['F']);
       const done = mjSet(arr); renderMjere(true); await done;
-      if (!/Sobna|Garažna/.test(v)) otvoriPredloske(i);
+      if (!/Sobna|Garažna|Komarnik/.test(v)) otvoriPredloske(i);
     }
 
     const SOBNA_SIRINE = [682, 782, 882, 982];
@@ -1382,11 +1387,11 @@
               <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
             </div>
             ${!vrstaOf(m) ? '<div class="mj-lbl" style="margin-bottom:6px;color:#fbbf24;">↑ Prvo odaberi proizvod</div>' : `<div class="mj-krila">
-              ${/Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
+              ${/Komarnik/.test(m.tip || '') ? `<span class="mj-lbl">Vrsta komarnika:</span><select onchange="postaviPolje(${i}, 'komarnik', this.value)" style="padding:8px;font-size:14px;">${KOMARNICI.map(k => `<option ${k === (m.komarnik || KOMARNICI[0]) ? 'selected' : ''}>${k}</option>`).join('')}</select>` : /Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
                 ${crtezOtvora(Object.assign({}, m, { sirina: m.sirina || predlozakVelicina('', krilaOf(m).length)[0], visina: m.visina || 1300 }), i, { mini: true, size: 44 })}
                 <b style="color:#0f172a;font-size:13px;">🖼 Predložak</b>
               </button>`}
-              ${/Sobna/.test(m.tip || '') ? sobnaStrana(m, i) : jeVrataTip(m.tip) ? '' : `<label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
+              ${/Komarnik/.test(m.tip || '') ? '' : /Sobna/.test(m.tip || '') ? sobnaStrana(m, i) : jeVrataTip(m.tip) ? '' : `<label class="mj-lbl" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" style="width:auto;" ${m.roleta ? 'checked' : ''} onchange="postaviPolje(${i}, 'roleta', this.checked)"> Roleta</label>
               <button type="button" onclick="toggleRucno(${i})" style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;text-decoration:underline;">${rucnoKrila.has(i) ? 'sakrij ručno' : 'ručno uredi'}</button>`}
             </div>`}
             ${jeVrataTip(m.tip) || /Sobna/.test(m.tip || '') || !rucnoKrila.has(i) ? '' : `
@@ -1455,7 +1460,7 @@
       const K = parseFloat(String(m.kutija || '').replace(',', '.'));
       const kb = rol ? Math.min(Math.max((K > 0 ? K : H * 0.1) * sc, 9), h * 0.5) : 0;
       const fy = y0 + kb, fh = h - kb;
-      const naslov = `${i + 1}. ${tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
+      const naslov = `${i + 1}. ${m.vrsta === 'ALU otvori' ? 'ALU ' : ''}${/Komarnik/.test(tip) ? 'Komarnik – ' + (m.komarnik || KOMARNICI[0]) : tip}${imaStranu(tip) ? ' ' + (m.strana === 'D' ? 'D' : 'L') : ''}${m.prostorija ? ' – ' + m.prostorija : ''}`;
       const podnaslov = [/Garažna/.test(tip) ? ['c1', 'c2', 'd'].filter(k => m[k] !== undefined && m[k] !== '').map(k => k.toUpperCase() + ' ' + m[k]).join('  ') : '', m.boja, rol ? ('roleta' + (K > 0 ? ' – kutija ' + K + ' u mjeri' : '')) : '', m.dubina ? 'špaleta ' + m.dubina : ''].filter(Boolean).join(' · ');
       let svgW = Math.max(w + 54 + (rol ? 34 : 0), 190, naslov.length * 6.3 + 10);
       svgW = Math.max(svgW, podnaslov.length * 5.6 + 10);
@@ -1523,7 +1528,18 @@
         return r;
       };
 
-      if (/Garažna/.test(tip)) {
+      if (/Komarnik/.test(tip)) {
+        o += `<rect x="${x0}" y="${fy}" width="${w}" height="${fh}" fill="#f8fafc" stroke="#475569" stroke-width="3"/>`;
+        const pid = 'mrezica' + i + (mini ? 'm' : '');
+        o += `<defs><pattern id="${pid}" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0,0 L6,0 M0,0 L0,6" stroke="#94a3b8" stroke-width="0.7"/></pattern></defs>`;
+        o += `<rect x="${x0 + 4}" y="${fy + 4}" width="${w - 8}" height="${fh - 8}" fill="url(#${pid})" stroke="#64748b" stroke-width="1"/>`;
+        const kt = m.komarnik || KOMARNICI[0];
+        if (/Rolo – okomiti/.test(kt)) o += `<rect x="${x0}" y="${fy - 8}" width="${w}" height="8" fill="#94a3b8"/>`;
+        if (/Rolo – vodoravni/.test(kt)) o += `<rect x="${x0 - 6}" y="${fy}" width="6" height="${fh}" fill="#94a3b8"/>`;
+        if (/Plise/.test(kt)) for (let xx = x0 + 6; xx < x0 + w - 4; xx += 7) o += `<line x1="${xx}" y1="${fy + 4}" x2="${xx}" y2="${fy + fh - 4}" stroke="#64748b" stroke-width="0.6"/>`;
+        if (/Krilni/.test(kt)) o += `<polyline points="${x0 + w - 6},${fy + 6} ${x0 + 6},${fy + fh / 2} ${x0 + w - 6},${fy + fh - 6}" fill="none" stroke="#475569" stroke-dasharray="4 3"/>`;
+        if (/Klizni/.test(kt)) o += `<line x1="${x0 + w * 0.3}" y1="${fy + fh / 2}" x2="${x0 + w * 0.7}" y2="${fy + fh / 2}" stroke="#1e3a8a" stroke-width="2"/><polygon points="${x0 + w * 0.7},${fy + fh / 2} ${x0 + w * 0.7 - 7},${fy + fh / 2 - 4} ${x0 + w * 0.7 - 7},${fy + fh / 2 + 4}" fill="#1e3a8a"/>`;
+      } else if (/Garažna/.test(tip)) {
         o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e2e8f0" stroke="${plava}" stroke-width="3"/>`;
         for (let k = 1; k < 5; k++) o += `<line x1="${x0}" y1="${y0 + h * k / 5}" x2="${x0 + w}" y2="${y0 + h * k / 5}" stroke="#64748b" stroke-width="1"/>`;
       } else {
@@ -1753,6 +1769,7 @@
             const op = [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip: ' + m.g_tip : ''].filter(Boolean).join(' · ');
             if (op) info.push(op);
           }
+          if (/Komarnik/.test(m.tip || '')) info.push('Komarnik: ' + (m.komarnik || KOMARNICI[0]));
           if (m.boja) info.push('Boja: ' + m.boja);
           let lines = [];
           info.forEach(t => lines = lines.concat(prelomi(ctx, t, colW)));
