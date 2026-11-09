@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.21</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.22</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1308,22 +1308,36 @@
     }
     function obrisiSkicu() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
     function vratiSkicu() {
+      // ne vraća automatski – samo ponudi (da se staro mjerenje ne pojavi samo od sebe)
       try {
-        if (draftMjere.length) return;
-        const raw = localStorage.getItem(DRAFT_KEY); if (!raw) return;
-        const d = JSON.parse(raw); if (!d || typeof d !== 'object') return;
-        if (d.t && Date.now() - d.t > 24 * 3600 * 1000) { obrisiSkicu(); return; }
-        const set = (id, v) => { const el = document.getElementById(id); if (el && !el.value && v) el.value = v; };
-        set('cName', d.name); set('cPhone', d.phone); set('cLoc', d.loc); set('cNotes', d.notes);
-        if (Array.isArray(d.mjere)) draftMjere = d.mjere;
-        const kad = new Date(d.t || Date.now());
-        const st = document.getElementById('laserStatus');
         const info = document.getElementById('draftInfo');
-        if (info) { info.style.display = 'block'; info.innerHTML = `↩️ Vraćeno nedovršeno mjerenje od ${kad.toLocaleString('hr-HR')}. <button type="button" onclick="odbaciSkicu()" style="background:#7f1d1d;color:#fff;border:none;border-radius:5px;padding:3px 8px;cursor:pointer;margin-left:6px;">Odbaci</button>`; }
+        if (draftMjere.length) return;
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) { if (info) info.style.display = 'none'; return; }
+        const d = JSON.parse(raw); if (!d || typeof d !== 'object') { obrisiSkicu(); return; }
+        if (d.t && Date.now() - d.t > 24 * 3600 * 1000) { obrisiSkicu(); return; }
+        const kad = new Date(d.t || Date.now());
+        const opis = [d.name, (d.mjere || []).length ? (d.mjere.length + ' otvora') : ''].filter(Boolean).join(', ');
+        if (info) {
+          info.style.display = 'block';
+          info.innerHTML = `Imaš nedovršeno mjerenje od ${kad.toLocaleString('hr-HR')}${opis ? ' (' + escAttr(opis) + ')' : ''}.
+            <button type="button" onclick="primijeniSkicu()" style="background:#0284c7;color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;margin-left:6px;font-weight:bold;">↩️ Vrati</button>
+            <button type="button" onclick="odbaciSkicu(true)" style="background:#7f1d1d;color:#fff;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;margin-left:4px;">Odbaci</button>`;
+        }
       } catch (e) { obrisiSkicu(); }
     }
-    function odbaciSkicu() {
-      if (!confirm('Odbaciti nedovršeno mjerenje?')) return;
+    function primijeniSkicu() {
+      try {
+        const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); if (!d) return;
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+        set('cName', d.name); set('cPhone', d.phone); set('cLoc', d.loc); set('cNotes', d.notes);
+        draftMjere = Array.isArray(d.mjere) ? d.mjere : [];
+        const info = document.getElementById('draftInfo'); if (info) info.style.display = 'none';
+        renderMjere(true);
+      } catch (e) { obrisiSkicu(); }
+    }
+    function odbaciSkicu(bezPitanja) {
+      if (!bezPitanja && !confirm('Odbaciti nedovršeno mjerenje?')) return;
       obrisiSkicu(); draftMjere = [];
       ['cName', 'cPhone', 'cLoc', 'cNotes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       const info = document.getElementById('draftInfo'); if (info) info.style.display = 'none';
