@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.19</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.20</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -963,7 +963,7 @@
     const TIPOVI_OTVORA = ['Fiksni prozor', 'Jednokrilni prozor', 'Dvokrilni prozor', 'Trokrilni prozor', 'Klizna stijena Smart-Slide', 'HST stijena', 'Balkonska jednokrilna vrata', 'Balkonska dvokrilna vrata', 'Alu stijena', 'Grilje', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
     const BOJE = ['Bijelo', 'Orah', 'Zlatni hrast', 'Antracit', 'Bijelo/Antracit', 'Bijelo/Orah', 'Bijelo/Zlatni hrast'];
     // krilo: F fiksno, O okretno, ON okretno-nagibno, N nagibno, K klizno, G grilje; -L/-D = strana kvake (kod K smjer klizanja)
-    const KRILA_CIKLUS = ['F', 'ON-L', 'ON-D', 'O-L', 'O-D', 'N', 'K-D', 'K-L', 'V-L', 'V-D', 'G'];
+    const KRILA_CIKLUS = ['F', 'ON-L', 'ON-D', 'O-L', 'O-D', 'N', 'K-D', 'K-L', 'V-L', 'V-D', 'G', 'GS-D', 'GS-L'];
     function jeVrataTip(tip) { return /Garažna/.test(tip || ''); }
     function imaStranu(tip) { return false; }
     function defaultKrila(tip, strana) {
@@ -985,6 +985,7 @@
       const [t, k] = c.split('-');
       const naziv = { ON: 'OZ', O: 'Z', N: 'OT', F: 'F', V: 'V', G: 'G' }[t];
       if (t === 'K') return k === 'L' ? 'K ←' : 'K →';
+      if (t === 'GS') return k === 'L' ? 'GS ←' : 'GS →';
       return naziv + (k ? '-' + k : '');
     }
     function opcijeTipa(cur) {
@@ -1024,7 +1025,13 @@
         ['HST stijena', ['F', 'K-L', 'K-D', 'F']], ['HST stijena', ['F']]
       ],
       'Grilje': [
-        ['Grilje', ['G']], ['Grilje', ['G', 'G']], ['Grilje', ['G', 'G', 'G']], ['Grilje', ['G', 'G', 'G', 'G']]
+        ['Grilje', ['G']], ['Grilje', ['G', 'G']], ['Grilje', ['G', 'G', 'G']], ['Grilje', ['G', 'G', 'G', 'G']],
+        ['Grilje sklopive', ['GS-D', 'GS-D']], ['Grilje sklopive', ['GS-L', 'GS-L']],
+        ['Grilje sklopive', ['GS-D', 'GS-D', 'GS-D']], ['Grilje sklopive', ['GS-L', 'GS-L', 'GS-L']],
+        ['Grilje sklopive', ['GS-D', 'GS-D', 'GS-D', 'GS-D']], ['Grilje sklopive', ['GS-L', 'GS-L', 'GS-L', 'GS-L']],
+        ['Grilje sklopive', ['GS-D', 'GS-D', 'GS-D', 'GS-D', 'GS-D']], ['Grilje sklopive', ['GS-L', 'GS-L', 'GS-L', 'GS-L', 'GS-L']],
+        ['Grilje sklopive', ['GS-D', 'GS-D', 'GS-D', 'GS-D', 'GS-D', 'GS-D']], ['Grilje sklopive', ['GS-L', 'GS-L', 'GS-L', 'GS-L', 'GS-L', 'GS-L']],
+        ['Grilje sklopive', ['GS-D', 'GS-D', 'GS-L', 'GS-L']], ['Grilje sklopive', ['GS-D', 'GS-D', 'GS-D', 'GS-L', 'GS-L', 'GS-L']]
       ],
       'Vrata': [
         ['Sobna vrata', ['V-L']], ['Sobna vrata', ['V-D']], ['Ulazna vrata', ['V-L']], ['Ulazna vrata', ['V-D']],
@@ -1036,7 +1043,7 @@
     function predlozakVelicina(kat, n) {
       if (kat === 'Balkonska vrata') return [800 * n, 2200];
       if (kat === 'Smart-Slide' || kat === 'HST') return [n >= 4 ? 4200 : (n === 1 ? 1100 : 2600), 2200];
-      if (kat === 'Grilje') return [550 * n, 1300];
+      if (kat === 'Grilje') return [500 * n, 1400];
       if (kat === 'Vrata') return [900 * n, 2100];
       if (kat === 'Garažna') return [2500, 2125];
       return [650 * n, 1300];
@@ -1486,6 +1493,22 @@
       const crtaj = (c, x, y, cw, ch) => {
         let r = '';
         const [t, k] = c.split('-');
+        if (t === 'GS') {
+          // sklopive (harmonika) grilje: lamele, srednja prečka, isprekidani trokut (vrh na strani šarke) i strelica smjera slaganja
+          const smeda = '#4a2c1d';
+          r += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="#e5e7eb" stroke="${smeda}" stroke-width="2"/>`;
+          const sy = y + ch / 2;
+          for (let yy = y + 4; yy < y + ch - 2; yy += 4.5) { if (Math.abs(yy - sy) > 4) r += `<line x1="${x + 2}" y1="${yy}" x2="${x + cw - 2}" y2="${yy}" stroke="#9ca3af" stroke-width="0.7"/>`; }
+          r += `<rect x="${x}" y="${sy - 3}" width="${cw}" height="6" fill="#7c4a2d" stroke="${smeda}" stroke-width="0.8"/>`;
+          const desno = k !== 'L';
+          const vrhX = desno ? x + 3 : x + cw - 3, krajX = desno ? x + cw - 3 : x + 3;
+          r += `<line x1="${krajX}" y1="${y + 3}" x2="${vrhX}" y2="${sy - 4}" stroke="#111827" stroke-width="1.1" stroke-dasharray="5 4"/>`;
+          r += `<line x1="${vrhX}" y1="${sy + 4}" x2="${krajX}" y2="${y + ch - 3}" stroke="#111827" stroke-width="1.1" stroke-dasharray="5 4"/>`;
+          const ay = sy - 9, a1 = x + cw * (desno ? 0.25 : 0.75), a2 = x + cw * (desno ? 0.75 : 0.25), dir = desno ? 1 : -1;
+          r += `<line x1="${a1}" y1="${ay}" x2="${a2}" y2="${ay}" stroke="#111827" stroke-width="2"/>`;
+          r += `<polygon points="${a2},${ay} ${a2 - 6 * dir},${ay - 4} ${a2 - 6 * dir},${ay + 4}" fill="#111827"/>`;
+          return r;
+        }
         if (t === 'G') {
           r += `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="#f1f5f9" stroke="#0369a1" stroke-width="1.2"/>`;
           for (let yy = y + 5; yy < y + ch - 2; yy += 5) r += `<line x1="${x + 3}" y1="${yy}" x2="${x + cw - 3}" y2="${yy}" stroke="#94a3b8" stroke-width="0.8"/>`;
@@ -1543,7 +1566,7 @@
         o += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#e2e8f0" stroke="${plava}" stroke-width="3"/>`;
         for (let k = 1; k < 5; k++) o += `<line x1="${x0}" y1="${y0 + h * k / 5}" x2="${x0 + w}" y2="${y0 + h * k / 5}" stroke="#64748b" stroke-width="1"/>`;
       } else {
-        o += `<rect x="${x0}" y="${fy}" width="${w}" height="${fh}" fill="#e0f2fe" stroke="${plava}" stroke-width="3"/>`;
+        o += `<rect x="${x0}" y="${fy}" width="${w}" height="${fh}" fill="${/Grilje/.test(tip) ? '#6b4430' : '#e0f2fe'}" stroke="${/Grilje/.test(tip) ? '#3b2416' : plava}" stroke-width="3"/>`;
         const ok = 4, ix = x0 + ok, iw = w - 2 * ok;
         let iy = fy + ok, ih = fh - 2 * ok;
         if (m.nadsvjetlo) {
