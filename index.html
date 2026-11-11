@@ -234,7 +234,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.22</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.23</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1445,6 +1445,7 @@
             </div>`}
             ${upozorenjaMjera(m, i)}
             ${/Sobna/.test(m.tip || '') ? sobnaPodsjetnik(m) : ''}
+            ${fotoBlok(m, i)}
             <input style="width:100%; margin-top:6px; font-size:13px;" placeholder="Napomena (npr. kvaka lijevo, bez praga...)" value="${escAttr(m.napomena)}" onchange="saveMjera(${i}, 'napomena', this.value)">
           </div>`).join('');
       }
@@ -1794,6 +1795,7 @@
             ctx.font = '19px Helvetica, Arial, sans-serif'; ctx.fillStyle = '#475569';
             gl.slice(1 + (op ? prelomi(ctx, op, fw).length : 0)).forEach(t => { ctx.fillText(t, M, yy + 20); yy += 28; });
             y = yy + 20; col = 0; redVisina = 0;
+            if (m.foto && m.foto.url) { try { const r = await fotoUPdf(ctx, m, i, y, W, H, M, novaStranica, () => ctx); ctx = r.ctx; y = r.y; } catch (e) {} }
             continue;
           }
           ctx.font = '22px Helvetica, Arial, sans-serif';
@@ -1824,6 +1826,10 @@
           lines.forEach((t, k) => { ctx.fillStyle = k === 0 ? '#0f172a' : '#334155'; ctx.font = (k === 0 ? 'bold ' : '') + '22px Helvetica, Arial, sans-serif'; ctx.fillText(t, x, yy + 22); yy += 30; });
           redVisina = Math.max(redVisina, blokH);
           if (col === 0) col = 1; else { col = 0; y += redVisina; redVisina = 0; }
+          if (m.foto && m.foto.url) {
+            if (col === 1) { col = 0; y += redVisina; redVisina = 0; }
+            try { const r = await fotoUPdf(ctx, m, i, y, W, H, M, novaStranica, () => ctx); ctx = r.ctx; y = r.y; } catch (e) {}
+          }
         }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -1881,6 +1887,322 @@
     }
     function zatvoriPdfModal() { const mo = document.getElementById('pdfModal'); if (mo) mo.style.display = 'none'; }
 
+    // --- FOTO-MJERE: slika otvora + kućice s mjerama na slici (dodatak – ne dira ostale mjere) ---
+    const FOTO_NAZIVI = ['Š gore', 'Š sredina', 'Š dolje', 'V lijevo', 'V sredina', 'V desno', 'Kutija', 'Špaleta', 'Ostalo'];
+    let fotoEd = null; // { i, oznake, sel, pending, url }
+
+    function fotoOznakeHtml(oz, sel, mali) {
+      return (oz || []).map((o, k) => {
+        const prazno = !String(o.v || '').trim();
+        const bg = prazno ? '#f59e0b' : '#1d4ed8';
+        const ring = (!mali && k === sel) ? 'box-shadow:0 0 0 3px #fbbf24,0 2px 6px rgba(0,0,0,.5);' : 'box-shadow:0 1px 4px rgba(0,0,0,.5);';
+        const fs = mali ? 8 : 15, fs2 = mali ? 6 : 10;
+        return `<div ${mali ? '' : `data-k="${k}"`} style="position:absolute;left:${(o.x * 100).toFixed(2)}%;top:${(o.y * 100).toFixed(2)}%;transform:translate(-50%,-50%);background:${bg};color:#fff;border-radius:${mali ? 3 : 7}px;padding:${mali ? '1px 3px' : '3px 8px'};text-align:center;line-height:1.1;white-space:nowrap;${ring}${mali ? 'pointer-events:none;' : 'touch-action:none;cursor:grab;'}">
+          <div style="font-size:${fs2}px;opacity:.9;">${escAttr(o.n || '?')}</div><div style="font-size:${fs}px;font-weight:bold;">${prazno ? '—' : escAttr(o.v)}</div></div>`;
+      }).join('');
+    }
+
+    function fotoBlok(m, i) {
+      if (!vrstaOf(m)) return '';
+      const f = m.foto;
+      if (!f || !f.url) {
+        return `<div style="margin-top:6px;"><button type="button" onclick="fotoOdaberi(${i})" style="background:#1e293b;color:#7dd3fc;border:1px dashed #0284c7;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:bold;cursor:pointer;width:100%;">📷 Foto-mjere – slikaj otvor i mjeri na slici</button></div>`;
+      }
+      const n = (f.oznake || []).length;
+      return `<div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+        <div onclick="fotoOtvori(${i})" style="position:relative;width:120px;flex:none;cursor:pointer;border-radius:6px;overflow:hidden;border:2px solid #0284c7;">
+          <img src="${escAttr(f.url)}" style="width:100%;display:block;" loading="lazy">${fotoOznakeHtml(f.oznake, -1, true)}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+          <button type="button" onclick="fotoOtvori(${i})" style="background:#0284c7;color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:bold;cursor:pointer;">📷 Foto-mjere (${n})</button>
+          <span style="font-size:11px;color:#94a3b8;">Dodirni sliku za mjerenje i uređivanje</span>
+        </div>
+      </div>`;
+    }
+
+    function fotoOdaberi(i) {
+      let inp = document.getElementById('fotoInput');
+      if (!inp) {
+        inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'fotoInput';
+        inp.setAttribute('capture', 'environment'); inp.style.display = 'none'; document.body.appendChild(inp);
+      }
+      inp.value = '';
+      inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) fotoUcitaj(i, f); };
+      inp.click();
+    }
+
+    function fotoSmanji(file) {
+      return new Promise((res, rej) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1600, sc = Math.min(1, MAX / Math.max(img.width, img.height));
+          const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          c.toBlob(b => b ? res({ blob: b, w: c.width, h: c.height }) : rej(new Error('Slika se ne može smanjiti')), 'image/jpeg', 0.72);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Slika se ne može učitati')); };
+        img.src = url;
+      });
+    }
+
+    async function fotoUcitaj(i, file) {
+      const stat = (t, c) => { const el = document.getElementById('mjSaveStatus'); if (el) { el.textContent = t; el.style.color = c; } };
+      try {
+        stat('⏳ Smanjujem i šaljem sliku...', '#fbbf24');
+        const { blob, w, h } = await fotoSmanji(file);
+        const path = `nalozi/${mjMode === 'new' ? 'novo' : selectedId}/fotomjere_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.jpg`;
+        const ref = storage.ref(path);
+        await ref.put(blob, { contentType: 'image/jpeg' });
+        const url = await ref.getDownloadURL();
+        const staro = (mjGet()[i] || {}).foto;
+        await fotoSpremi(i, { url, path, w, h, oznake: (staro && staro.oznake) || [] });
+        if (staro && staro.path) { try { storage.ref(staro.path).delete().catch(() => {}); } catch (e) {} }
+        stat('✅ Slika spremljena (' + Math.round(blob.size / 1024) + ' KB)', '#34d399');
+        renderMjere(true);
+        fotoOtvori(i);
+      } catch (e) {
+        stat('❌ Slika nije spremljena', '#f87171');
+        alert('Slika nije spremljena (provjeri internet): ' + ((e && e.message) || e));
+      }
+    }
+
+    async function fotoSpremi(i, foto) {
+      const arr = mjGet().map(x => Object.assign({}, x));
+      if (!arr[i]) return;
+      arr[i].foto = foto;
+      await mjSet(arr);
+    }
+
+    function fotoEdOtvoren() { const mo = document.getElementById('fotoEd'); return !!(fotoEd && mo && mo.style.display !== 'none'); }
+
+    function fotoOtvori(i) {
+      const m = mjGet()[i]; if (!m || !m.foto || !m.foto.url) return;
+      fotoEd = { i, url: m.foto.url, oznake: (m.foto.oznake || []).map(o => Object.assign({}, o)), sel: -1, pending: null };
+      let mo = document.getElementById('fotoEd');
+      if (!mo) {
+        mo = document.createElement('div'); mo.id = 'fotoEd';
+        mo.style.cssText = 'position:fixed;inset:0;z-index:10003;background:#020617;display:flex;flex-direction:column;';
+        mo.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const inp = document.getElementById('feVal'); if (inp && e.target === inp) fotoPostaviVrijednost(inp.value, true); } });
+        document.body.appendChild(mo);
+      }
+      mo.innerHTML = `
+        <div style="display:flex;gap:6px;align-items:center;padding:8px 10px;background:#0f172a;border-bottom:1px solid #334155;flex-wrap:wrap;">
+          <button type="button" onclick="fotoZatvori()" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:15px;font-weight:bold;">✓ Gotovo</button>
+          <b style="color:#fff;font-size:14px;flex:1;min-width:120px;">${i + 1}. ${escAttr(vrstaOf(m) || m.tip || '')}${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</b>
+          <button type="button" onclick="fotoOdaberi(${i})" style="background:#334155;color:#e2e8f0;border:none;border-radius:8px;padding:10px 12px;font-size:13px;">🔄 Nova slika</button>
+          <button type="button" onclick="fotoMakniSliku()" style="background:#334155;color:#f87171;border:none;border-radius:8px;padding:10px 12px;font-size:13px;">🗑 Slika</button>
+        </div>
+        <div id="feScroll" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px;display:flex;justify-content:center;align-items:flex-start;">
+          <div id="feWrap" style="position:relative;width:100%;max-width:${Math.max(320, Math.round((window.innerHeight - 230) * ((m.foto.w || 4) / (m.foto.h || 3))))}px;">
+            <img id="feImg" src="${escAttr(m.foto.url)}" style="width:100%;display:block;border-radius:6px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;" draggable="false">
+            <div id="feOz" style="position:absolute;inset:0;"></div>
+          </div>
+        </div>
+        <div id="fePanel" style="background:#0f172a;border-top:1px solid #334155;padding:10px;"></div>`;
+      mo.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      const oz = document.getElementById('feOz');
+      oz.addEventListener('click', e => {
+        if (e.target.closest('[data-k]')) return;
+        const r = oz.getBoundingClientRect();
+        const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+        fotoDodaj(x, y);
+      });
+      oz.addEventListener('pointerdown', fotoPointerDown);
+      fotoRender();
+    }
+
+    function fotoPogodiNaziv(x, y) {
+      const d = [[y, 'Š gore'], [1 - y, 'Š dolje'], [x, 'V lijevo'], [1 - x, 'V desno']].sort((a, b) => a[0] - b[0]);
+      return d[0][0] > 0.25 ? 'Š sredina' : d[0][1];
+    }
+
+    function fotoDodaj(x, y) {
+      if (!fotoEd) return;
+      const o = { x, y, n: fotoPogodiNaziv(x, y), v: fotoEd.pending != null ? String(fotoEd.pending) : '' };
+      fotoEd.oznake.push(o);
+      fotoEd.pending = null;
+      fotoEd.sel = o.v ? -1 : fotoEd.oznake.length - 1;
+      fotoRender(); fotoSpremiEd();
+      if (fotoEd.sel >= 0 && !(laserDevice && laserDevice.gatt && laserDevice.gatt.connected)) { const inp = document.getElementById('feVal'); if (inp) inp.focus(); }
+    }
+
+    let feDrag = null;
+    function fotoPointerDown(e) {
+      const el = e.target.closest('[data-k]'); if (!el || !fotoEd) return;
+      e.preventDefault(); e.stopPropagation();
+      const k = parseInt(el.dataset.k, 10);
+      feDrag = { k, el, sx: e.clientX, sy: e.clientY, moved: false };
+      try { el.setPointerCapture(e.pointerId); } catch (x) {}
+      const move = ev => {
+        if (!feDrag) return;
+        if (!feDrag.moved && Math.hypot(ev.clientX - feDrag.sx, ev.clientY - feDrag.sy) < 8) return;
+        feDrag.moved = true;
+        const r = document.getElementById('feOz').getBoundingClientRect();
+        const o = fotoEd.oznake[feDrag.k];
+        o.x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)); o.y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+        feDrag.el.style.left = (o.x * 100) + '%'; feDrag.el.style.top = (o.y * 100) + '%';
+      };
+      const up = () => {
+        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+        const d = feDrag; feDrag = null; if (!d) return;
+        if (d.moved) fotoSpremiEd();
+        else { fotoEd.sel = (fotoEd.sel === d.k) ? -1 : d.k; fotoRender(); }
+      };
+      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    }
+
+    function fotoRender() {
+      if (!fotoEd) return;
+      const oz = document.getElementById('feOz'); if (oz) oz.innerHTML = fotoOznakeHtml(fotoEd.oznake, fotoEd.sel, false);
+      const pn = document.getElementById('fePanel'); if (!pn) return;
+      const o = fotoEd.oznake[fotoEd.sel];
+      const m = mjGet()[fotoEd.i] || {};
+      const minS = fotoMin('Š'), minV = fotoMin('V');
+      const prepisi = !/Garažna/.test(m.tip || '') && (minS || minV)
+        ? `<button type="button" onclick="fotoPrepisi()" style="background:#1e293b;color:#34d399;border:1px solid #059669;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:bold;margin-top:8px;width:100%;">⬇ Upiši najmanju u mjere: Š ${minS || '—'} × V ${minV || '—'}</button>` : '';
+      if (!o) {
+        pn.innerHTML = `<div style="color:#e2e8f0;font-size:14px;text-align:center;">${fotoEd.pending != null ? `<b style="color:#fbbf24;">Izmjereno ${fotoEd.pending} mm</b> – dodirni na slici gdje je ta mjera` : '👆 Dodirni sliku gdje mjeriš, pa izmjeri laserom (ili upiši).<br><span style="font-size:12px;color:#94a3b8;">Kućicu možeš povući prstom · dodirni kućicu za promjenu naziva ili mjere</span>'}</div>${prepisi}`;
+        return;
+      }
+      pn.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+          ${FOTO_NAZIVI.map(n => `<button type="button" onclick="fotoPostaviNaziv('${n}')" style="background:${o.n === n ? '#0284c7' : '#1e293b'};color:#fff;border:1px solid #334155;border-radius:14px;padding:6px 10px;font-size:13px;">${n}</button>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input id="feNaziv" value="${escAttr(o.n)}" placeholder="Naziv" oninput="fotoPostaviNaziv(this.value, true)" style="flex:1;min-width:0;font-size:14px;">
+          <input id="feVal" inputmode="decimal" value="${escAttr(o.v)}" placeholder="mm" onchange="fotoPostaviVrijednost(this.value)" style="width:110px;font-size:18px;font-weight:bold;text-align:center;">
+          <button type="button" onclick="fotoObrisiOznaku()" style="background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:10px 12px;font-size:15px;">🗑</button>
+          <button type="button" onclick="fotoPostaviVrijednost(document.getElementById('feVal').value, true)" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:15px;font-weight:bold;">✓</button>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;">📡 Izmjeri laserom – mjera ide u označenu (žutu) kućicu.</div>${prepisi}`;
+    }
+
+    function fotoMin(slovo) {
+      if (!fotoEd) return '';
+      const v = fotoEd.oznake.filter(o => String(o.n || '').trim().toUpperCase().startsWith(slovo === 'Š' ? 'Š' : 'V')).map(o => parseFloat(String(o.v).replace(',', '.'))).filter(x => x > 0);
+      return v.length ? String(Math.min(...v)) : '';
+    }
+
+    function fotoPostaviNaziv(n, bezRendera) {
+      if (!fotoEd || !fotoEd.oznake[fotoEd.sel]) return;
+      fotoEd.oznake[fotoEd.sel].n = n;
+      if (bezRendera) { const oz = document.getElementById('feOz'); if (oz) oz.innerHTML = fotoOznakeHtml(fotoEd.oznake, fotoEd.sel, false); clearTimeout(window.__feT); window.__feT = setTimeout(fotoSpremiEd, 700); }
+      else { fotoRender(); fotoSpremiEd(); }
+    }
+
+    function fotoPostaviVrijednost(v, zatvori) {
+      if (!fotoEd || !fotoEd.oznake[fotoEd.sel]) return;
+      fotoEd.oznake[fotoEd.sel].v = normalizirajMjeru(v);
+      if (zatvori) fotoEd.sel = -1;
+      fotoRender(); fotoSpremiEd();
+    }
+
+    function fotoObrisiOznaku() {
+      if (!fotoEd || fotoEd.sel < 0) return;
+      fotoEd.oznake.splice(fotoEd.sel, 1); fotoEd.sel = -1;
+      fotoRender(); fotoSpremiEd();
+    }
+
+    function fotoLaser(mm) {
+      if (!fotoEd) return;
+      const o = fotoEd.oznake[fotoEd.sel];
+      if (o) { o.v = String(mm); fotoEd.sel = -1; fotoRender(); fotoSpremiEd(); setLaserStatus('Zadnja mjera: ' + mm + ' mm (na slici)', '#34d399'); }
+      else { fotoEd.pending = mm; fotoRender(); setLaserStatus('Izmjereno ' + mm + ' mm – dodirni sliku gdje je ta mjera', '#fbbf24'); }
+    }
+
+    function fotoSpremiEd() {
+      if (!fotoEd) return Promise.resolve();
+      const m = mjGet()[fotoEd.i]; if (!m || !m.foto) return Promise.resolve();
+      const foto = Object.assign({}, m.foto, { oznake: fotoEd.oznake.map(o => ({ x: Math.round(o.x * 10000) / 10000, y: Math.round(o.y * 10000) / 10000, n: o.n || '', v: o.v || '' })) });
+      return fotoSpremi(fotoEd.i, foto);
+    }
+
+    async function fotoPrepisi() {
+      if (!fotoEd) return;
+      const s = fotoMin('Š'), v = fotoMin('V'), i = fotoEd.i;
+      if (!confirm(`Upisati u mjere otvora ${i + 1}?\n\nŠirina: ${s || '(ne mijenja se)'}\nVisina: ${v || '(ne mijenja se)'}`)) return;
+      await fotoSpremiEd();
+      if (s) await saveMjera(i, 'sirina', s);
+      if (v) await saveMjera(i, 'visina', v);
+      renderMjere(true);
+      const pn = document.getElementById('fePanel'); if (pn) pn.insertAdjacentHTML('afterbegin', '<div style="color:#34d399;font-size:13px;text-align:center;margin-bottom:6px;">✅ Upisano u Širinu/Visinu</div>');
+    }
+
+    async function fotoMakniSliku() {
+      if (!fotoEd) return;
+      if (!confirm('Maknuti sliku i sve mjere na njoj? (ostale mjere otvora ostaju)')) return;
+      const i = fotoEd.i, m = mjGet()[i];
+      const path = m && m.foto && m.foto.path;
+      await fotoSpremi(i, null);
+      if (path) { try { storage.ref(path).delete().catch(() => {}); } catch (e) {} }
+      fotoEd = null;
+      const mo = document.getElementById('fotoEd'); if (mo) mo.style.display = 'none';
+      document.body.style.overflow = '';
+      renderMjere(true);
+    }
+
+    async function fotoZatvori() {
+      if (fotoEd) { const inp = document.getElementById('feVal'); if (inp && fotoEd.oznake[fotoEd.sel]) fotoEd.oznake[fotoEd.sel].v = normalizirajMjeru(inp.value); clearTimeout(window.__feT); await fotoSpremiEd(); }
+      fotoEd = null;
+      const mo = document.getElementById('fotoEd'); if (mo) mo.style.display = 'none';
+      document.body.style.overflow = document.querySelector('.mj-full') ? 'hidden' : '';
+      renderMjere(true);
+    }
+
+    // slika za PDF ide preko Vercel proxyja (/fs/...) da canvas ne bude "zaključan" (CORS)
+    function fotoUcitajZaPdf(url) {
+      const tryLoad = (u, cors) => new Promise((res, rej) => {
+        const img = new Image(); if (cors) img.crossOrigin = 'anonymous';
+        img.onload = () => res(img); img.onerror = () => rej(new Error('slika'));
+        img.src = u;
+      });
+      const proxy = String(url).replace('https://firebasestorage.googleapis.com/', '/fs/');
+      return tryLoad(proxy, false).catch(() => tryLoad(url, true));
+    }
+
+    async function fotoUPdf(ctx, m, i, y, W, H, M, novaStranica, getCtx) {
+      const oz = (m.foto.oznake || []);
+      const fw = W - 2 * M;
+      let img = null;
+      try { img = await fotoUcitajZaPdf(m.foto.url); } catch (e) {}
+      if (!img) {
+        const txt = `${i + 1}. Foto-mjere: ` + (oz.map(o => `${o.n || '?'} ${o.v || '—'}`).join(' · ') || '(nema mjera)');
+        ctx.font = '22px Helvetica, Arial, sans-serif';
+        const lines = prelomi(ctx, txt, fw);
+        if (y + lines.length * 30 + 20 > H - M - 40) { novaStranica(); ctx = getCtx(); y = M; }
+        ctx.fillStyle = '#334155'; lines.forEach(t => { ctx.fillText(t, M, y + 22); y += 30; });
+        return { ctx, y: y + 20 };
+      }
+      const maxH = 1000;
+      const sc = Math.min(fw / img.width, maxH / img.height);
+      const iw = img.width * sc, ih = img.height * sc;
+      if (y + ih + 50 > H - M - 40) { novaStranica(); ctx = getCtx(); y = M; }
+      ctx.fillStyle = '#0f172a'; ctx.font = 'bold 22px Helvetica, Arial, sans-serif';
+      ctx.fillText(`${i + 1}. Foto-mjere${m.prostorija ? ' – ' + m.prostorija : ''}`, M, y + 22); y += 32;
+      const x0 = M + (fw - iw) / 2;
+      ctx.drawImage(img, x0, y, iw, ih);
+      const fs = Math.max(18, Math.round(iw * 0.022)), fs2 = Math.round(fs * 0.65);
+      oz.forEach(o => {
+        const val = String(o.v || '—'), naz = String(o.n || '');
+        ctx.font = `bold ${fs}px Helvetica, Arial, sans-serif`; const w1 = ctx.measureText(val).width;
+        ctx.font = `${fs2}px Helvetica, Arial, sans-serif`; const w2 = ctx.measureText(naz).width;
+        const bw = Math.max(w1, w2) + 16, bh = fs + fs2 + 12;
+        const cx = x0 + o.x * iw, cy = y + o.y * ih;
+        const bx = Math.min(Math.max(cx - bw / 2, x0), x0 + iw - bw), by = Math.min(Math.max(cy - bh / 2, y), y + ih - bh);
+        ctx.fillStyle = String(o.v || '').trim() ? '#1d4ed8' : '#f59e0b';
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 6); else ctx.rect(bx, by, bw, bh); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+        ctx.font = `${fs2}px Helvetica, Arial, sans-serif`; ctx.fillText(naz, bx + bw / 2, by + fs2 + 3);
+        ctx.font = `bold ${fs}px Helvetica, Arial, sans-serif`; ctx.fillText(val, bx + bw / 2, by + fs2 + fs + 6);
+        ctx.textAlign = 'left';
+      });
+      return { ctx, y: y + ih + 30 };
+    }
+
     // --- Bosch GLM laser preko Web Bluetootha (Android Chrome; iPhone/iPad samo u Bluefy pregledniku) ---
     const BOSCH_SERVICE = '02a6c0d0-0451-4000-b000-fb3210111989';
     const BOSCH_CHAR    = '02a6c0d1-0451-4000-b000-fb3210111989';
@@ -1937,6 +2259,7 @@
 
     function laserFill(mm) {
       if (navigator.vibrate) navigator.vibrate(80);
+      try { if (fotoEdOtvoren()) { fotoLaser(mm); return; } } catch (e) {}
       const fields = Array.from(document.querySelectorAll('#mjereList .mj-num'));
       if (fields.length === 0) { setLaserStatus('Izmjereno ' + mm + ' mm – prvo dodaj otvor (+ Otvor)', '#fbbf24'); return; }
       const active = document.activeElement;
