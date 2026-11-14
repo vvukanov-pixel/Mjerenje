@@ -237,7 +237,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.24</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.25</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1074,8 +1074,11 @@
     function renderPredloske() {
       const modal = document.getElementById('predlosciModal');
       const tabs = Object.keys(PREDLOSCI).map(k => `<button type="button" onclick="predlozakKat='${k}';renderPredloske()" style="padding:9px 12px;border-radius:7px;border:1px solid #334155;font-weight:bold;font-size:13px;cursor:pointer;background:${k === predlozakKat ? '#0284c7' : '#1e293b'};color:#fff;">${k}</button>`).join('');
+      const curV = vrstaOf(mjGet()[predlozakZa] || {});
       const items = PREDLOSCI[predlozakKat].map((p, idx) => {
         const [tip, krila, nad, dol] = p;
+        if (predlozakKat === 'Vrata' && curV === 'Ulazna vrata' && /Sobna/.test(tip)) return '';
+        if (predlozakKat === 'Vrata' && curV === 'Sobna vrata' && !/Sobna/.test(tip)) return '';
         const [W, H] = predlozakVelicina(predlozakKat, krila.length);
         const svg = crtezOtvora({ tip, krila, nadsvjetlo: nad || '', donje: dol || '', sirina: W, visina: H }, 0, { mini: true, size: 76 });
         return `<button type="button" onclick="primijeniPredlozak(${idx})" style="background:#e5e7eb;border:2px solid #64748b;border-radius:8px;width:96px;height:96px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:2px;">${svg}</button>`;
