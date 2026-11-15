@@ -237,7 +237,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.25</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.26</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -967,7 +967,7 @@
     const BOJE = ['Bijelo', 'Orah', 'Zlatni hrast', 'Antracit', 'Bijelo/Antracit', 'Bijelo/Orah', 'Bijelo/Zlatni hrast'];
     // krilo: F fiksno, O okretno, ON okretno-nagibno, N nagibno, K klizno, G grilje; -L/-D = strana kvake (kod K smjer klizanja)
     const KRILA_CIKLUS = ['F', 'ON-L', 'ON-D', 'O-L', 'O-D', 'N', 'K-D', 'K-L', 'V-L', 'V-D', 'G', 'GS-D', 'GS-L'];
-    function jeVrataTip(tip) { return /Garažna/.test(tip || ''); }
+    function jeVrataTip(tip) { return /Garažna|Pergola/.test(tip || ''); }
     function imaStranu(tip) { return false; }
     function defaultKrila(tip, strana) {
       const s = strana === 'D' ? 'D' : 'L', o = s === 'L' ? 'D' : 'L';
@@ -1160,7 +1160,7 @@
       return `<div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;">${btn('V-D', 'LIJEVO OTVARANJE', true)}${btn('V-L', 'DESNO OTVARANJE', false)}</div>`;
     }
 
-    const VRSTE = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Komarnik', 'Ostalo'];
+    const VRSTE = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Pergola', 'Komarnik', 'Ostalo'];
     const KOMARNICI = ['Fiksni (okvirni)', 'Rolo – okomiti', 'Rolo – vodoravni (vrata)', 'Plise', 'Krilni (vrata)', 'Klizni'];
     function vrstaOf(m) {
       if (m.vrsta && VRSTE.includes(m.vrsta)) return m.vrsta;
@@ -1169,6 +1169,7 @@
       if (/Sobna/.test(t)) return 'Sobna vrata';
       if (/Ulazna/.test(t)) return 'Ulazna vrata';
       if (/Garažna/.test(t)) return 'Garažna vrata';
+      if (/Pergola/.test(t)) return 'Pergola';
       if (/Grilje/.test(t)) return 'Grilje';
       if (/Smart/.test(t)) return 'Smart-Slide';
       if (/HST/.test(t)) return 'HST';
@@ -1193,10 +1194,11 @@
       else if (v === 'Smart-Slide') set('Klizna stijena Smart-Slide', ['K-D', 'F']);
       else if (v === 'HST') set('HST stijena', ['K-D', 'F']);
       else if (v === 'ALU otvori') set('Jednokrilni prozor', ['ON-L']);
+      else if (v === 'Pergola') { set('Pergola', ['F']); m.roleta = false; m.p_sustav = m.p_sustav || PERGOLA_SUSTAVI[0]; }
       else if (v === 'Komarnik') { set('Komarnik', ['F']); m.komarnik = m.komarnik || KOMARNICI[0]; m.roleta = false; }
       else set('Ostalo', ['F']);
       const done = mjSet(arr); renderMjere(true); await done;
-      if (!/Sobna|Garažna|Komarnik/.test(v)) otvoriPredloske(i);
+      if (!/Sobna|Garažna|Komarnik|Pergola/.test(v)) otvoriPredloske(i);
     }
 
     const SOBNA_SIRINE = [682, 782, 882, 982];
@@ -1209,6 +1211,107 @@
         <div><b style="color:#38bdf8;">Vanjska širina dovratnika (mm):</b><br>${SOBNA_SIRINE.map(v => chip(v, false)).join('')}</div>
         <div style="margin-top:4px;"><b style="color:#38bdf8;">Debljine štoka (mm):</b><br>${SOBNA_STOKOVI.map(v => chip(v, v === prep)).join('')}</div>
         ${d > 0 ? (prep ? `<div style="margin-top:4px;color:#4ade80;">Za špaletu ${d} mm → štok <b>${prep}</b> mm</div>` : `<div style="margin-top:4px;color:#fbbf24;">Špaleta ${d} mm je deblja od najvećeg štoka (280 mm)</div>`) : ''}
+      </div>`;
+    }
+
+    // ================= PERGOLA (Aluprof MB-OpenSky) – izmjera po shemi =================
+    const PERGOLA_SUSTAVI = ['MB-OpenSky 140', 'MB-OpenSky 120'];
+    const PERGOLA_IZVEDBE = [
+      ['Samostojeća', '4 stupa'],
+      ['Uz zid – tip 1', 'zid uz stranu L, 2 stupa'],
+      ['Uz zid – tip 2', 'zid uz stranu B, 2 stupa'],
+      ['Uz zid – tip 3', 'dva zida (kut), 1 stup'],
+      ['Uz zid – tip 4', 'dva zida, prepust L1, 1 stup'],
+      ['Dvodijelna poprečna – samostojeća', '2 polja jedno do drugog po B'],
+      ['Dvodijelna poprečna – uz zid', '2 polja po B, uz zid'],
+      ['Dvodijelna uzdužna – samostojeća', '2 polja jedno iza drugog po L']
+    ];
+    const PERGOLA_POLJA = [
+      ['p_l', 'L', 'Dužina (smjer slaganja lamela)', true],
+      ['p_b', 'B', 'Širina (dužina lamele)', true],
+      ['p_h', 'H', 'Visina do donjeg ruba', true],
+      ['p_l1', 'L1', 'Prepust (samo tip 4, max 900)', true, m => /tip 4/.test(m.p_izvedba || '')],
+      ['p_pr', 'P', 'Podjela – mjera 1. polja', false, m => /Dvodijelna/.test(m.p_izvedba || '')]
+    ];
+    const PERGOLA_POZ = { p_l: [300, 690], p_b: [150, 150], p_h: [10, 410], p_l1: [430, 40], p_pr: [520, 250] };
+    function pergolaPolja(m) { return PERGOLA_POLJA.filter(p => !p[4] || p[4](m)); }
+    function pergolaShema(m, i, staticno) {
+      const iz = m.p_izvedba || '', zid = /zid/.test(iz), dvo = /Dvodijelna/.test(iz);
+      const P0 = [150, 330], vL = [460, 207], vB = [264, -132], hh = 230;
+      const pt = (a, b) => [P0[0] + vL[0] * a + vB[0] * b, P0[1] + vL[1] * a + vB[1] * b];
+      const xy = p => p.join(',');
+      const st = 'stroke="#334155" stroke-width="3" fill="none" marker-start="url(#pa)" marker-end="url(#pa)"';
+      let o = `<defs><marker id="pa" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker></defs>`;
+      o += `<rect x="0" y="0" width="1000" height="860" fill="#f1f5f9"/>`;
+      const A = pt(0, 0), Bp = pt(1, 0), C = pt(1, 1), D = pt(0, 1);
+      const zidL = zid && !/tip 2/.test(iz), zidB = /tip 2|tip 3|tip 4/.test(iz);
+      const zidPlo = (p1, p2) => `<polygon points="${p1[0]},${p1[1] - 170} ${p2[0]},${p2[1] - 170} ${p2[0]},${p2[1] + hh + 40} ${p1[0]},${p1[1] + hh + 40}" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2" stroke-dasharray="10 6"/>`;
+      if (zidL) { o += zidPlo(D, C); o += `<text x="${(D[0] + C[0]) / 2}" y="${(D[1] + C[1]) / 2 - 120}" text-anchor="middle" font-size="26" font-weight="bold" fill="#64748b">ZID</text>`; }
+      if (zidB) { o += zidPlo(C, Bp); o += `<text x="${(C[0] + Bp[0]) / 2 + 40}" y="${(C[1] + Bp[1]) / 2 - 110}" text-anchor="middle" font-size="26" font-weight="bold" fill="#64748b">ZID</text>`; }
+      const stupovi = /tip 3|tip 4/.test(iz) ? [A] : /tip 2/.test(iz) ? [A, D] : zid ? [A, Bp] : [A, Bp, C, D];
+      if (dvo) stupovi.push(/uzdužna/.test(iz) ? pt(0.5, 0) : pt(0, 0.5));
+      if (dvo && !/uzdužna/.test(iz)) stupovi.push(pt(1, 0.5));
+      if (dvo && /uzdužna/.test(iz) && !zid) stupovi.push(pt(0.5, 1));
+      stupovi.forEach(p => { o += `<rect x="${p[0] - 9}" y="${p[1]}" width="18" height="${hh}" fill="#475569"/>`; });
+      o += `<polygon points="${xy(A)} ${xy(Bp)} ${xy(C)} ${xy(D)}" fill="#cbd5e1" fill-opacity="0.55" stroke="#334155" stroke-width="5"/>`;
+      for (let t = 1; t < 18; t++) { const a = pt(t / 18, 0.03), b = pt(t / 18, 0.97); o += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#64748b" stroke-width="2"/>`; }
+      if (dvo) { const [a, b] = /uzdužna/.test(iz) ? [pt(0.5, 0), pt(0.5, 1)] : [pt(0, 0.5), pt(1, 0.5)]; o += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#0369a1" stroke-width="6"/>`; }
+      if (/tip 4/.test(iz)) { const a = pt(0, 1), b = pt(-0.12, 1); o += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#334155" stroke-width="5"/><line x1="${b[0]}" y1="${b[1] - 25}" x2="${a[0]}" y2="${a[1] - 25}" ${st}/>`; }
+      // kote
+      const lA = [A[0], A[1] + hh + 40], lB = [Bp[0], Bp[1] + hh + 40];
+      o += `<line x1="${lA[0]}" y1="${lA[1]}" x2="${lB[0]}" y2="${lB[1]}" ${st}/>`;
+      o += `<line x1="${A[0] - 30}" y1="${A[1] - 25}" x2="${D[0] - 30}" y2="${D[1] - 25}" ${st}/>`;
+      o += `<line x1="110" y1="${A[1]}" x2="110" y2="${A[1] + hh}" ${st}/>`;
+      o += `<text x="${A[0] + 20}" y="${A[1] + hh + 25}" font-size="22" font-weight="bold" fill="#334155">tlo ▽</text>`;
+      o += `<text x="990" y="840" text-anchor="end" font-size="22" font-weight="bold" fill="#64748b">${escAttr(m.p_sustav || PERGOLA_SUSTAVI[0])}${iz ? ' · ' + escAttr(iz) : ''}</text>`;
+      pergolaPolja(m).forEach(([k, lab, , nuzno]) => {
+        const [x, y] = PERGOLA_POZ[k]; const v = m[k] || '';
+        o += `<g ${staticno ? '' : `style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')"`}>
+          <rect ${staticno ? '' : `id="pbr_${i}_${k}"`} x="${x}" y="${y}" width="140" height="62" rx="6" fill="${v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')}" stroke="${nuzno ? '#d97706' : '#0284c7'}" stroke-width="${nuzno ? 4 : 3}"/>
+          <text x="${x + 6}" y="${y + 18}" font-size="17" font-weight="bold" fill="#0f172a">${lab}</text>
+          <text ${staticno ? '' : `id="pb_${i}_${k}"`} x="${x + 70}" y="${y + 52}" text-anchor="middle" font-size="30" font-weight="bold" fill="#0f172a">${escAttr(v)}</text>
+        </g>`;
+      });
+      return staticno === 'pdf'
+        ? `<svg viewBox="0 0 1000 860" width="1000" height="860" xmlns="http://www.w3.org/2000/svg">${o}</svg>`
+        : `<svg viewBox="0 0 1000 860" style="width:100%;height:auto;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+    }
+    function pergolaOsvjeziKucicu(i, k, v) {
+      const t = document.getElementById(`pb_${i}_${k}`); if (t) t.textContent = v || '';
+      const r = document.getElementById(`pbr_${i}_${k}`);
+      if (r) { const nuzno = (PERGOLA_POLJA.find(x => x[0] === k) || [])[3]; r.setAttribute('fill', v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')); }
+      const w = document.getElementById(`pw_${i}`); if (w) { const m = Object.assign({}, mjGet()[i] || {}); m[k] = v; w.innerHTML = pergolaUpozorenja(m); }
+    }
+    function pergolaGranice(m) {
+      const iz = m.p_izvedba || '';
+      if (/120/.test(m.p_sustav || '')) return { p_l: 6010, p_b: 4000, p_h: 3000 };
+      if (/Dvodijelna poprečna/.test(iz)) return { p_l: 6980, p_b: 9860, p_h: 3000 };
+      if (/Dvodijelna uzdužna/.test(iz)) return { p_l: 9020, p_b: 5000, p_h: 3000 };
+      return { p_l: 6980, p_b: 5000, p_h: 3000, p_l1: 900 };
+    }
+    function pergolaUpozorenja(m) {
+      const g = pergolaGranice(m), n = v => parseFloat(String(v || '').replace(',', '.'));
+      const msg = Object.keys(g).filter(k => n(m[k]) > g[k]).map(k => `${(PERGOLA_POLJA.find(p => p[0] === k) || [])[1]} ${m[k]} > max ${g[k]} mm`);
+      return msg.length ? `<div style="margin-top:6px;padding:7px 9px;border-radius:6px;background:rgba(245,158,11,.15);border:1px solid #f59e0b;color:#fbbf24;font-size:13px;">⚠️ Preko maksimuma za ${escAttr(m.p_sustav || PERGOLA_SUSTAVI[0])}: ${msg.join(' · ')} – treba podjela ili druga izvedba.</div>` : '';
+    }
+    function pergolaIzbor(m, i) {
+      return `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;">
+        <span class="mj-lbl">Sustav:</span>
+        <select onchange="postaviPolje(${i}, 'p_sustav', this.value)" style="padding:8px;font-size:14px;width:auto;">${PERGOLA_SUSTAVI.map(s => `<option ${s === (m.p_sustav || PERGOLA_SUSTAVI[0]) ? 'selected' : ''}>${s}</option>`).join('')}</select>
+        <span class="mj-lbl">Izvedba:</span>
+        <select onchange="postaviPolje(${i}, 'p_izvedba', this.value)" style="padding:8px;font-size:14px;flex:1;min-width:200px;${m.p_izvedba ? '' : 'border-color:#f59e0b;color:#fbbf24;'}">
+          ${m.p_izvedba ? '' : '<option value="" selected>— odaberi izvedbu —</option>'}
+          ${PERGOLA_IZVEDBE.map(([v, o]) => `<option value="${v}" ${v === m.p_izvedba ? 'selected' : ''}>${v} (${o})</option>`).join('')}
+        </select>
+      </div>`;
+    }
+    function pergolaPanel(m, i) {
+      const polje = ([k, lab, opis, nuzno]) => `<div><label style="${nuzno ? 'color:#fbbf24;' : ''}">${lab} – ${opis}${nuzno ? ' *' : ''}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); pergolaOsvjeziKucicu(${i}, '${k}', this.value)" onchange="saveMjera(${i}, '${k}', this.value)" onfocus="this.closest('.mj-row').querySelectorAll('rect[id^=pbr_]').forEach(r=>r.setAttribute('stroke-dasharray',''));const r=document.getElementById('pbr_${i}_${k}');if(r)r.setAttribute('stroke-dasharray','10 5');" data-idx="${i}" data-key="${k}"></div>`;
+      return `<div style="margin:6px 0;">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Dodirni kućicu na shemi pa mjeri laserom. Žute (*) su obavezne. Sve mjere u mm.</div>
+        ${pergolaShema(m, i)}
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr; margin-top:8px;">${pergolaPolja(m).map(polje).join('')}</div>
+        <div id="pw_${i}">${pergolaUpozorenja(m)}</div>
       </div>`;
     }
 
@@ -1417,7 +1520,7 @@
               <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
             </div>
             ${!vrstaOf(m) ? '<div class="mj-lbl" style="margin-bottom:6px;color:#fbbf24;">↑ Prvo odaberi proizvod</div>' : `<div class="mj-krila">
-              ${/Komarnik/.test(m.tip || '') ? `<span class="mj-lbl">Vrsta komarnika:</span><select onchange="postaviPolje(${i}, 'komarnik', this.value)" style="padding:8px;font-size:14px;">${KOMARNICI.map(k => `<option ${k === (m.komarnik || KOMARNICI[0]) ? 'selected' : ''}>${k}</option>`).join('')}</select>` : /Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
+              ${/Pergola/.test(m.tip || '') ? pergolaIzbor(m, i) : /Komarnik/.test(m.tip || '') ? `<span class="mj-lbl">Vrsta komarnika:</span><select onchange="postaviPolje(${i}, 'komarnik', this.value)" style="padding:8px;font-size:14px;">${KOMARNICI.map(k => `<option ${k === (m.komarnik || KOMARNICI[0]) ? 'selected' : ''}>${k}</option>`).join('')}</select>` : /Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
                 ${crtezOtvora(Object.assign({}, m, { sirina: m.sirina || predlozakVelicina('', krilaOf(m).length)[0], visina: m.visina || 1300 }), i, { mini: true, size: 44 })}
                 <b style="color:#0f172a;font-size:13px;">🖼 Predložak</b>
               </button>`}
@@ -1444,7 +1547,7 @@
                 <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
               </select>
             </div>`}
-            ${/Garažna/.test(m.tip || '') ? garazaPanel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
+            ${/Pergola/.test(m.tip || '') ? pergolaPanel(m, i) : /Garažna/.test(m.tip || '') ? garazaPanel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
               ${/Sobna/.test(m.tip || '') ? `<div><label>Debljina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>` : ''}
@@ -1630,7 +1733,8 @@
       const m = mjGet()[i]; if (!m) return;
       const vw = Math.min(window.innerWidth, 1100), vh = window.innerHeight;
       let svg;
-      if (/Garažna/.test(m.tip || '')) svg = garazaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
+      if (/Pergola/.test(m.tip || '')) svg = pergolaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
+      else if (/Garažna/.test(m.tip || '')) svg = garazaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
       else svg = crtezOtvora(m, i, { size: Math.max(200, Math.min(vw - 120, vh - 220)) });
       let mo = document.getElementById('crtezZoom');
       if (!mo) {
@@ -1656,6 +1760,9 @@
       if (!box) return;
       const mjere = mjGet();
       const svgs = mjere.map((m, i) => {
+        if (/Pergola/.test(m.tip || '')) {
+          return `<div onclick="uvecajCrtez(${i})" style="cursor:zoom-in;width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Pergola${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${pergolaShema(m, i, true)}</div>`;
+        }
         if (/Garažna/.test(m.tip || '') && (m.sirina || m.visina)) {
           return `<div onclick="uvecajCrtez(${i})" style="cursor:zoom-in;width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Garažna vrata${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${garazaShema(m, i, true)}</div>`;
         }
@@ -1670,7 +1777,7 @@
     }
 
     // laseri u "keyboard" načinu (npr. Leica DISTO) mogu poslati "1.234 m", "1234 mm" ili "1,234" – sve pretvori u mm
-    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g'];
+    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr'];
     function normalizirajMjeru(v) {
       const t = String(v || '').trim().toLowerCase();
       if (!t) return '';
@@ -1809,18 +1916,19 @@
         let col = 0, redVisina = 0;
         for (let i = 0; i < mjere.length; i++) {
           const m = mjere[i];
-          const garaza = /Garažna/.test(m.tip || '');
-          const svg = garaza ? garazaShema(m, i, 'pdf') : crtezOtvora(m, i, { size: 230 });
+          const pergola = /Pergola/.test(m.tip || '');
+          const garaza = /Garažna/.test(m.tip || '') || pergola;
+          const svg = pergola ? pergolaShema(m, i, 'pdf') : garaza ? garazaShema(m, i, 'pdf') : crtezOtvora(m, i, { size: 230 });
           let img = null; try { if (svg) img = await svgUSliku(svg); } catch (e) {}
           if (garaza) {
             if (col === 1) { col = 0; y += redVisina; redVisina = 0; }
             const fw = W - 2 * M, gs = img ? fw / img.width : 0, gh = img ? img.height * gs : 0;
             ctx.font = '22px Helvetica, Arial, sans-serif';
-            const ginfo = [`${i + 1}. Garažna vrata${m.prostorija ? ' – ' + m.prostorija : ''}`];
-            const op = [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
+            const ginfo = [`${i + 1}. ${pergola ? 'Pergola' : 'Garažna vrata'}${m.prostorija ? ' – ' + m.prostorija : ''}`];
+            const op = pergola ? [m.p_sustav || PERGOLA_SUSTAVI[0], m.p_izvedba ? 'Izvedba: ' + m.p_izvedba : 'Izvedba: nije odabrana', pergolaPolja(m).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · '), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
             let gl = [ginfo[0]].concat(op ? prelomi(ctx, op, fw) : []);
             if (m.napomena) gl = gl.concat(prelomi(ctx, 'Napomena: ' + m.napomena, fw));
-            const leg = 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
+            const leg = pergola ? 'L dužina (smjer slaganja lamela) · B širina (dužina lamele) · H visina do donjeg ruba · L1 prepust (tip 4) · P mjera 1. polja (dvodijelna) – sve u mm' : 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
             gl = gl.concat(prelomi(ctx, leg, fw));
             const bh = gh + gl.length * 30 + 40;
             if (y + bh > H - M - 40) novaStranica();
@@ -2302,7 +2410,7 @@
       if (!target) { setLaserStatus('Izmjereno ' + mm + ' mm – sva polja su puna, klikni u polje ili dodaj otvor', '#fbbf24'); return; }
       target.value = mm;
       saveMjera(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm));
-      try { garazaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); } catch (e) {}
+      try { garazaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); pergolaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); } catch (e) {}
       setLaserStatus('Zadnja mjera: ' + mm + ' mm', '#34d399');
       const next = fields[fields.indexOf(target) + 1];
       if (next) next.focus(); else target.blur();
