@@ -237,7 +237,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.26</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.27</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -2358,17 +2358,16 @@
       if (b) b.textContent = (laserDevice && laserDevice.gatt && laserDevice.gatt.connected) ? '✅ Laser spojen' : '📡 Spoji laser';
     }
 
-    async function laserConnect() {
+    async function laserConnect(sviUredaji) {
       if (!navigator.bluetooth) {
         alert('Ovaj preglednik ne podržava spajanje lasera.\n\nAndroid: otvori TerenRad u Chromeu.\niPhone/iPad: otvori TerenRad u aplikaciji Bluefy.');
         return;
       }
       try {
         setLaserStatus('Tražim laser...', '#fbbf24');
-        laserDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { services: [BOSCH_SERVICE] }],
-          optionalServices: [BOSCH_SERVICE]
-        });
+        laserDevice = await navigator.bluetooth.requestDevice(sviUredaji === true
+          ? { acceptAllDevices: true, optionalServices: [BOSCH_SERVICE] }
+          : { filters: [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { namePrefix: 'PLR' }, { namePrefix: 'Zamo' }, { services: [BOSCH_SERVICE] }], optionalServices: [BOSCH_SERVICE] });
         laserDevice.addEventListener('gattserverdisconnected', () => setLaserStatus('Laser se odspojio – dodirni "Spoji laser"', '#f87171'));
         setLaserStatus('Spajam ' + (laserDevice.name || 'laser') + '...', '#fbbf24');
         const server = await Promise.race([
@@ -2384,7 +2383,10 @@
         const firstEmpty = Array.from(document.querySelectorAll('#mjereList .mj-num')).find(x => !x.value);
         if (firstEmpty) firstEmpty.focus();
       } catch (e) {
-        if (e && e.name === 'NotFoundError') setLaserStatus('Laser nije odabran', 'var(--text-muted)');
+        if (e && e.name === 'NotFoundError') {
+          const el = document.getElementById('laserStatus');
+          if (el) { el.style.color = '#fbbf24'; el.innerHTML = 'Laser nije pronađen. Provjeri: laser nije spojen na drugi uređaj (iPad – isključi Bluetooth), na laseru uključen BT, na mobitelu uključena <b>Lokacija</b>. <button type="button" onclick="laserConnect(true)" style="margin-left:6px;background:#334155;color:#fff;border:1px solid #f59e0b;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:bold;">🔍 Prikaži sve Bluetooth uređaje</button>'; }
+        }
         else setLaserStatus('Greška: ' + ((e && e.message) || e), '#f87171');
       }
     }
