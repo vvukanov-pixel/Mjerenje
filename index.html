@@ -237,7 +237,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.27</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.28</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -326,6 +326,7 @@
             </div>
           </div>
           <div class="btn-action-group">
+            <button onclick="urediPodatke()" id="btnUrediPodatke" class="btn-action btn-print" style="background:#0284c7;display:none;">✏️ Uredi podatke</button>
             <button onclick="deleteCurrent()" class="btn-action btn-delete">🗑️ Izbriši</button>
             <button onclick="window.print()" class="btn-action btn-print">🖨️ Ispiši</button>
             <button onclick="spremiShemePDF()" id="btnShemePdf" class="btn-action btn-print" style="background:#059669;">📤 Spremi sheme</button>
@@ -2842,6 +2843,33 @@
       if (p && p.rnDoc) openDocumentView(p.rnDoc);
     }
 
+    function urediPodatke() {
+      const p = projects.find(item => item.id === selectedId); if (!p) return;
+      if (!canViewFinancialDocs()) { alert('Podatke može mijenjati samo administrator.'); return; }
+      let mo = document.getElementById('urediModal');
+      if (!mo) { mo = document.createElement('div'); mo.id = 'urediModal'; mo.style.cssText = 'position:fixed;inset:0;z-index:10004;background:rgba(2,6,23,.85);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px;'; document.body.appendChild(mo); }
+      const f = (id, lab, val, rows) => `<label style="display:block;color:#94a3b8;font-size:13px;margin:10px 0 4px;">${lab}</label>${rows ? `<textarea id="${id}" rows="${rows}" style="width:100%;font-size:16px;">${escAttr(val)}</textarea>` : `<input id="${id}" value="${escAttr(val)}" style="width:100%;font-size:16px;">`}`;
+      mo.innerHTML = `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:16px;width:100%;max-width:520px;">
+        <b style="color:#fff;font-size:17px;">✏️ Uredi podatke naloga</b>
+        ${f('uName', 'Klijent / objekt', p.name)}${f('uPhone', 'Telefon', p.phone)}${f('uLoc', 'Lokacija', p.loc)}${f('uNotes', 'Opće napomene s mjerenja', p.notes, 3)}
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button type="button" onclick="document.getElementById('urediModal').style.display='none'" style="flex:1;background:#334155;color:#fff;border:none;border-radius:8px;padding:12px;font-size:16px;">Odustani</button>
+          <button type="button" onclick="spremiPodatke()" style="flex:2;background:#059669;color:#fff;border:none;border-radius:8px;padding:12px;font-size:16px;font-weight:bold;">💾 Spremi</button>
+        </div></div>`;
+      mo.style.display = 'flex';
+    }
+    async function spremiPodatke() {
+      const v = id => (document.getElementById(id).value || '').trim();
+      const data = { name: v('uName'), phone: v('uPhone'), loc: v('uLoc'), notes: v('uNotes') };
+      if (!data.name) { alert('Upiši ime klijenta.'); return; }
+      try {
+        await db.collection("nalozi").doc(selectedId).update(data);
+        const p = projects.find(item => item.id === selectedId); if (p) Object.assign(p, data);
+        document.getElementById('urediModal').style.display = 'none';
+        renderDetails(); try { renderSidebar(); } catch (e) {}
+      } catch (e) { alert('Nije spremljeno (provjeri internet): ' + ((e && e.message) || e)); }
+    }
+
     function renderDetails() {
       const p = projects.find(item => item.id === selectedId);
       if (!p) return;
@@ -2849,6 +2877,7 @@
       document.getElementById('d-name').innerText = p.name;
       document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
       document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
+      const bu = document.getElementById('btnUrediPodatke'); if (bu) bu.style.display = canViewFinancialDocs() ? '' : 'none';
       renderMjere();
       if (p.mjere && p.mjere.length) { try { ucitajJsPDF().catch(() => {}); } catch (e) {} }
 
