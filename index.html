@@ -237,7 +237,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.29</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.30</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1278,7 +1278,7 @@
         : `<svg viewBox="0 0 1000 860" style="width:100%;height:auto;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
     }
     function pergolaOsvjeziKucicu(i, k, v) {
-      const t = document.getElementById(`pb_${i}_${k}`); if (t) t.textContent = v || '';
+      const t = document.getElementById(`pb_${i}_${k}`); if (t) t.textContent = v ? normalizirajMjeru(v) : '';
       const r = document.getElementById(`pbr_${i}_${k}`);
       if (r) { const nuzno = (PERGOLA_POLJA.find(x => x[0] === k) || [])[3]; r.setAttribute('fill', v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')); }
       const w = document.getElementById(`pw_${i}`); if (w) { const m = Object.assign({}, mjGet()[i] || {}); m[k] = v; w.innerHTML = pergolaUpozorenja(m); }
@@ -1359,7 +1359,7 @@
       if (inp) { inp.focus(); inp.scrollIntoView({ block: 'nearest' }); }
     }
     function garazaOsvjeziKucicu(i, k, v) {
-      const t = document.getElementById(`gb_${i}_${k}`); if (t) t.textContent = v || '';
+      const t = document.getElementById(`gb_${i}_${k}`); if (t) t.textContent = v ? normalizirajMjeru(v) : '';
       const r = document.getElementById(`gbr_${i}_${k}`);
       if (r) { const nuzno = (GARAZA_POLJA.find(x => x[0] === k) || [])[3]; r.setAttribute('fill', v ? '#dcfce7' : (nuzno ? '#fef3c7' : '#e0f2fe')); }
     }
