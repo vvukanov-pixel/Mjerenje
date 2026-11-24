@@ -257,7 +257,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.36</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.37</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -366,6 +366,7 @@
               <input type="file" id="addSketchFileInput" multiple style="display:none" onchange="uploadAdditionalSketches(event)">
             </div>
 
+            <div id="mjNalogInfo" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:8px 10px;margin-bottom:8px;"></div>
             <div class="main-sketch" id="mainSketchBox" onclick="openSketchFull()">
               <img id="d-img" src="" alt="Skica" title="Klik za Zoom">
             </div>
@@ -1208,6 +1209,8 @@
       if (!v) return;
       const arr = mjGet().map(x => Object.assign({}, x));
       const m = arr[i]; if (!m) return;
+      const staraVrsta = vrstaOf(m);
+      if (staraVrsta && staraVrsta !== v && !potvrdiPostojeciNalog('Mijenjaš vrstu proizvoda ' + (i + 1) + ' (' + staraVrsta + ' → ' + v + ')')) { renderMjere(true); return; }
       m.vrsta = v;
       const set = (tip, krila) => { m.tip = tip; m.krila = krila; m.nadsvjetlo = ''; m.donje = ''; };
       if (v === 'Prozor') set('Jednokrilni prozor', ['ON-L']);
@@ -2011,8 +2014,14 @@
         <button type="button" class="mj-add-big" onclick="mjPickOpen=true;renderMjAdd(${n});document.getElementById('mjAdd').scrollIntoView({block:'nearest',behavior:'smooth'})" style="width:100%;background:#0284c7;color:#fff;border:none;border-radius:10px;padding:16px;font-size:19px;font-weight:bold;cursor:pointer;">${label}</button>`;
     }
 
+    function potvrdiPostojeciNalog(sto) {
+      if (mjMode !== 'detail') return true;
+      const p = projects.find(item => item.id === selectedId); if (!p) return true;
+      return confirm(`${sto} u POSTOJEĆI nalog:\n\n${p.name || '-'} (${p.date || ''})\n\nAko mjeriš novog klijenta, stisni Odustani pa ➕ Novo mjerenje.`);
+    }
     async function noviProizvod(v) {
       mjPickOpen = false;
+      if (!potvrdiPostojeciNalog('Dodaješ proizvod „' + v + '“')) { renderMjAdd(mjGet().length); return; }
       await addOtvor();
       const i = mjGet().length - 1;
       await promijeniVrstu(i, v);
@@ -3104,6 +3113,9 @@
       document.getElementById('d-sub').innerText = `Mjernik: ${p.worker || '-'} | Lokacija: ${p.loc || '-'} | Tel: ${p.phone || '-'} | Datum: ${p.date}`;
       document.getElementById('d-notes').innerText = p.notes ? 'Napomena s mjerenja: ' + p.notes : '';
       const bu = document.getElementById('btnUrediPodatke'); if (bu) bu.style.display = canViewFinancialDocs() ? '' : 'none';
+      const ni = document.getElementById('mjNalogInfo');
+      if (ni) ni.innerHTML = `<div style="font-size:13px;color:#cbd5e1;">📋 Mjerenje naloga: <b style="color:#fff;">${escAttr(p.name || '-')}</b> · ${escAttr(p.date || '')}</div>
+        <button type="button" onclick="showMonterView()" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:bold;cursor:pointer;">➕ Novo mjerenje (novi klijent)</button>`;
       renderMjere();
       if (p.mjere && p.mjere.length) { try { ucitajJsPDF().catch(() => {}); } catch (e) {} }
 
