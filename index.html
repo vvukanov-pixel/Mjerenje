@@ -257,7 +257,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.44</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.45</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -2456,6 +2456,43 @@
     const FOTO_NAZIVI = ['Š gore', 'Š sredina', 'Š dolje', 'V lijevo', 'V sredina', 'V desno', 'Kutija', 'Špaleta', 'Ostalo'];
     let fotoEd = null; // { i, oznake, sel, pending, url }
 
+    // Predložak kućica po vrsti proizvoda: [naziv, x, y, ključ polja u mjerama]
+    function fotoPredlozak(m) {
+      const t = (m && m.tip) || '';
+      let p;
+      if (jeNovogradnja(m)) p = [['Š gore', .5, .1, 'n_sg'], ['Š sredina', .5, .4, 'n_ss'], ['Š dolje', .5, .9, 'n_sd'], ['V lijevo', .1, .5, 'n_vl'], ['V sredina', .5, .62, 'n_vs'], ['V desno', .9, .5, 'n_vd'], ['Vagres', .82, .78, 'n_vg']];
+      else if (jeKlupcica(m)) p = [['Š1 unutarnja', .5, .25, 'k_s1'], ['Š2 vanjska', .5, .8, 'k_s2'], ['D1 lijevo', .15, .55, 'k_d1'], ['D2 desno', .85, .55, 'k_d2']];
+      else if (jeZaluzina(m)) p = [['Š', .5, .88, 'sirina'], ['V', .88, .5, 'visina'], ['Kutija K', .5, .08, 'z_kut'], ['Špaleta D', .12, .5, 'z_dub']];
+      else if (/Garažna/.test(t)) p = [['A širina', .5, .86, 'sirina'], ['B visina', .2, .5, 'visina'], ['D nadvoj', .5, .07, 'd'], ['C1 lijevo', .06, .7, 'c1'], ['C2 desno', .94, .7, 'c2']];
+      else if (/Pergola/.test(t)) p = [['L dužina', .5, .85, 'p_l'], ['B širina', .2, .3, 'p_b'], ['H visina', .1, .6, 'p_h']];
+      else if (/Sobna/.test(t)) p = [['Š', .5, .85, 'sirina'], ['V', .85, .5, 'visina'], ['Dubina zida', .15, .5, 'dubina']];
+      else if (/Komarnik|Grilje/.test(t)) p = [['Š', .5, .88, 'sirina'], ['V', .88, .5, 'visina']];
+      else { p = [['Š gore', .5, .1, 's_g'], ['Š sredina', .5, .4, 's_s'], ['Š dolje', .5, .9, 's_d'], ['V lijevo', .1, .5, 'v_l'], ['V sredina', .5, .62, 'v_s'], ['V desno', .9, .5, 'v_d']]; if (m.roleta) p.push(['Kutija', .82, .05, 'kutija']); }
+      return p.map(([n, x, y, k]) => ({ x, y, n, v: '', k }));
+    }
+    function fotoSljedeca(od) {
+      if (!fotoEd) return -1;
+      const oz = fotoEd.oznake, N = oz.length;
+      for (let d = 1; d <= N; d++) { const k = ((od == null ? -1 : od) + d + N) % N; if (!String(oz[k].v || '').trim()) return k; }
+      return -1;
+    }
+    function fotoFokus() {
+      if (!fotoEd || fotoEd.sel < 0 || (laserDevice && laserDevice.gatt && laserDevice.gatt.connected)) return;
+      setTimeout(() => { const inp = document.getElementById('feVal'); if (inp) { inp.focus(); try { inp.select(); } catch (e) {} } }, 30);
+    }
+    // vrijednosti iz kućica s poznatim poljem upisuju se i u mjere proizvoda
+    async function fotoUpisiPolja() {
+      if (!fotoEd) return;
+      const i = fotoEd.i, m = mjGet()[i]; if (!m) return;
+      for (const o of fotoEd.oznake) {
+        if (!o.k || !String(o.v || '').trim() || String(m[o.k] || '') === String(o.v)) continue;
+        if (jeKlupcica(m)) await kluSpremi(i, o.k, o.v);
+        else if (jeNovogradnja(m) && /^n_/.test(o.k)) await ngSpremi(i, o.k, o.v);
+        else if (/^[sv]_/.test(o.k) && typeof t3Spremi === 'function') await t3Spremi(i, o.k, o.v);
+        else await saveMjera(i, o.k, o.v);
+      }
+    }
+
     function fotoOznakeHtml(oz, sel, mali) {
       return (oz || []).map((o, k) => {
         const prazno = !String(o.v || '').trim();
@@ -2545,6 +2582,9 @@
     function fotoOtvori(i) {
       const m = mjGet()[i]; if (!m || !m.foto || !m.foto.url) return;
       fotoEd = { i, url: m.foto.url, oznake: (m.foto.oznake || []).map(o => Object.assign({}, o)), sel: -1, pending: null };
+      const novePredl = !fotoEd.oznake.length;
+      if (novePredl) fotoEd.oznake = fotoPredlozak(m);
+      fotoEd.sel = fotoSljedeca(-1);
       let mo = document.getElementById('fotoEd');
       if (!mo) {
         mo = document.createElement('div'); mo.id = 'fotoEd';
@@ -2577,6 +2617,8 @@
       });
       oz.addEventListener('pointerdown', fotoPointerDown);
       fotoRender();
+      if (novePredl) fotoSpremiEd();
+      fotoFokus();
     }
 
     function fotoPogodiNaziv(x, y) {
@@ -2629,7 +2671,7 @@
       const prepisi = !/Garažna/.test(m.tip || '') && (minS || minV)
         ? `<button type="button" onclick="fotoPrepisi()" style="background:#1e293b;color:#34d399;border:1px solid #059669;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:bold;margin-top:8px;width:100%;">⬇ Upiši najmanju u mjere: Š ${minS || '—'} × V ${minV || '—'}</button>` : '';
       if (!o) {
-        pn.innerHTML = `<div style="color:#e2e8f0;font-size:14px;text-align:center;">${fotoEd.pending != null ? `<b style="color:#fbbf24;">Izmjereno ${fotoEd.pending} mm</b> – dodirni na slici gdje je ta mjera` : '👆 Dodirni sliku gdje mjeriš, pa izmjeri laserom (ili upiši).<br><span style="font-size:12px;color:#94a3b8;">Kućicu možeš povući prstom · dodirni kućicu za promjenu naziva ili mjere</span>'}</div>${prepisi}`;
+        pn.innerHTML = `<div style="color:#e2e8f0;font-size:14px;text-align:center;">${fotoEd.pending != null ? `<b style="color:#fbbf24;">Izmjereno ${fotoEd.pending} mm</b> – dodirni na slici gdje je ta mjera` : (fotoEd.oznake.length && fotoSljedeca(-1) < 0 ? '<b style="color:#34d399;">✅ Sve kućice izmjerene – mjere su upisane i u proizvod.</b><br>' : '') + '👆 Dodirni sliku gdje mjeriš, pa izmjeri laserom (ili upiši).<br><span style="font-size:12px;color:#94a3b8;">Kućicu možeš povući prstom · dodirni kućicu za promjenu naziva ili mjere</span>'}</div>${prepisi}`;
         return;
       }
       pn.innerHTML = `
@@ -2638,11 +2680,11 @@
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           <input id="feNaziv" value="${escAttr(o.n)}" placeholder="Naziv" oninput="fotoPostaviNaziv(this.value, true)" style="flex:1;min-width:0;font-size:14px;">
-          <input id="feVal" inputmode="decimal" value="${escAttr(o.v)}" placeholder="mm" onchange="fotoPostaviVrijednost(this.value)" style="width:110px;font-size:18px;font-weight:bold;text-align:center;">
+          <input id="feVal" inputmode="decimal" value="${escAttr(o.v)}" placeholder="mm" onchange="fotoPostaviVrijednost(this.value, false, ${fotoEd.sel})" style="width:110px;font-size:18px;font-weight:bold;text-align:center;">
           <button type="button" onclick="fotoObrisiOznaku()" style="background:#7f1d1d;color:#fff;border:none;border-radius:8px;padding:10px 12px;font-size:15px;">🗑</button>
           <button type="button" onclick="fotoPostaviVrijednost(document.getElementById('feVal').value, true)" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:15px;font-weight:bold;">✓</button>
         </div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;">📡 Izmjeri laserom – mjera ide u označenu (žutu) kućicu.</div>${prepisi}`;
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;">📡 Izmjeri laserom – mjera ide u označenu kućicu, zatim se sama označi sljedeća prazna. Kućice možeš povući na pravo mjesto.</div>${prepisi}`;
     }
 
     function fotoMin(slovo) {
@@ -2658,11 +2700,14 @@
       else { fotoRender(); fotoSpremiEd(); }
     }
 
-    function fotoPostaviVrijednost(v, zatvori) {
-      if (!fotoEd || !fotoEd.oznake[fotoEd.sel]) return;
+    function fotoPostaviVrijednost(v, zatvori, idx) {
+      if (!fotoEd) return;
+      if (idx != null && idx !== fotoEd.sel) { if (fotoEd.oznake[idx] && !zatvori) { const nv = normalizirajMjeru(v); if (String(fotoEd.oznake[idx].v || '') === nv) return; } return; }
+      if (!fotoEd.oznake[fotoEd.sel]) return;
       fotoEd.oznake[fotoEd.sel].v = normalizirajMjeru(v);
-      if (zatvori) fotoEd.sel = -1;
-      fotoRender(); fotoSpremiEd();
+      if (zatvori) fotoEd.sel = String(fotoEd.oznake[fotoEd.sel].v || '').trim() ? fotoSljedeca(fotoEd.sel) : fotoEd.sel;
+      fotoRender(); fotoSpremiEd().then(fotoUpisiPolja);
+      if (zatvori) fotoFokus();
     }
 
     function fotoObrisiOznaku() {
@@ -2674,14 +2719,14 @@
     function fotoLaser(mm) {
       if (!fotoEd) return;
       const o = fotoEd.oznake[fotoEd.sel];
-      if (o) { o.v = String(mm); fotoEd.sel = -1; fotoRender(); fotoSpremiEd(); setLaserStatus('Zadnja mjera: ' + mm + ' mm (na slici)', '#34d399'); }
+      if (o) { o.v = String(mm); fotoEd.sel = fotoSljedeca(fotoEd.sel); fotoRender(); fotoSpremiEd().then(fotoUpisiPolja); setLaserStatus('Zadnja mjera: ' + mm + ' mm (na slici)' + (fotoEd.sel >= 0 ? ' → sljedeća: ' + fotoEd.oznake[fotoEd.sel].n : ' – sve izmjereno ✅'), '#34d399'); }
       else { fotoEd.pending = mm; fotoRender(); setLaserStatus('Izmjereno ' + mm + ' mm – dodirni sliku gdje je ta mjera', '#fbbf24'); }
     }
 
     function fotoSpremiEd() {
       if (!fotoEd) return Promise.resolve();
       const m = mjGet()[fotoEd.i]; if (!m || !m.foto) return Promise.resolve();
-      const foto = Object.assign({}, m.foto, { oznake: fotoEd.oznake.map(o => ({ x: Math.round(o.x * 10000) / 10000, y: Math.round(o.y * 10000) / 10000, n: o.n || '', v: o.v || '' })) });
+      const foto = Object.assign({}, m.foto, { oznake: fotoEd.oznake.map(o => Object.assign({ x: Math.round(o.x * 10000) / 10000, y: Math.round(o.y * 10000) / 10000, n: o.n || '', v: o.v || '' }, o.k ? { k: o.k } : {})) });
       return fotoSpremi(fotoEd.i, foto);
     }
 
@@ -2710,7 +2755,7 @@
     }
 
     async function fotoZatvori() {
-      if (fotoEd) { const inp = document.getElementById('feVal'); if (inp && fotoEd.oznake[fotoEd.sel]) fotoEd.oznake[fotoEd.sel].v = normalizirajMjeru(inp.value); clearTimeout(window.__feT); await fotoSpremiEd(); }
+      if (fotoEd) { const inp = document.getElementById('feVal'); if (inp && fotoEd.oznake[fotoEd.sel]) fotoEd.oznake[fotoEd.sel].v = normalizirajMjeru(inp.value); clearTimeout(window.__feT); await fotoSpremiEd(); try { await fotoUpisiPolja(); } catch (e) {} }
       fotoEd = null;
       const mo = document.getElementById('fotoEd'); if (mo) mo.style.display = 'none';
       document.body.style.overflow = document.querySelector('.mj-full') ? 'hidden' : '';
