@@ -237,7 +237,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.30</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.31</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -968,7 +968,7 @@
     const BOJE = ['Bijelo', 'Orah', 'Zlatni hrast', 'Antracit', 'Bijelo/Antracit', 'Bijelo/Orah', 'Bijelo/Zlatni hrast'];
     // krilo: F fiksno, O okretno, ON okretno-nagibno, N nagibno, K klizno, G grilje; -L/-D = strana kvake (kod K smjer klizanja)
     const KRILA_CIKLUS = ['F', 'ON-L', 'ON-D', 'O-L', 'O-D', 'N', 'K-D', 'K-L', 'V-L', 'V-D', 'G', 'GS-D', 'GS-L'];
-    function jeVrataTip(tip) { return /Garažna|Pergola/.test(tip || ''); }
+    function jeVrataTip(tip) { return /Garažna|Pergola|Građevinski otvor/.test(tip || ''); }
     function imaStranu(tip) { return false; }
     function defaultKrila(tip, strana) {
       const s = strana === 'D' ? 'D' : 'L', o = s === 'L' ? 'D' : 'L';
@@ -1161,7 +1161,7 @@
       return `<div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;">${btn('V-D', 'LIJEVO OTVARANJE', true)}${btn('V-L', 'DESNO OTVARANJE', false)}</div>`;
     }
 
-    const VRSTE = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Pergola', 'Komarnik', 'Ostalo'];
+    const VRSTE = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Sobna vrata', 'Ulazna vrata', 'Garažna vrata', 'Grilje', 'Pergola', 'Komarnik', 'Novogradnja – građevinska mjera', 'Ostalo'];
     const KOMARNICI = ['Fiksni (okvirni)', 'Rolo – okomiti', 'Rolo – vodoravni (vrata)', 'Plise', 'Krilni (vrata)', 'Klizni'];
     function vrstaOf(m) {
       if (m.vrsta && VRSTE.includes(m.vrsta)) return m.vrsta;
@@ -1171,6 +1171,7 @@
       if (/Ulazna/.test(t)) return 'Ulazna vrata';
       if (/Garažna/.test(t)) return 'Garažna vrata';
       if (/Pergola/.test(t)) return 'Pergola';
+      if (/Građevinski otvor/.test(t)) return 'Novogradnja – građevinska mjera';
       if (/Grilje/.test(t)) return 'Grilje';
       if (/Smart/.test(t)) return 'Smart-Slide';
       if (/HST/.test(t)) return 'HST';
@@ -1195,11 +1196,12 @@
       else if (v === 'Smart-Slide') set('Klizna stijena Smart-Slide', ['K-D', 'F']);
       else if (v === 'HST') set('HST stijena', ['K-D', 'F']);
       else if (v === 'ALU otvori') set('Jednokrilni prozor', ['ON-L']);
+      else if (v === 'Novogradnja – građevinska mjera') { set('Građevinski otvor', ['F']); m.roleta = false; }
       else if (v === 'Pergola') { set('Pergola', ['F']); m.roleta = false; m.p_sustav = m.p_sustav || PERGOLA_SUSTAVI[0]; }
       else if (v === 'Komarnik') { set('Komarnik', ['F']); m.komarnik = m.komarnik || KOMARNICI[0]; m.roleta = false; }
       else set('Ostalo', ['F']);
       const done = mjSet(arr); renderMjere(true); await done;
-      if (!/Sobna|Garažna|Komarnik|Pergola/.test(v)) otvoriPredloske(i);
+      if (!/Sobna|Garažna|Komarnik|Pergola|Novogradnja/.test(v)) otvoriPredloske(i);
     }
 
     const SOBNA_SIRINE = [682, 782, 882, 982];
@@ -1212,6 +1214,78 @@
         <div><b style="color:#38bdf8;">Vanjska širina dovratnika (mm):</b><br>${SOBNA_SIRINE.map(v => chip(v, false)).join('')}</div>
         <div style="margin-top:4px;"><b style="color:#38bdf8;">Debljine štoka (mm):</b><br>${SOBNA_STOKOVI.map(v => chip(v, v === prep)).join('')}</div>
         ${d > 0 ? (prep ? `<div style="margin-top:4px;color:#4ade80;">Za špaletu ${d} mm → štok <b>${prep}</b> mm</div>` : `<div style="margin-top:4px;color:#fbbf24;">Špaleta ${d} mm je deblja od najvećeg štoka (280 mm)</div>`) : ''}
+      </div>`;
+    }
+
+    // ================= NOVOGRADNJA – građevinska mjera (3 širine + 3 visine) =================
+    const NG_PROIZVODI = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
+    const NG_POLJA = [
+      ['n_sg', 'Š gore', 'Širina gore'], ['n_ss', 'Š sredina', 'Širina sredina'], ['n_sd', 'Š dolje', 'Širina dolje'],
+      ['n_vl', 'V lijevo', 'Visina lijevo'], ['n_vs', 'V sredina', 'Visina sredina'], ['n_vd', 'V desno', 'Visina desno']
+    ];
+    const NG_POZ = { n_sg: [530, 119], n_ss: [530, 349], n_sd: [530, 579], n_vl: [280, 465], n_vs: [510, 465], n_vd: [740, 465] };
+    function jeNovogradnja(m) { return /Građevinski otvor/.test((m && m.tip) || ''); }
+    function ngBroj(v) { const n = parseFloat(String(v || '').replace(',', '.')); return n > 0 ? n : null; }
+    function ngMin(m, kljucevi) { const v = kljucevi.map(k => ngBroj(m[k])).filter(x => x); return v.length ? Math.min(...v) : null; }
+    function ngRaspon(m, kljucevi) { const v = kljucevi.map(k => ngBroj(m[k])).filter(x => x); return v.length > 1 ? Math.max(...v) - Math.min(...v) : 0; }
+    function ngShema(m, i, staticno) {
+      let o = `<defs><marker id="nga" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+        <pattern id="ngh" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="16" stroke="#cbd5e1" stroke-width="5"/></pattern></defs>`;
+      o += `<rect x="0" y="0" width="1000" height="760" fill="url(#ngh)"/><rect x="0" y="0" width="1000" height="760" fill="#e2e8f0" fill-opacity="0.55"/>`;
+      o += `<rect x="220" y="100" width="560" height="560" fill="#ffffff" stroke="#334155" stroke-width="6"/>`;
+      const st = 'stroke="#334155" stroke-width="3" fill="none" marker-start="url(#nga)" marker-end="url(#nga)"';
+      [150, 380, 610].forEach(y => { o += `<line x1="228" y1="${y}" x2="772" y2="${y}" ${st}/>`; });
+      [270, 500, 730].forEach(x => { o += `<line x1="${x}" y1="108" x2="${x}" y2="652" ${st}/>`; });
+      o += `<text x="500" y="720" text-anchor="middle" font-size="26" font-weight="bold" fill="#475569">GRAĐEVINSKI OTVOR${m.g_proizvod ? ' – ' + escAttr(m.g_proizvod) : ''}</text>`;
+      o += `<text x="110" y="390" text-anchor="middle" font-size="26" font-weight="bold" fill="#64748b">ZID</text><text x="890" y="390" text-anchor="middle" font-size="26" font-weight="bold" fill="#64748b">ZID</text>`;
+      NG_POLJA.forEach(([k, lab]) => {
+        const [x, y] = NG_POZ[k]; const v = m[k] || '';
+        o += `<g ${staticno ? '' : `style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')"`}>
+          <rect ${staticno ? '' : `id="nbr_${i}_${k}"`} x="${x}" y="${y}" width="140" height="62" rx="6" fill="${v ? '#dcfce7' : '#fef3c7'}" stroke="#d97706" stroke-width="4"/>
+          <text x="${x + 6}" y="${y + 18}" font-size="16" font-weight="bold" fill="#0f172a">${lab}</text>
+          <text ${staticno ? '' : `id="nb_${i}_${k}"`} x="${x + 70}" y="${y + 52}" text-anchor="middle" font-size="30" font-weight="bold" fill="#0f172a">${escAttr(v)}</text>
+        </g>`;
+      });
+      return staticno === 'pdf'
+        ? `<svg viewBox="0 0 1000 760" width="1000" height="760" xmlns="http://www.w3.org/2000/svg">${o}</svg>`
+        : `<svg viewBox="0 0 1000 760" style="width:100%;height:auto;display:block;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">${o}</svg>`;
+    }
+    function ngSazetak(m) {
+      const s = ngMin(m, ['n_sg', 'n_ss', 'n_sd']), v = ngMin(m, ['n_vl', 'n_vs', 'n_vd']);
+      const rs = ngRaspon(m, ['n_sg', 'n_ss', 'n_sd']), rv = ngRaspon(m, ['n_vl', 'n_vs', 'n_vd']);
+      let h = `<div style="margin-top:6px;padding:8px 10px;border-radius:6px;background:#0b1220;border:1px solid #334155;color:#e2e8f0;font-size:14px;">Najmanja mjera otvora: <b style="color:#34d399;font-size:16px;">Š ${s || '—'} × V ${v || '—'}</b> mm</div>`;
+      if (rs > 10 || rv > 10) h += `<div style="margin-top:6px;padding:7px 9px;border-radius:6px;background:rgba(245,158,11,.15);border:1px solid #f59e0b;color:#fbbf24;font-size:13px;">⚠️ Otvor nije ravan:${rs > 10 ? ` širine se razlikuju ${rs} mm` : ''}${rs > 10 && rv > 10 ? ',' : ''}${rv > 10 ? ` visine se razlikuju ${rv} mm` : ''}.</div>`;
+      return h;
+    }
+    function ngOsvjeziKucicu(i, k, v) {
+      const t = document.getElementById(`nb_${i}_${k}`); if (t) t.textContent = v ? normalizirajMjeru(v) : '';
+      const r = document.getElementById(`nbr_${i}_${k}`); if (r) r.setAttribute('fill', v ? '#dcfce7' : '#fef3c7');
+      const w = document.getElementById(`nw_${i}`); if (w) { const m = Object.assign({}, mjGet()[i] || {}); m[k] = normalizirajMjeru(v); w.innerHTML = ngSazetak(m); }
+    }
+    async function ngSpremi(i, k, v) {
+      await saveMjera(i, k, v);
+      const m = mjGet()[i]; if (!m) return;
+      const s = ngMin(m, ['n_sg', 'n_ss', 'n_sd']), vv = ngMin(m, ['n_vl', 'n_vs', 'n_vd']);
+      if (s && String(s) !== String(m.sirina)) await saveMjera(i, 'sirina', String(s));
+      if (vv && String(vv) !== String(m.visina)) await saveMjera(i, 'visina', String(vv));
+      const w = document.getElementById(`nw_${i}`); if (w) w.innerHTML = ngSazetak(mjGet()[i] || {});
+    }
+    function ngIzbor(m, i) {
+      return `<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;">
+        <span class="mj-lbl">Što ide u otvor:</span>
+        <select onchange="postaviPolje(${i}, 'g_proizvod', this.value)" style="padding:8px;font-size:14px;flex:1;min-width:160px;">
+          <option value="" ${m.g_proizvod ? '' : 'selected'}>— odaberi —</option>
+          ${NG_PROIZVODI.map(p => `<option ${p === m.g_proizvod ? 'selected' : ''}>${p}</option>`).join('')}
+        </select></div>`;
+    }
+    function ngPanel(m, i) {
+      const polje = ([k, lab, opis]) => `<div><label style="color:#fbbf24;">${opis}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); ngOsvjeziKucicu(${i}, '${k}', this.value)" onchange="ngSpremi(${i}, '${k}', this.value)" onfocus="const r=document.getElementById('nbr_${i}_${k}');this.closest('.mj-row').querySelectorAll('rect[id^=nbr_]').forEach(x=>x.setAttribute('stroke-dasharray',''));if(r)r.setAttribute('stroke-dasharray','10 5');" data-idx="${i}" data-key="${k}"></div>`;
+      return `<div style="margin:6px 0;">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Građevinska mjera: dodirni kućicu pa mjeri laserom – 3 širine (gore, sredina, dolje) i 3 visine (lijevo, sredina, desno). Sve u mm.</div>
+        ${ngShema(m, i)}
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:8px;">${NG_POLJA.slice(0, 3).map(polje).join('')}</div>
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:6px;">${NG_POLJA.slice(3).map(polje).join('')}</div>
+        <div id="nw_${i}">${ngSazetak(m)}</div>
       </div>`;
     }
 
@@ -1521,7 +1595,7 @@
               <input style="flex:1; min-width:0;" list="bojeLista" placeholder="Boja" value="${escAttr(m.boja)}" oninput="liveMjera(${i}, 'boja', this.value)" onchange="saveMjera(${i}, 'boja', this.value)">
             </div>
             ${!vrstaOf(m) ? '<div class="mj-lbl" style="margin-bottom:6px;color:#fbbf24;">↑ Prvo odaberi proizvod</div>' : `<div class="mj-krila">
-              ${/Pergola/.test(m.tip || '') ? pergolaIzbor(m, i) : /Komarnik/.test(m.tip || '') ? `<span class="mj-lbl">Vrsta komarnika:</span><select onchange="postaviPolje(${i}, 'komarnik', this.value)" style="padding:8px;font-size:14px;">${KOMARNICI.map(k => `<option ${k === (m.komarnik || KOMARNICI[0]) ? 'selected' : ''}>${k}</option>`).join('')}</select>` : /Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
+              ${jeNovogradnja(m) ? ngIzbor(m, i) : /Pergola/.test(m.tip || '') ? pergolaIzbor(m, i) : /Komarnik/.test(m.tip || '') ? `<span class="mj-lbl">Vrsta komarnika:</span><select onchange="postaviPolje(${i}, 'komarnik', this.value)" style="padding:8px;font-size:14px;">${KOMARNICI.map(k => `<option ${k === (m.komarnik || KOMARNICI[0]) ? 'selected' : ''}>${k}</option>`).join('')}</select>` : /Sobna/.test(m.tip || '') ? '' : `<button type="button" onclick="otvoriPredloske(${i})" style="display:flex;align-items:center;gap:8px;background:#e5e7eb;border:2px solid #0284c7;border-radius:8px;padding:4px 10px 4px 4px;cursor:pointer;">
                 ${crtezOtvora(Object.assign({}, m, { sirina: m.sirina || predlozakVelicina('', krilaOf(m).length)[0], visina: m.visina || 1300 }), i, { mini: true, size: 44 })}
                 <b style="color:#0f172a;font-size:13px;">🖼 Predložak</b>
               </button>`}
@@ -1548,7 +1622,7 @@
                 <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
               </select>
             </div>`}
-            ${/Pergola/.test(m.tip || '') ? pergolaPanel(m, i) : /Garažna/.test(m.tip || '') ? garazaPanel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
+            ${jeNovogradnja(m) ? ngPanel(m, i) : /Pergola/.test(m.tip || '') ? pergolaPanel(m, i) : /Garažna/.test(m.tip || '') ? garazaPanel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
               ${/Sobna/.test(m.tip || '') ? `<div><label>Debljina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>` : ''}
@@ -1734,7 +1808,8 @@
       const m = mjGet()[i]; if (!m) return;
       const vw = Math.min(window.innerWidth, 1100), vh = window.innerHeight;
       let svg;
-      if (/Pergola/.test(m.tip || '')) svg = pergolaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
+      if (jeNovogradnja(m)) svg = ngShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
+      else if (/Pergola/.test(m.tip || '')) svg = pergolaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
       else if (/Garažna/.test(m.tip || '')) svg = garazaShema(m, i, true).replace('style="width:100%;height:auto;display:block;border-radius:8px;"', `style="width:${vw - 40}px;max-width:100%;height:auto;display:block;"`);
       else svg = crtezOtvora(m, i, { size: Math.max(200, Math.min(vw - 120, vh - 220)) });
       let mo = document.getElementById('crtezZoom');
@@ -1761,6 +1836,9 @@
       if (!box) return;
       const mjere = mjGet();
       const svgs = mjere.map((m, i) => {
+        if (jeNovogradnja(m)) {
+          return `<div onclick="uvecajCrtez(${i})" style="cursor:zoom-in;width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Građevinski otvor${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${ngShema(m, i, true)}</div>`;
+        }
         if (/Pergola/.test(m.tip || '')) {
           return `<div onclick="uvecajCrtez(${i})" style="cursor:zoom-in;width:min(100%, ${document.querySelector('.mj-full') ? 520 : 340}px);"><div style="font:bold 11px sans-serif;color:#0f172a;margin:2px 0 3px;">${i + 1}. Pergola${m.prostorija ? ' – ' + escAttr(m.prostorija) : ''}</div>${pergolaShema(m, i, true)}</div>`;
         }
@@ -1778,7 +1856,7 @@
     }
 
     // laseri u "keyboard" načinu (npr. Leica DISTO) mogu poslati "1.234 m", "1234 mm" ili "1,234" – sve pretvori u mm
-    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr'];
+    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr', 'n_sg', 'n_ss', 'n_sd', 'n_vl', 'n_vs', 'n_vd'];
     function normalizirajMjeru(v) {
       const t = String(v || '').trim().toLowerCase();
       if (!t) return '';
@@ -1928,18 +2006,19 @@
         for (let i = 0; i < mjere.length; i++) {
           const m = mjere[i];
           const pergola = /Pergola/.test(m.tip || '');
-          const garaza = /Garažna/.test(m.tip || '') || pergola;
-          const svg = pergola ? pergolaShema(m, i, 'pdf') : garaza ? garazaShema(m, i, 'pdf') : crtezOtvora(m, i, { size: 230 });
+          const novo = jeNovogradnja(m);
+          const garaza = /Garažna/.test(m.tip || '') || pergola || novo;
+          const svg = novo ? ngShema(m, i, 'pdf') : pergola ? pergolaShema(m, i, 'pdf') : garaza ? garazaShema(m, i, 'pdf') : crtezOtvora(m, i, { size: 230 });
           let img = null; try { if (svg) img = await svgUSliku(svg); } catch (e) {}
           if (garaza) {
             if (col === 1) { col = 0; y += redVisina; redVisina = 0; }
             const fw = W - 2 * M, gs = img ? fw / img.width : 0, gh = img ? img.height * gs : 0;
             ctx.font = '22px Helvetica, Arial, sans-serif';
-            const ginfo = [`${i + 1}. ${pergola ? 'Pergola' : 'Garažna vrata'}${m.prostorija ? ' – ' + m.prostorija : ''}`];
-            const op = pergola ? [m.p_sustav || PERGOLA_SUSTAVI[0], m.p_izvedba ? 'Izvedba: ' + m.p_izvedba : 'Izvedba: nije odabrana', pergolaPolja(m).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · '), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
+            const ginfo = [`${i + 1}. ${novo ? 'Građevinski otvor (novogradnja)' : pergola ? 'Pergola' : 'Garažna vrata'}${m.prostorija ? ' – ' + m.prostorija : ''}`];
+            const op = novo ? [m.g_proizvod ? 'U otvor: ' + m.g_proizvod : '', 'Širine (gore/sred/dolje): ' + ['n_sg', 'n_ss', 'n_sd'].map(k => m[k] || '—').join(' / '), 'Visine (lijevo/sred/desno): ' + ['n_vl', 'n_vs', 'n_vd'].map(k => m[k] || '—').join(' / '), 'Najmanja: ' + (ngMin(m, ['n_sg', 'n_ss', 'n_sd']) || '—') + ' × ' + (ngMin(m, ['n_vl', 'n_vs', 'n_vd']) || '—'), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : pergola ? [m.p_sustav || PERGOLA_SUSTAVI[0], m.p_izvedba ? 'Izvedba: ' + m.p_izvedba : 'Izvedba: nije odabrana', pergolaPolja(m).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · '), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
             let gl = [ginfo[0]].concat(op ? prelomi(ctx, op, fw) : []);
             if (m.napomena) gl = gl.concat(prelomi(ctx, 'Napomena: ' + m.napomena, fw));
-            const leg = pergola ? 'L dužina (smjer slaganja lamela) · B širina (dužina lamele) · H visina do donjeg ruba · L1 prepust (tip 4) · P mjera 1. polja (dvodijelna) – sve u mm' : 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
+            const leg = novo ? 'Građevinska mjera otvora u mm – 3 širine i 3 visine; za narudžbu se uzima najmanja' : pergola ? 'L dužina (smjer slaganja lamela) · B širina (dužina lamele) · H visina do donjeg ruba · L1 prepust (tip 4) · P mjera 1. polja (dvodijelna) – sve u mm' : 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
             gl = gl.concat(prelomi(ctx, leg, fw));
             const bh = gh + gl.length * 30 + 40;
             if (y + bh > H - M - 40) novaStranica();
@@ -2423,7 +2502,7 @@
       if (!target) { setLaserStatus('Izmjereno ' + mm + ' mm – sva polja su puna, klikni u polje ili dodaj otvor', '#fbbf24'); return; }
       target.value = mm;
       saveMjera(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm));
-      try { garazaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); pergolaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); } catch (e) {}
+      try { garazaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); pergolaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); ngOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); } catch (e) {}
       setLaserStatus('Zadnja mjera: ' + mm + ' mm', '#34d399');
       const next = fields[fields.indexOf(target) + 1];
       if (next) next.focus(); else target.blur();
