@@ -154,11 +154,31 @@
     .lightbox-viewport:active { cursor: grabbing; }
     .lightbox-img { max-width: 90vw; max-height: 85vh; object-fit: contain; transform-origin: center center; transition: transform 0.05s ease-out; user-select: none; }
 
+    /* FAZE PO STRANICAMA */
+    .faze-head { }
+    .faze-traka { flex-shrink: 0; position: sticky; top: -18px; z-index: 50; background: var(--bg-dark); margin: -16px -18px 0; padding: 26px 18px 8px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; }
+    .faza-btn { flex: 1 0 auto; min-width: 118px; display: flex; align-items: center; gap: 7px; background: #0f172a; border: 2px solid #334155; color: #64748b; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .faza-btn .fz-br { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #1e293b; color: #94a3b8; font-size: 12px; flex: 0 0 auto; }
+    .faza-btn.gotovo { color: #a7f3d0; border-color: #065f46; }
+    .faza-btn.gotovo .fz-br { background: #10b981; color: #fff; }
+    .faza-btn.trenutna { color: #fde68a; border-color: #b45309; }
+    .faza-btn.trenutna .fz-br { background: #ef4444; color: #fff; }
+    .faza-btn.aktivna { background: #0c4a6e; border-color: #38bdf8; color: #fff; box-shadow: 0 0 0 2px rgba(56,189,248,.25); }
+    .faza-btn.sve { flex: 0 0 auto; min-width: 0; color: #94a3b8; }
+    .faze-tabs .grid-six-col { grid-template-columns: 1fr; max-width: 1100px; }
+    .faze-tabs .grid-six-col > .card { display: none; }
+    .faze-tabs .grid-six-col > .card.faza-aktivna { display: block; }
+    .faze-tabs .grid-six-col > .card h4[id^="stage"] { font-size: 17px !important; }
+    @media print { .faze-traka { display: none !important; } .faze-tabs .grid-six-col > .card { display: block !important; } }
+
     @media (max-width: 900px) {
+      .faze-head { position: static; margin: 0; padding: 0; }
+      .faze-traka { top: var(--hdr, 52px); margin: -10px -12px 0; padding: 6px 12px; }
+      .faza-btn { min-width: 0; padding: 7px 9px; font-size: 12px; }
       .main-container { display: block; }
       .sidebar { width: 100%; height: auto; min-height: calc(100vh - 52px); border-right: none; display: block; }
       .sidebar.mobile-hide { display: none; }
-      .detail-panel { width: 100%; height: auto; min-height: calc(100vh - 52px); display: none; padding: 12px; }
+      .detail-panel { width: 100%; height: auto; min-height: calc(100vh - 52px); display: none; padding: 12px; overflow: visible; }
       .detail-panel.mobile-show { display: flex; }
       .btn-mobile-back { display: block; }
     }
@@ -237,7 +257,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.31</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.35</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -317,6 +337,7 @@
 
       <div class="detail-panel" id="detailPanel">
         
+        <div class="faze-head">
         <div class="full-width">
           <div style="display: flex; align-items: center; gap: 10px;">
             <button onclick="backToSidebar()" class="btn-mobile-back">← Popis</button>
@@ -332,11 +353,13 @@
             <button onclick="spremiShemePDF()" id="btnShemePdf" class="btn-action btn-print" style="background:#059669;">📤 Spremi sheme</button>
           </div>
         </div>
+        </div>
+        <div class="faze-traka" id="fazeTraka"></div>
 
         <div class="grid-six-col">
           
           <!-- 1. MAPA: SLIKE MJERENJA -->
-          <div class="card">
+          <div data-faza="1" class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 id="stage1Title" style="color: #38bdf8; font-size: 13px;">📐 1. MJERENJE <span id="stage1Badge"></span></h4>
               <button onclick="document.getElementById('addSketchFileInput').click()" style="background: #0284c7; color: white; border: none; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Dodaj skicu</button>
@@ -357,7 +380,7 @@
             <p id="d-notes" style="font-size: 12px; color: #f59e0b; margin-top: 8px;"></p>
 
             <!-- MJERE OTVORA (laser) -->
-            <div id="mjereBox" onkeydown="if(event.key==='Enter'){event.preventDefault();mjEnterDalje(event.target);}" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
+            <div id="mjereBox" onkeydown="if((event.key==='Enter'||(event.key==='Tab'&&!event.shiftKey))&&event.target.classList.contains('mj-num')){event.preventDefault();mjEnterDalje(event.target);}" style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                 <h4 style="color:#38bdf8; font-size:15px;">📏 Proizvodi i mjere (mm)</h4>
                 <div style="display:flex; gap:6px;">
@@ -377,7 +400,7 @@
           </div>
 
           <!-- 2. MAPA: PONUDA -->
-          <div class="card">
+          <div data-faza="2" class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 id="stage2Title" style="color: #34d399; font-size: 13px;">📄 2. PONUDA <span id="stage2Badge"></span></h4>
               <button id="btnDelOffer" onclick="removeOffer()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
@@ -399,7 +422,7 @@
           </div>
 
           <!-- 3. MAPA: RADNI NALOG -->
-          <div class="card" style="border-left: 4px solid #fbbf24;">
+          <div data-faza="3" class="card" style="border-left: 4px solid #fbbf24;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 id="stage3Title" style="color: #fbbf24; font-size: 13px;">📋 3. RADNI NALOG <span id="stage3Badge"></span></h4>
               <button id="btnDelRn" onclick="removeRn()" style="display:none; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🗑️ Obriši</button>
@@ -428,7 +451,7 @@
           </div>
 
           <!-- 4. MAPA: SKLADIŠTE -->
-          <div class="card" style="border-left: 4px solid var(--cyan);">
+          <div data-faza="4" class="card" style="border-left: 4px solid var(--cyan);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 id="stage4Title" style="color: var(--cyan); font-size: 13px;">📦 4. SKLADIŠTE <span id="stage4Badge"></span></h4>
               <span id="skladisteStatusBadge" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(6,182,212,0.15); color:var(--cyan);">ROBA U SKLADIŠTU</span>
@@ -444,7 +467,7 @@
           </div>
 
           <!-- 5. MAPA: MONTAŽA -->
-          <div class="card" style="border-left: 4px solid #a855f7;">
+          <div data-faza="5" class="card" style="border-left: 4px solid #a855f7;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 id="stage5Title" style="color: #c084fc; font-size: 13px;">🛠️ 5. MONTAŽA <span id="stage5Badge"></span></h4>
               <button onclick="document.getElementById('doneFileInput').click()" style="background: #7e22ce; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">📷 + Slike</button>
@@ -470,7 +493,7 @@
           </div>
 
           <!-- 6. MAPA: FAKTURIRANJE -->
-          <div class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
+          <div data-faza="6" class="card" id="fakturaCard" style="border-left: 4px solid var(--success);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
               <h4 id="stage6Title" style="color: #34d399; font-size: 13px;">💰 6. FAKTURIRANJE <span id="stage6Badge"></span></h4>
               <span id="fakturaPill" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1);">ČEKA RAČUN</span>
@@ -1221,9 +1244,10 @@
     const NG_PROIZVODI = ['Prozor', 'Balkonska vrata', 'ALU otvori', 'Smart-Slide', 'HST', 'Ulazna vrata', 'Garažna vrata', 'Ostalo'];
     const NG_POLJA = [
       ['n_sg', 'Š gore', 'Širina gore'], ['n_ss', 'Š sredina', 'Širina sredina'], ['n_sd', 'Š dolje', 'Širina dolje'],
-      ['n_vl', 'V lijevo', 'Visina lijevo'], ['n_vs', 'V sredina', 'Visina sredina'], ['n_vd', 'V desno', 'Visina desno']
+      ['n_vl', 'V lijevo', 'Visina lijevo'], ['n_vs', 'V sredina', 'Visina sredina'], ['n_vd', 'V desno', 'Visina desno'],
+      ['n_vg', 'Vagres', 'Vagres']
     ];
-    const NG_POZ = { n_sg: [530, 119], n_ss: [530, 349], n_sd: [530, 579], n_vl: [280, 465], n_vs: [510, 465], n_vd: [740, 465] };
+    const NG_POZ = { n_sg: [530, 119], n_ss: [530, 349], n_sd: [530, 579], n_vl: [280, 465], n_vs: [510, 465], n_vd: [740, 465], n_vg: [840, 520] };
     function jeNovogradnja(m) { return /Građevinski otvor/.test((m && m.tip) || ''); }
     function ngBroj(v) { const n = parseFloat(String(v || '').replace(',', '.')); return n > 0 ? n : null; }
     function ngMin(m, kljucevi) { const v = kljucevi.map(k => ngBroj(m[k])).filter(x => x); return v.length ? Math.min(...v) : null; }
@@ -1238,6 +1262,7 @@
       [270, 500, 730].forEach(x => { o += `<line x1="${x}" y1="108" x2="${x}" y2="652" ${st}/>`; });
       o += `<text x="500" y="720" text-anchor="middle" font-size="26" font-weight="bold" fill="#475569">GRAĐEVINSKI OTVOR${m.g_proizvod ? ' – ' + escAttr(m.g_proizvod) : ''}</text>`;
       o += `<text x="110" y="390" text-anchor="middle" font-size="26" font-weight="bold" fill="#64748b">ZID</text><text x="890" y="390" text-anchor="middle" font-size="26" font-weight="bold" fill="#64748b">ZID</text>`;
+      o += `<line x1="10" y1="500" x2="212" y2="500" stroke="#dc2626" stroke-width="4" stroke-dasharray="14 8"/><line x1="788" y1="500" x2="990" y2="500" stroke="#dc2626" stroke-width="4" stroke-dasharray="14 8"/><text x="20" y="490" font-size="20" font-weight="bold" fill="#dc2626">VAGRES</text>`;
       NG_POLJA.forEach(([k, lab]) => {
         const [x, y] = NG_POZ[k]; const v = m[k] || '';
         o += `<g ${staticno ? '' : `style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')"`}>
@@ -1281,12 +1306,63 @@
     function ngPanel(m, i) {
       const polje = ([k, lab, opis]) => `<div><label style="color:#fbbf24;">${opis}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); ngOsvjeziKucicu(${i}, '${k}', this.value)" onchange="ngSpremi(${i}, '${k}', this.value)" onfocus="const r=document.getElementById('nbr_${i}_${k}');this.closest('.mj-row').querySelectorAll('rect[id^=nbr_]').forEach(x=>x.setAttribute('stroke-dasharray',''));if(r)r.setAttribute('stroke-dasharray','10 5');" data-idx="${i}" data-key="${k}"></div>`;
       return `<div style="margin:6px 0;">
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Građevinska mjera: dodirni kućicu pa mjeri laserom – 3 širine (gore, sredina, dolje) i 3 visine (lijevo, sredina, desno). Sve u mm.</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Građevinska mjera: dodirni kućicu pa mjeri laserom – 3 širine (gore, sredina, dolje), 3 visine (lijevo, sredina, desno) i vagres. Sve u mm.</div>
         ${ngShema(m, i)}
         <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:8px;">${NG_POLJA.slice(0, 3).map(polje).join('')}</div>
-        <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:6px;">${NG_POLJA.slice(3).map(polje).join('')}</div>
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:6px;">${NG_POLJA.slice(3, 6).map(polje).join('')}</div>
+        <div class="mj-grid" style="grid-template-columns:1fr; margin-top:6px;">${NG_POLJA.slice(6).map(polje).join('')}</div>
         <div id="nw_${i}">${ngSazetak(m)}</div>
       </div>`;
+    }
+
+    // ================= 3 ŠIRINE + 3 VISINE kod običnih proizvoda =================
+    // Obavezna je prva širina i prva visina; ostale su preporučene. U Širinu/Visinu ide najmanja.
+    const T3_S = ['s_g', 's_s', 's_d'], T3_V = ['v_l', 'v_s', 'v_d'];
+    const T3_POLJA = [['s_g', 'Širina gore', 1], ['s_s', 'Širina sredina'], ['s_d', 'Širina dolje'], ['v_l', 'Visina lijevo', 1], ['v_s', 'Visina sredina'], ['v_d', 'Visina desno']];
+    function jeTri3(m) { return !/Sobna|Komarnik|Grilje/.test((m && m.tip) || ''); }
+    function t3Vrijednost(m, k) {
+      if (m[k]) return m[k];
+      if (k === 's_g' && !T3_S.some(x => m[x])) return m.sirina || '';
+      if (k === 'v_l' && !T3_V.some(x => m[x])) return m.visina || '';
+      return '';
+    }
+    function t3Min(m, kljucevi) { const v = kljucevi.map(k => ngBroj(normalizirajMjeru(t3Vrijednost(m, k)))).filter(x => x); return v.length ? Math.min(...v) : null; }
+    function t3Raspon(m, kljucevi) { const v = kljucevi.map(k => ngBroj(normalizirajMjeru(t3Vrijednost(m, k)))).filter(x => x); return v.length > 1 ? Math.max(...v) - Math.min(...v) : 0; }
+    function t3Sazetak(m) {
+      const s = t3Min(m, T3_S), v = t3Min(m, T3_V), rs = t3Raspon(m, T3_S), rv = t3Raspon(m, T3_V);
+      let h = `<div style="margin-top:6px;padding:6px 10px;border-radius:6px;background:#0b1220;border:1px solid #334155;color:#e2e8f0;font-size:13px;">Ide u mjeru (najmanja): <b style="color:#34d399;font-size:15px;">Š ${s || '—'} × V ${v || '—'}</b> mm</div>`;
+      if (rs > 10 || rv > 10) h += `<div style="margin-top:6px;padding:7px 9px;border-radius:6px;background:rgba(245,158,11,.15);border:1px solid #f59e0b;color:#fbbf24;font-size:13px;">⚠️ Otvor nije ravan:${rs > 10 ? ` širine se razlikuju ${rs} mm` : ''}${rs > 10 && rv > 10 ? ',' : ''}${rv > 10 ? ` visine se razlikuju ${rv} mm` : ''}.</div>`;
+      return h;
+    }
+    function t3Live(i, k, v) {
+      liveMjera(i, k, v);
+      const m = mjGet()[i] || {};
+      const s = t3Min(m, T3_S), vv = t3Min(m, T3_V);
+      liveMjera(i, 'sirina', s ? String(s) : ''); liveMjera(i, 'visina', vv ? String(vv) : '');
+      const w = document.getElementById(`t3w_${i}`); if (w) w.innerHTML = t3Sazetak(m);
+    }
+    async function t3Spremi(i, k, v) {
+      const m0 = mjGet()[i]; if (!m0) return;
+      // stari zapis imao samo Širinu/Visinu – prvo je prepiši u prvu kućicu da se ne izgubi
+      if (k !== 's_g' && T3_S.includes(k) && !T3_S.some(x => m0[x]) && m0.sirina) await saveMjera(i, 's_g', String(m0.sirina));
+      if (k !== 'v_l' && T3_V.includes(k) && !T3_V.some(x => m0[x]) && m0.visina) await saveMjera(i, 'v_l', String(m0.visina));
+      await saveMjera(i, k, v);
+      const m = mjGet()[i]; if (!m) return;
+      const s = t3Min(m, T3_S), vv = t3Min(m, T3_V);
+      if (String(s || '') !== String(m.sirina || '')) await saveMjera(i, 'sirina', s ? String(s) : '');
+      if (String(vv || '') !== String(m.visina || '')) await saveMjera(i, 'visina', vv ? String(vv) : '');
+      const w = document.getElementById(`t3w_${i}`); if (w) w.innerHTML = t3Sazetak(mjGet()[i] || {});
+      const row = document.querySelectorAll('#mjereList .mj-row')[i]; const old = row ? row.querySelector('.mj-warn') : null; if (old) old.outerHTML = upozorenjaMjera(mjGet()[i] || {}, i);
+    }
+    function t3Panel(m, i) {
+      const polje = ([k, opis, nuzno]) => `<div><label style="${nuzno ? 'color:#fbbf24;' : ''}">${opis}${nuzno ? ' *' : ''}</label><input class="mj-num" inputmode="numeric" value="${escAttr(t3Vrijednost(m, k))}" oninput="t3Live(${i}, '${k}', this.value)" onchange="t3Spremi(${i}, '${k}', this.value)" data-idx="${i}" data-key="${k}"></div>`;
+      const dodatno = [];
+      if (m.roleta && !jeVrataTip(m.tip)) dodatno.push(`<div><label>Kutija rolete (u mjeri)</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.kutija)}" oninput="liveMjera(${i}, 'kutija', this.value)" onchange="saveMjera(${i}, 'kutija', this.value)" data-idx="${i}" data-key="kutija"></div>`);
+      return `<div style="font-size:11px;color:#94a3b8;margin:4px 0 2px;">Žute (*) su obavezne, ostale preporučene – u mjeru ide najmanja.</div>
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr;">${T3_POLJA.slice(0, 3).map(polje).join('')}</div>
+        <div class="mj-grid" style="grid-template-columns:1fr 1fr 1fr; margin-top:6px;">${T3_POLJA.slice(3).map(polje).join('')}</div>
+        ${dodatno.length ? `<div class="mj-grid" style="grid-template-columns:1fr; margin-top:6px;">${dodatno.join('')}</div>` : ''}
+        <div id="t3w_${i}">${t3Sazetak(m)}</div>`;
     }
 
     // ================= PERGOLA (Aluprof MB-OpenSky) – izmjera po shemi =================
@@ -1622,7 +1698,7 @@
                 <option value="F" ${m.donje === 'F' ? 'selected' : ''}>fiksno polje</option>
               </select>
             </div>`}
-            ${jeNovogradnja(m) ? ngPanel(m, i) : /Pergola/.test(m.tip || '') ? pergolaPanel(m, i) : /Garažna/.test(m.tip || '') ? garazaPanel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
+            ${jeNovogradnja(m) ? ngPanel(m, i) : /Pergola/.test(m.tip || '') ? pergolaPanel(m, i) : /Garažna/.test(m.tip || '') ? garazaPanel(m, i) : jeTri3(m) ? t3Panel(m, i) : `<div class="mj-grid" style="grid-template-columns:repeat(${2 + (/Sobna/.test(m.tip || '') ? 1 : 0) + (m.roleta && !jeVrataTip(m.tip) ? 1 : 0)}, 1fr);">
               <div><label>Širina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.sirina)}" oninput="liveMjera(${i}, 'sirina', this.value)" onchange="saveMjera(${i}, 'sirina', this.value)" data-idx="${i}" data-key="sirina"></div>
               <div><label>Visina</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.visina)}" oninput="liveMjera(${i}, 'visina', this.value)" onchange="saveMjera(${i}, 'visina', this.value)" data-idx="${i}" data-key="visina"></div>
               ${/Sobna/.test(m.tip || '') ? `<div><label>Debljina špalete</label><input class="mj-num" inputmode="numeric" value="${escAttr(m.dubina)}" oninput="liveMjera(${i}, 'dubina', this.value)" onchange="saveMjera(${i}, 'dubina', this.value)" data-idx="${i}" data-key="dubina"></div>` : ''}
@@ -1856,7 +1932,7 @@
     }
 
     // laseri u "keyboard" načinu (npr. Leica DISTO) mogu poslati "1.234 m", "1234 mm" ili "1,234" – sve pretvori u mm
-    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr', 'n_sg', 'n_ss', 'n_sd', 'n_vl', 'n_vs', 'n_vd'];
+    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr', 'n_sg', 'n_ss', 'n_sd', 'n_vl', 'n_vs', 'n_vd', 'n_vg', 's_g', 's_s', 's_d', 'v_l', 'v_s', 'v_d'];
     function normalizirajMjeru(v) {
       const t = String(v || '').trim().toLowerCase();
       if (!t) return '';
@@ -1879,6 +1955,28 @@
       const dalje = sva.slice(i + 1).find(x => !x.value) || sva[i + 1];
       if (dalje) setTimeout(() => dalje.focus(), 50);
     }
+
+    // Laser/metar kao tipkovnica (Leica DISTO, Reekon): znamenke stižu u brzom nizu.
+    // Kad niz stane (bez obzira šalje li laser Enter, Tab ili ništa) – kursor sam skoči u sljedeću kućicu.
+    const kbNiz = { el: null, t: 0, n: 0, brzo: 0, timer: null };
+    document.addEventListener('input', e => {
+      const el = e.target;
+      if (!el || !((el.classList && el.classList.contains('mj-num')) || el.id === 'feVal')) return;
+      const now = performance.now();
+      if (kbNiz.el !== el || now - kbNiz.t > 400) { kbNiz.n = 0; kbNiz.brzo = 0; }
+      else if (now - kbNiz.t < 70) kbNiz.brzo++;
+      kbNiz.el = el; kbNiz.t = now; kbNiz.n++;
+      clearTimeout(kbNiz.timer);
+      kbNiz.timer = setTimeout(() => {
+        if (kbNiz.el !== el || document.activeElement !== el || !el.value.trim()) return;
+        if (kbNiz.n >= 3 && kbNiz.brzo >= kbNiz.n - 2) {
+          kbNiz.n = 0; kbNiz.brzo = 0;
+          if (navigator.vibrate) navigator.vibrate(80);
+          if (el.id === 'feVal') fotoPostaviVrijednost(el.value, true);
+          else mjEnterDalje(el);
+        }
+      }, 350);
+    }, true);
 
     async function saveMjera(idx, key, val) {
       const arr = mjGet().map(x => Object.assign({}, x));
@@ -2015,7 +2113,7 @@
             const fw = W - 2 * M, gs = img ? fw / img.width : 0, gh = img ? img.height * gs : 0;
             ctx.font = '22px Helvetica, Arial, sans-serif';
             const ginfo = [`${i + 1}. ${novo ? 'Građevinski otvor (novogradnja)' : pergola ? 'Pergola' : 'Garažna vrata'}${m.prostorija ? ' – ' + m.prostorija : ''}`];
-            const op = novo ? [m.g_proizvod ? 'U otvor: ' + m.g_proizvod : '', 'Širine (gore/sred/dolje): ' + ['n_sg', 'n_ss', 'n_sd'].map(k => m[k] || '—').join(' / '), 'Visine (lijevo/sred/desno): ' + ['n_vl', 'n_vs', 'n_vd'].map(k => m[k] || '—').join(' / '), 'Najmanja: ' + (ngMin(m, ['n_sg', 'n_ss', 'n_sd']) || '—') + ' × ' + (ngMin(m, ['n_vl', 'n_vs', 'n_vd']) || '—'), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : pergola ? [m.p_sustav || PERGOLA_SUSTAVI[0], m.p_izvedba ? 'Izvedba: ' + m.p_izvedba : 'Izvedba: nije odabrana', pergolaPolja(m).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · '), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
+            const op = novo ? [m.g_proizvod ? 'U otvor: ' + m.g_proizvod : '', 'Širine (gore/sred/dolje): ' + ['n_sg', 'n_ss', 'n_sd'].map(k => m[k] || '—').join(' / '), 'Visine (lijevo/sred/desno): ' + ['n_vl', 'n_vs', 'n_vd'].map(k => m[k] || '—').join(' / '), 'Najmanja: ' + (ngMin(m, ['n_sg', 'n_ss', 'n_sd']) || '—') + ' × ' + (ngMin(m, ['n_vl', 'n_vs', 'n_vd']) || '—'), m.n_vg ? 'Vagres: ' + m.n_vg : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : pergola ? [m.p_sustav || PERGOLA_SUSTAVI[0], m.p_izvedba ? 'Izvedba: ' + m.p_izvedba : 'Izvedba: nije odabrana', pergolaPolja(m).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · '), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
             let gl = [ginfo[0]].concat(op ? prelomi(ctx, op, fw) : []);
             if (m.napomena) gl = gl.concat(prelomi(ctx, 'Napomena: ' + m.napomena, fw));
             const leg = novo ? 'Građevinska mjera otvora u mm – 3 širine i 3 visine; za narudžbu se uzima najmanja' : pergola ? 'L dužina (smjer slaganja lamela) · B širina (dužina lamele) · H visina do donjeg ruba · L1 prepust (tip 4) · P mjera 1. polja (dvodijelna) – sve u mm' : 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
@@ -2217,7 +2315,7 @@
       if (!mo) {
         mo = document.createElement('div'); mo.id = 'fotoEd';
         mo.style.cssText = 'position:fixed;inset:0;z-index:10003;background:#020617;display:flex;flex-direction:column;';
-        mo.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const inp = document.getElementById('feVal'); if (inp && e.target === inp) fotoPostaviVrijednost(inp.value, true); } });
+        mo.addEventListener('keydown', e => { if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey && e.target && e.target.id === 'feVal')) { e.preventDefault(); const inp = document.getElementById('feVal'); if (inp && e.target === inp) fotoPostaviVrijednost(inp.value, true); } });
         document.body.appendChild(mo);
       }
       mo.innerHTML = `
@@ -2501,7 +2599,8 @@
       const target = fields.includes(active) ? active : (fields.find(f => !f.value) || null);
       if (!target) { setLaserStatus('Izmjereno ' + mm + ' mm – sva polja su puna, klikni u polje ili dodaj otvor', '#fbbf24'); return; }
       target.value = mm;
-      saveMjera(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm));
+      try { target.dispatchEvent(new Event('input', { bubbles: true })); target.dispatchEvent(new Event('change', { bubbles: true })); }
+      catch (e) { saveMjera(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); }
       try { garazaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); pergolaOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); ngOsvjeziKucicu(parseInt(target.dataset.idx, 10), target.dataset.key, String(mm)); } catch (e) {}
       setLaserStatus('Zadnja mjera: ' + mm + ' mm', '#34d399');
       const next = fields[fields.indexOf(target) + 1];
@@ -2959,6 +3058,45 @@
       } catch (e) { alert('Nije spremljeno (provjeri internet): ' + ((e && e.message) || e)); }
     }
 
+    // ================= FAZE PO STRANICAMA =================
+    const FAZE = [['📐', 'Mjerenje'], ['📄', 'Ponuda'], ['📋', 'Radni nalog'], ['📦', 'Skladište'], ['🛠️', 'Montaža'], ['💰', 'Fakturiranje']];
+    let fazaAktivna = 1, fazaZaNalog = null, fazeGotovo = [false, false, false, false, false, false];
+    function fazeSve() { try { return localStorage.getItem('teren_faze_sve') === '1'; } catch (e) { return false; } }
+    function fazaZadana(gotovo) {
+      const prva = gotovo.findIndex(x => !x) + 1 || 6;
+      const ime = workerName();
+      if (ime.indexOf('BRANISLAV') !== -1) return 4;           // skladište
+      if (isVedran() || isAnkica()) return prva;               // ured – faza u kojoj je nalog
+      return prva >= 4 ? 5 : 1;                                // monteri: mjerenje ili montaža
+    }
+    function renderFaze(gotovo) {
+      fazeGotovo = gotovo;
+      try { const h = document.querySelector('header'), fh = document.querySelector('.faze-head'); if (h) document.documentElement.style.setProperty('--hdr', h.offsetHeight + 'px'); if (fh) document.documentElement.style.setProperty('--fh', fh.offsetHeight + 'px'); } catch (e) {}
+      const traka = document.getElementById('fazeTraka'); if (!traka) return;
+      const panel = document.getElementById('detailPanel');
+      if (fazaZaNalog !== selectedId) { fazaZaNalog = selectedId; fazaAktivna = fazaZadana(gotovo); }
+      const trenutna = gotovo.findIndex(x => !x) + 1;
+      const sve = fazeSve();
+      panel.classList.toggle('faze-tabs', !sve);
+      traka.innerHTML = FAZE.map(([ik, ime], i) => {
+        const n = i + 1, cls = ['faza-btn', gotovo[i] ? 'gotovo' : (n === trenutna ? 'trenutna' : ''), (!sve && n === fazaAktivna) ? 'aktivna' : ''].join(' ');
+        return `<button type="button" class="${cls}" onclick="otvoriFazu(${n})"><span class="fz-br">${gotovo[i] ? '✓' : n}</span>${ik} ${ime}</button>`;
+      }).join('') + `<button type="button" class="faza-btn sve" onclick="prebaciSveFaze()" title="Prikaži sve faze odjednom">${sve ? '▤ Po stranicama' : '▦ Sve'}</button>`;
+      document.querySelectorAll('#detailPanel .grid-six-col > .card[data-faza]').forEach(c => c.classList.toggle('faza-aktivna', +c.dataset.faza === fazaAktivna));
+    }
+    function otvoriFazu(n) {
+      fazaAktivna = n;
+      try { localStorage.setItem('teren_faze_sve', '0'); } catch (e) {}
+      renderFaze(fazeGotovo);
+      const b = document.querySelector('#fazeTraka .faza-btn.aktivna'); if (b) b.scrollIntoView({ inline: 'center', block: 'nearest' });
+      const panel = document.getElementById('detailPanel'); if (panel && panel.scrollTop > 0) panel.scrollTop = 0;
+      if (window.innerWidth <= 900) window.scrollTo(0, 0);
+    }
+    function prebaciSveFaze() {
+      try { localStorage.setItem('teren_faze_sve', fazeSve() ? '0' : '1'); } catch (e) {}
+      renderFaze(fazeGotovo);
+    }
+
     function renderDetails() {
       const p = projects.find(item => item.id === selectedId);
       if (!p) return;
@@ -3200,6 +3338,7 @@
       setBadge('stage4Badge', hasSkladiste, currentStage === 4);
       setBadge('stage5Badge', hasMontaza, currentStage === 5);
       setBadge('stage6Badge', isInvoiced, currentStage === 6);
+      try { renderFaze([hasMeasure, hasOffer, hasRn, hasSkladiste, hasMontaza, isInvoiced]); } catch (e) { console.warn('faze', e); }
 
       // Prikaz datuma faza
       const isAdmin = canViewFinancialDocs();
