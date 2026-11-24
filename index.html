@@ -80,6 +80,10 @@
 
     .btn-mobile-back { display: none; background: var(--card-dark); color: white; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
     .btn-action-group { display: flex; gap: 8px; }
+    body.uloga-suradnik #btnExport, body.uloga-suradnik #btnPinNav, body.uloga-suradnik #statusFilters,
+    body.uloga-suradnik .btn-delete, body.uloga-suradnik #btnUrediPodatke,
+    body.uloga-suradnik #fazeTraka .faza-btn:not(:first-child),
+    body.uloga-suradnik #detailPanel .card[data-faza]:not([data-faza="1"]) { display: none !important; }
     .btn-action { padding: 7px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; }
     .btn-print { background: var(--accent); color: white; }
     .btn-delete { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
@@ -251,13 +255,14 @@
           <input type="text" id="newWorkerName" placeholder="Ime i prezime..." style="flex: 1.5; font-size: 12px;">
           <input type="text" id="newWorkerPin" placeholder="PIN (npr. 1234)" maxlength="6" style="flex: 1; text-align: center; font-size: 12px;">
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:#fbbf24;font-size:12px;cursor:pointer;"><input type="checkbox" id="newWorkerSuradnik" style="width:auto;"> 🔧 Vanjski suradnik (obrt) – samo mjerenje</label>
         <button onclick="addNewWorkerWithPin()" class="btn-submit" style="background: #0284c7; margin-top: 8px; padding: 9px; font-size: 12px;">➕ DODAJ RADNIKA</button>
       </div>
     </div>
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.37</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.38</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -586,6 +591,7 @@
     db.collection("postavke").doc("pinovi").onSnapshot(doc => {
       if (doc.exists && doc.data().pins && Object.keys(doc.data().pins).length > 0) {
         userPins = { ...doc.data().pins };
+        suradniciMap = Object.assign({}, doc.data().suradnici || {});
       } else {
         // NIKAD ne pišemo automatski u bazu ovdje, bez obzira postoji li dokument ili ne.
         // Ovo sprječava da bilo koji (i zastarjeli) uređaj ikad sam prebriše PIN-ove
@@ -615,7 +621,7 @@
         const isAdm = name.includes('VEDRAN');
         const isUred = name.includes('ANKICA');
         const isSkladiste = name.includes('BRANISLAV');
-        let icon = '👷 ';
+        let icon = suradniciMap[name] ? '🔧 ' : '👷 ';
         if (isAdm) icon = '👑 ';
         else if (isUred) icon = '💼 ';
         else if (isSkladiste) icon = '📦 ';
@@ -640,6 +646,7 @@
         const isUred = name.includes('ANKICA');
         const isSkl = name.includes('BRANISLAV');
         let role = 'Monter';
+        if (suradniciMap[name]) role = '🔧 Vanjski suradnik – samo mjerenje';
         if (isAdm) role = '👑 Administrator';
         else if (isUred) role = '💼 Ured / Fakturiranje';
         else if (isSkl) role = '📦 Skladište';
@@ -661,6 +668,7 @@
               <span class="pin-code-badge">${pinVal}</span>
             </td>
             <td style="text-align:right; white-space:nowrap;">
+              ${isAdm ? '' : `<button onclick="prebaciSuradnika('${name}')" title="Vanjski suradnik (obrt) – samo mjerenje" style="background:${suradniciMap[name] ? '#b45309' : '#334155'}; color:white; border:none; padding:3px 6px; border-radius:4px; font-size:11px; cursor:pointer; margin-right:4px;">🔧</button>`}
               <button onclick="quickEditPin('${name}')" style="background:#0284c7; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">✏️ Uredi</button>
               ${deleteBtn}
             </td>
@@ -681,6 +689,26 @@
           [`pins.${name}`]: firebase.firestore.FieldValue.delete()
         });
       }
+    }
+
+    let suradniciMap = {};
+    function isSuradnik(ime) {
+      const n = (ime || currentWorker || '').toUpperCase().trim();
+      return !!n && !!suradniciMap[n];
+    }
+    function primijeniUlogu() {
+      try { document.body.classList.toggle('uloga-suradnik', !!currentWorker && isSuradnik()); } catch (e) {}
+      try {
+        if (isSuradnik() && selectedId) {
+          const pp = projects.find(x => x.id === selectedId);
+          if (!pp || (pp.worker || '').toUpperCase().trim() !== workerName()) { selectedId = null; if (typeof showMonterView === 'function') showMonterView(); }
+        }
+      } catch (e) {}
+    }
+    async function prebaciSuradnika(name) {
+      const sad = !!suradniciMap[name];
+      if (!confirm(sad ? `${name} vratiti u običnog radnika (vidi sve faze)?` : `${name} postaviti kao VANJSKOG SURADNIKA (obrt)?\n\nVidjet će samo svoja mjerenja, bez ponuda, radnih naloga, skladišta, montaže i faktura.`)) return;
+      await db.collection("postavke").doc("pinovi").update({ [`suradnici.${name}`]: sad ? firebase.firestore.FieldValue.delete() : true });
     }
 
     function workerName() {
@@ -752,7 +780,10 @@
         if (isVedranAdmin) icon = '👑 ';
         else if (isUred) icon = '💼 ';
         else if (isSkladiste) icon = '📦 ';
+        if (isSuradnik()) icon = '🔧 ';
         document.getElementById('userBadge').innerText = `${icon}${currentWorker}`;
+        primijeniUlogu();
+        try { renderSidebar(); } catch (e) {}
 
         const btnPin = document.getElementById('btnPinNav');
         if (btnPin) {
@@ -829,9 +860,11 @@
         return;
       }
 
-      await db.collection("postavke").doc("pinovi").update({
-        [`pins.${name}`]: pin
-      });
+      const sur = document.getElementById('newWorkerSuradnik');
+      const upd = { [`pins.${name}`]: pin };
+      if (sur && sur.checked) upd[`suradnici.${name}`] = true;
+      await db.collection("postavke").doc("pinovi").update(upd);
+      if (sur) sur.checked = false;
       
       document.getElementById('newWorkerName').value = '';
       document.getElementById('newWorkerPin').value = '';
@@ -2924,7 +2957,9 @@
         }).join('');
       }
 
+      const suradnik = isSuradnik();
       const filtered = projects.filter(p => {
+        if (suradnik && (p.worker || '').toUpperCase().trim() !== workerName()) return false;
         if (currentStatusFilter !== 'sve' && getProjectStage(p) !== currentStatusFilter) return false;
         if (!query) return true;
         const nameMatch = (p.name || '').toLowerCase().includes(query);
@@ -2980,6 +3015,7 @@
     }
 
     function openDetails(id) {
+      if (isSuradnik()) { const pp = projects.find(x => x.id === id); if (!pp || (pp.worker || '').toUpperCase().trim() !== workerName()) return; }
       selectedId = id;
       currentImageIndex = 0;
       renderSidebar();
@@ -3084,7 +3120,8 @@
       const panel = document.getElementById('detailPanel');
       if (fazaZaNalog !== selectedId) { fazaZaNalog = selectedId; fazaAktivna = fazaZadana(gotovo); }
       const trenutna = gotovo.findIndex(x => !x) + 1;
-      const sve = fazeSve();
+      const sve = fazeSve() && !isSuradnik();
+      if (isSuradnik()) fazaAktivna = 1;
       panel.classList.toggle('faze-tabs', !sve);
       traka.innerHTML = FAZE.map(([ik, ime], i) => {
         const n = i + 1, cls = ['faza-btn', gotovo[i] ? 'gotovo' : (n === trenutna ? 'trenutna' : ''), (!sve && n === fazaAktivna) ? 'aktivna' : ''].join(' ');
@@ -3093,6 +3130,7 @@
       document.querySelectorAll('#detailPanel .grid-six-col > .card[data-faza]').forEach(c => c.classList.toggle('faza-aktivna', +c.dataset.faza === fazaAktivna));
     }
     function otvoriFazu(n) {
+      if (isSuradnik() && n !== 1) return;
       fazaAktivna = n;
       try { localStorage.setItem('teren_faze_sve', '0'); } catch (e) {}
       renderFaze(fazeGotovo);
