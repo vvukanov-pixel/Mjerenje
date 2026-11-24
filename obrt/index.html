@@ -363,7 +363,7 @@
   </div>
 
   <header>
-    <div class="logo">MJERE<span>NJE</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.42</small></div>
+    <div class="logo">MJERE<span>NJE</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.44</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -1685,16 +1685,21 @@
     // ================= ALU KLUPČICA (vanjska) – širine do 250 mm =================
     const KLU_SIRINE = [50, 70, 90, 110, 130, 150, 165, 180, 195, 210, 225, 240, 250];
     const KLU_POLJA = [
-      ['sirina', 'L', 'Dužina klupčice (s kapicama)', true],
-      ['k_dub', 'D', 'Izmjerena špaleta (od prozora do ruba zida)', true]
+      ['k_s1', 'Š1', 'Širina unutarnje špalete (uz prozor)', true],
+      ['k_s2', 'Š2', 'Širina vanjske špalete (rub zida)', true],
+      ['k_d1', 'D1', 'Dubina špalete lijevo', true],
+      ['k_d2', 'D2', 'Dubina špalete desno', true]
     ];
-    const KLU_POZ = { sirina: [430, 610], k_dub: [600, 120] };
+    const KLU_POZ = { k_s1: [640, 196], k_s2: [640, 600], k_d1: [445, 390], k_d2: [835, 390] };
+    const kluBr = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return n > 0 ? n : 0; };
+    function kluMaxS(m) { return Math.round(Math.max(kluBr(m.k_s1), kluBr(m.k_s2))) || kluBr(m.sirina) || 0; }
+    function kluMaxD(m) { return Math.round(Math.max(kluBr(m.k_d1), kluBr(m.k_d2))) || kluBr(m.k_dub) || 0; }
     function jeKlupcica(m) { return /Alu klupčica/.test((m && m.tip) || ''); }
-    const KLU_PREPUST = 20; // okapnik – koliko klupčica izlazi preko zida (mm)
+    const KLU_PREPUST = 30; // okapnik – prepust preko gotove fasade, pravilno 30–40 mm
     function kluPrep(m) { const p = parseFloat(String(m.k_prep == null || m.k_prep === '' ? KLU_PREPUST : m.k_prep).replace(',', '.')); return isNaN(p) ? KLU_PREPUST : p; }
-    function kluPotrebno(m) { const d = parseFloat(String(m.k_dub || '').replace(',', '.')); return d > 0 ? Math.round(d + kluPrep(m)) : null; }
+    function kluPotrebno(m) { const d = kluMaxD(m); return d > 0 ? Math.round(d + kluPrep(m)) : null; }
     function kluPrijedlog(m) { const d = kluPotrebno(m); return d ? (KLU_SIRINE.find(x => x >= d) || null) : null; }
-    function kluRacun(m) { const d = kluPotrebno(m); if (!d) return ''; const pr = kluPrijedlog(m); return `${Math.round(parseFloat(String(m.k_dub).replace(',', '.')))} + ${kluPrep(m)} prepust = ${d} mm → ${pr ? 'naruči ' + pr + ' mm' : 'preko ' + KLU_SIRINE[KLU_SIRINE.length - 1] + ' mm!'}`; }
+    function kluRacun(m) { const d = kluPotrebno(m); if (!d) return ''; const pr = kluPrijedlog(m); return `${kluMaxD(m)}${kluBr(m.k_d1) && kluBr(m.k_d2) ? ' (veća dubina)' : ''} + ${kluPrep(m)} prepust = ${d} mm → ${pr ? 'naruči ' + pr + ' mm' : 'preko ' + KLU_SIRINE[KLU_SIRINE.length - 1] + ' mm!'}`; }
     function kluStd(m) { return parseInt(m.k_std, 10) || kluPrijedlog(m) || null; }
     function kluShema(m, i, staticno) {
       const st = 'stroke="#334155" stroke-width="3" fill="none" marker-start="url(#ka)" marker-end="url(#ka)"';
@@ -1708,18 +1713,22 @@
       o += `<polygon points="110,232 400,262 400,292 392,292 392,268 110,250" fill="#94a3b8" stroke="#334155" stroke-width="3"/>`;
       o += `<line x1="110" y1="205" x2="340" y2="205" ${st}/><text x="225" y="196" text-anchor="middle" font-size="20" font-weight="bold" fill="#334155">D špaleta</text>`;
       o += `<line x1="340" y1="160" x2="400" y2="160" ${st}/><text x="370" y="150" text-anchor="middle" font-size="18" font-weight="bold" fill="#b45309">+${kluPrep(m)}</text><line x1="340" y1="150" x2="340" y2="260" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 4"/>`;
-      o += `<text x="200" y="540" text-anchor="middle" font-size="18" fill="#334155">nagib ~6° · prepust (okapnik) ${kluPrep(m)} mm</text>`;
-      // pogled odozgo (desno)
-      o += `<text x="440" y="400" font-size="22" font-weight="bold" fill="#64748b">POGLED ODOZGO</text>`;
-      o += `<rect x="440" y="420" width="520" height="120" fill="#cbd5e1" stroke="#334155" stroke-width="4"/>`;
-      if (m.k_kape !== 'Ne') { o += `<rect x="430" y="415" width="14" height="130" fill="#475569"/><rect x="956" y="415" width="14" height="130" fill="#475569"/>`; }
-      o += `<line x1="440" y1="580" x2="960" y2="580" ${st}/>`;
+      o += `<text x="200" y="540" text-anchor="middle" font-size="18" fill="#334155">nagib ~6° · prepust preko fasade ${kluPrep(m)} mm</text>`;
+      // tlocrt špalete (desno): unutarnja širina uz prozor, vanjska na rubu zida, dubine lijevo/desno
+      o += `<text x="440" y="185" font-size="22" font-weight="bold" fill="#64748b">TLOCRT</text>`;
+      o += `<polygon points="430,270 560,270 520,560 430,560" fill="url(#kh)" stroke="#94a3b8" stroke-width="2"/><polygon points="860,270 990,270 990,560 900,560" fill="url(#kh)" stroke="#94a3b8" stroke-width="2"/>`;
+      o += `<polygon points="560,280 860,280 900,560 520,560" fill="#cbd5e1" stroke="#334155" stroke-width="3"/>`;
+      o += `<rect x="560" y="262" width="300" height="18" fill="#e2e8f0" stroke="#334155" stroke-width="3"/><text x="710" y="276" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">PROZOR</text>`;
+      if (m.k_kape !== 'Ne') { o += `<polygon points="556,282 566,282 527,560 514,560" fill="#475569"/><polygon points="854,282 864,282 906,560 893,560" fill="#475569"/>`; }
+      o += `<line x1="560" y1="300" x2="860" y2="300" stroke="#334155" stroke-width="2" stroke-dasharray="8 5"/><line x1="520" y1="585" x2="900" y2="585" ${st}/>`;
+      o += `<line x1="540" y1="282" x2="505" y2="558" ${st}/><line x1="880" y1="282" x2="915" y2="558" ${st}/>`;
+      o += `<text x="710" y="545" text-anchor="middle" font-size="16" fill="#334155">vanjski rub zida</text>`;
       const std = kluStd(m);
-      o += `<rect x="560" y="250" width="420" height="100" rx="8" fill="${std ? '#dcfce7' : '#fef3c7'}" stroke="${std ? '#16a34a' : '#d97706'}" stroke-width="3"/>
-        <text x="770" y="285" text-anchor="middle" font-size="20" font-weight="bold" fill="#0f172a">ŠIRINA KLUPČICE (NARUDŽBA)</text>
-        <text ${staticno ? '' : `id="kracun_${i}"`} x="770" y="375" text-anchor="middle" font-size="19" fill="#334155">${escAttr(kluRacun(m))}</text>
-        <text ${staticno ? '' : `id="kstd_${i}"`} x="770" y="335" text-anchor="middle" font-size="38" font-weight="bold" fill="#0f172a">${std ? std + ' mm' : '—'}</text>`;
-      o += `<text x="990" y="710" text-anchor="end" font-size="22" font-weight="bold" fill="#334155">Alu klupčica${m.k_kape === 'Ne' ? ' · bez kapica' : ' · s kapicama'}${m.k_kom ? ' · ' + escAttr(m.k_kom) + ' kom' : ''}</text>`;
+      o += `<rect x="470" y="30" width="510" height="130" rx="8" fill="${std ? '#dcfce7' : '#fef3c7'}" stroke="${std ? '#16a34a' : '#d97706'}" stroke-width="3"/>
+        <text x="725" y="62" text-anchor="middle" font-size="20" font-weight="bold" fill="#0f172a">ŠIRINA KLUPČICE (NARUDŽBA)</text>
+        <text ${staticno ? '' : `id="kracun_${i}"`} x="725" y="148" text-anchor="middle" font-size="19" fill="#334155">${escAttr(kluRacun(m))}</text>
+        <text ${staticno ? '' : `id="kstd_${i}"`} x="725" y="112" text-anchor="middle" font-size="38" font-weight="bold" fill="#0f172a">${std ? std + ' mm' : '—'}</text>`;
+      o += `<text x="990" y="710" text-anchor="end" font-size="22" font-weight="bold" fill="#334155">Alu klupčica${kluMaxS(m) ? ' · dužina ' + kluMaxS(m) : ''}${m.k_kape === 'Ne' ? ' · bez kapica' : ' · s kapicama'}${m.k_kom ? ' · ' + escAttr(m.k_kom) + ' kom' : ''}</text>`;
       KLU_POLJA.forEach(([k, lab, , nuzno]) => {
         const [x, y] = KLU_POZ[k]; const v = m[k] || '';
         o += `<g ${staticno ? '' : `style="cursor:pointer" onclick="garazaKlik(${i}, '${k}')"`}>
@@ -1735,11 +1744,12 @@
     function kluOsvjeziKucicu(i, k, v) {
       const t = document.getElementById(`kb_${i}_${k}`); if (t) t.textContent = v ? normalizirajMjeru(v) : '';
       const r = document.getElementById(`kbr_${i}_${k}`); if (r) r.setAttribute('fill', v ? '#dcfce7' : '#fef3c7');
-      if (k === 'k_dub') {
-        const m = Object.assign({}, mjGet()[i] || {}); m.k_dub = v;
+      {
+        const m = Object.assign({}, mjGet()[i] || {}); m[k] = v;
         const s = document.getElementById(`kstd_${i}`); if (s) { const x = kluStd(m); s.textContent = x ? x + ' mm' : '—'; }
         const rc = document.getElementById(`kracun_${i}`); if (rc) rc.textContent = kluRacun(m);
         const rt = document.getElementById(`kracunt_${i}`); if (rt) rt.textContent = kluRacun(m);
+        const kw = document.getElementById(`kwarn_${i}`); if (kw) { const a = kluBr(m.k_d1), b = kluBr(m.k_d2); kw.innerHTML = a && b && Math.abs(a - b) > 10 ? `<span style="color:#fbbf24;">⚠️ Dubine se razlikuju ${Math.round(Math.abs(a - b))} mm – špaleta nije paralelna.</span>` : ''; }
         const c = document.getElementById(`kchip_${i}`); if (c) c.innerHTML = kluChipovi(m, i);
       }
     }
@@ -1749,9 +1759,17 @@
         + (m.k_std ? ` <button type="button" onclick="postaviPolje(${i}, 'k_std', '')" style="background:none;border:none;color:#94a3b8;text-decoration:underline;font-size:12px;">automatski</button>` : '')
         + (kluPotrebno(m) > KLU_SIRINE[KLU_SIRINE.length - 1] ? `<div style="color:#fbbf24;font-size:13px;margin-top:4px;">⚠️ Špaleta + prepust veće od ${KLU_SIRINE[KLU_SIRINE.length - 1]} mm – posebna narudžba.</div>` : '');
     }
+    async function kluSpremi(i, k, v) {
+      const arr = mjGet().map(x => Object.assign({}, x)); const m = arr[i]; if (!m) return;
+      m[k] = normalizirajMjeru(String(v || '')).trim();
+      const inp = document.querySelector(`#mjereList .mj-num[data-idx="${i}"][data-key="${k}"]`); if (inp && inp.value !== m[k]) inp.value = m[k];
+      if (kluMaxS(Object.assign({}, m, { sirina: '' }))) m.sirina = String(kluMaxS(Object.assign({}, m, { sirina: '' })));
+      if (kluMaxD(Object.assign({}, m, { k_dub: '' }))) m.k_dub = String(kluMaxD(Object.assign({}, m, { k_dub: '' })));
+      const done = mjSet(arr); renderCrtez(); kluOsvjeziKucicu(i, k, m[k]); await done;
+    }
     function kluOpis(m) {
       const std = kluStd(m);
-      return [std ? 'Širina klupčice: ' + std + ' mm' : 'Širina: nije odabrana', m.sirina ? 'Dužina L: ' + m.sirina : '', m.k_dub ? 'Špaleta D: ' + m.k_dub + ' + prepust ' + kluPrep(m) + ' = ' + kluPotrebno(m) : '', m.k_kape === 'Ne' ? 'Bez završnih kapica' : 'Sa završnim kapicama', m.k_kom ? 'Kom: ' + m.k_kom : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
+      return [std ? 'Širina klupčice: ' + std + ' mm' : 'Širina: nije odabrana', 'Š1 unutarnja ' + (m.k_s1 || '—') + ' / Š2 vanjska ' + (m.k_s2 || '—'), 'D1 lijevo ' + (m.k_d1 || '—') + ' / D2 desno ' + (m.k_d2 || '—'), kluPotrebno(m) ? 'Veća dubina ' + kluMaxD(m) + ' + prepust ' + kluPrep(m) + ' = ' + kluPotrebno(m) : '', kluMaxS(m) ? 'Dužina (veća širina): ' + kluMaxS(m) : '', m.k_kape === 'Ne' ? 'Bez završnih kapica' : 'Sa završnim kapicama', m.k_kom ? 'Kom: ' + m.k_kom : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
     }
     function kluIzbor(m, i) {
       const b = (v, t) => `<button type="button" onclick="postaviPolje(${i}, 'k_kape', '${v}')" style="padding:8px 11px;border-radius:7px;font-weight:bold;font-size:14px;border:2px solid ${(m.k_kape || 'Da') === v ? '#0284c7' : '#334155'};background:${(m.k_kape || 'Da') === v ? '#0284c7' : '#1e293b'};color:#fff;">${t}</button>`;
@@ -1762,11 +1780,12 @@
       </div>`;
     }
     function kluPanel(m, i) {
-      const polje = ([k, lab, opis, nuzno]) => `<div><label style="${nuzno ? 'color:#fbbf24;' : ''}">${lab} – ${opis}${nuzno ? ' *' : ''}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); kluOsvjeziKucicu(${i}, '${k}', this.value)" onchange="saveMjera(${i}, '${k}', this.value)" data-idx="${i}" data-key="${k}"></div>`;
+      const polje = ([k, lab, opis, nuzno]) => `<div><label style="${nuzno ? 'color:#fbbf24;' : ''}">${lab} – ${opis}${nuzno ? ' *' : ''}</label><input class="mj-num" inputmode="numeric" value="${escAttr(m[k])}" oninput="liveMjera(${i}, '${k}', this.value); kluOsvjeziKucicu(${i}, '${k}', this.value)" onchange="kluSpremi(${i}, '${k}', this.value)" data-idx="${i}" data-key="${k}"></div>`;
       return `<div style="margin:6px 0;">
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Izmjeri dužinu i špaletu – aplikacija doda prepust za okapnik i predloži prvu veću standardnu širinu. Dodirom odabereš drugu.</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Izmjeri širinu špalete uz prozor (Š1) i na rubu zida (Š2), te dubinu lijevo (D1) i desno (D2). Za širinu klupčice uzima se veća dubina + prepust za okapnik.</div>
         ${kluShema(m, i)}
         <div class="mj-grid" style="grid-template-columns:1fr 1fr; margin-top:8px;">${KLU_POLJA.map(polje).join('')}</div>
+        <div id="kwarn_${i}" style="margin-top:4px;font-size:13px;color:#cbd5e1;">${(() => { const a = kluBr(m.k_d1), b = kluBr(m.k_d2); return a && b && Math.abs(a - b) > 10 ? `<span style="color:#fbbf24;">⚠️ Dubine se razlikuju ${Math.round(Math.abs(a - b))} mm – špaleta nije paralelna.</span>` : ''; })()}</div>
         <div id="kracunt_${i}" style="margin-top:6px;font-size:15px;font-weight:bold;color:#4ade80;">${escAttr(kluRacun(m))}</div>
         <div style="margin-top:6px;"><div class="mj-lbl" style="margin-bottom:3px;">Standardne širine (mm):</div><div id="kchip_${i}">${kluChipovi(m, i)}</div></div>
       </div>`;
@@ -2246,7 +2265,7 @@
     }
 
     // laseri u "keyboard" načinu (npr. Leica DISTO) mogu poslati "1.234 m", "1234 mm" ili "1,234" – sve pretvori u mm
-    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr', 'z_kut', 'z_dub', 'k_dub', 'n_sg', 'n_ss', 'n_sd', 'n_vl', 'n_vs', 'n_vd', 'n_vg', 's_g', 's_s', 's_d', 'v_l', 'v_s', 'v_d'];
+    const MJ_BROJCANA = ['sirina', 'visina', 'dubina', 'kutija', 'c1', 'c2', 'd', 'h', 'e1', 'e2', 'f1', 'f2', 'g', 'p_l', 'p_b', 'p_h', 'p_l1', 'p_pr', 'z_kut', 'z_dub', 'k_dub', 'k_s1', 'k_s2', 'k_d1', 'k_d2', 'n_sg', 'n_ss', 'n_sd', 'n_vl', 'n_vs', 'n_vd', 'n_vg', 's_g', 's_s', 's_d', 'v_l', 'v_s', 'v_d'];
     function normalizirajMjeru(v) {
       const t = String(v || '').trim().toLowerCase();
       if (!t) return '';
@@ -2437,7 +2456,7 @@
             const op = klu ? kluOpis(m) : zal ? zalOpis(m) : novo ? [m.g_proizvod ? 'U otvor: ' + m.g_proizvod : '', 'Širine (gore/sred/dolje): ' + ['n_sg', 'n_ss', 'n_sd'].map(k => m[k] || '—').join(' / '), 'Visine (lijevo/sred/desno): ' + ['n_vl', 'n_vs', 'n_vd'].map(k => m[k] || '—').join(' / '), 'Najmanja: ' + (ngMin(m, ['n_sg', 'n_ss', 'n_sd']) || '—') + ' × ' + (ngMin(m, ['n_vl', 'n_vs', 'n_vd']) || '—'), m.n_vg ? 'Vagres: ' + m.n_vg : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : pergola ? [m.p_sustav || PERGOLA_SUSTAVI[0], m.p_izvedba ? 'Izvedba: ' + m.p_izvedba : 'Izvedba: nije odabrana', pergolaPolja(m).filter(([k]) => m[k]).map(([k, lab]) => `${lab} ${m[k]}`).join(' · '), m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ') : [m.g_mjere ? 'Mjere: ' + (m.g_mjere === 'grube' ? 'grube građevinske' : 'gotove') : '', m.g_strop ? 'Spušteni strop: ' + m.g_strop : '', m.g_ulaz ? 'Drugi ulaz: ' + m.g_ulaz : '', m.g_ugradnja ? 'Ugradnja: ' + (m.g_ugradnja === 'u' ? 'u otvor' : 'iza otvora') : '', m.g_tip ? 'Tip vrata: ' + m.g_tip : '', m.boja ? 'Boja: ' + m.boja : ''].filter(Boolean).join(' · ');
             let gl = [ginfo[0]].concat(op ? prelomi(ctx, op, fw) : []);
             if (m.napomena) gl = gl.concat(prelomi(ctx, 'Napomena: ' + m.napomena, fw));
-            const leg = klu ? 'L dužina klupčice · D izmjerena špaleta + prepust za okapnik – sve u mm; naručuje se prva veća standardna širina' : zal ? 'Š širina · V visina · K prostor za kutiju (nadvoj) · D dubina špalete – sve u mm' : novo ? 'Građevinska mjera otvora u mm – 3 širine i 3 visine; za narudžbu se uzima najmanja' : pergola ? 'L dužina (smjer slaganja lamela) · B širina (dužina lamele) · H visina do donjeg ruba · L1 prepust (tip 4) · P mjera 1. polja (dvodijelna) – sve u mm' : 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
+            const leg = klu ? 'Š1 širina unutarnje špalete (uz prozor) · Š2 širina vanjske špalete (rub zida) · D1/D2 dubina lijevo/desno – sve u mm; širina klupčice = veća dubina + prepust, prva veća standardna' : zal ? 'Š širina · V visina · K prostor za kutiju (nadvoj) · D dubina špalete – sve u mm' : novo ? 'Građevinska mjera otvora u mm – 3 širine i 3 visine; za narudžbu se uzima najmanja' : pergola ? 'L dužina (smjer slaganja lamela) · B širina (dužina lamele) · H visina do donjeg ruba · L1 prepust (tip 4) · P mjera 1. polja (dvodijelna) – sve u mm' : 'A svjetla širina · B svjetla visina od OFF · C1/C2 bočni prostor L/D · D nadvoj · H debljina zida · E1/E2 unutr. širina ispred/otraga · F1/F2 visina stropa ispred/otraga · G dubina garaže';
             gl = gl.concat(prelomi(ctx, leg, fw));
             const bh = gh + gl.length * 30 + 40;
             if (y + bh > H - M - 40) novaStranica();
