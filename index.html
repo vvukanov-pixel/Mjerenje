@@ -257,7 +257,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.47</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.48</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -3879,10 +3879,13 @@
       const v = prompt(polje === 'rokPonude' ? 'Rok iz ponude (npr. 30 radnih dana od uplate avansa):' : 'Očekivani termin proizvodnje (npr. 15.01.2027.):', p[polje] || '');
       if (v === null) return;
       const upd = { [polje]: v.trim() }; if (polje === 'terminProizvodnje') upd.terminIzracun = 'upisano ručno';
+      if (polje === 'rokPonude' && p.rnDoc && p.terminIzracun !== 'upisano ručno') {
+        const t = terminIzRoka(p.dateRn, v); if (t) { upd.terminProizvodnje = t; upd.terminIzracun = `RN ${p.dateRn} + ${v.trim()}`; }
+      }
       await spremiPolja(upd);
     }
     function rokInfoHtml(p, polje) {
-      const v = p[polje] || '';
+      let v = p[polje] || '';
       const smije = typeof canUploadOfferOrRn === 'function' && canUploadOfferOrRn();
       if (!v && !smije) return '';
       const btn = (fn, t) => `<button type="button" onclick="${fn}" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;font-size:13px;white-space:nowrap;">${t}</button>`;
@@ -3892,6 +3895,14 @@
         if (smije) gumbi = (!v && /pdf/i.test(p.offerDoc || '') ? btn('procitajRokIzPonude()', '🔍 Pročitaj') : '') + btn(`urediRok('rokPonude')`, '✏️');
       } else {
         nas = '🏭 Očekivani termin proizvodnje';
+        if (!v && p.rnDoc && p.rokPonude && p.dateRn) {
+          const t = terminIzRoka(p.dateRn, p.rokPonude);
+          if (t) {
+            v = t; pod = `RN ${p.dateRn} + ${p.rokPonude}`;
+            window.__terminAuto = window.__terminAuto || {};
+            if (smije && !window.__terminAuto[p.id]) { window.__terminAuto[p.id] = 1; db.collection('nalozi').doc(p.id).update({ terminProizvodnje: t, terminIzracun: pod }).catch(() => {}); }
+          }
+        }
         if (p.terminIzracun) pod = p.terminIzracun;
         if (smije) gumbi = (p.rokPonude && p.dateRn ? btn('izracunajTermin()', '🧮') : '') + btn(`urediRok('terminProizvodnje')`, '✏️');
       }
