@@ -363,7 +363,7 @@
   </div>
 
   <header>
-    <div class="logo">MJERE<span>NJE</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.46</small></div>
+    <div class="logo">MJERE<span>NJE</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.47</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -3872,7 +3872,7 @@
       if (e.key === 'Escape') closeLightbox();
     });
 
-    // ================= ROK IZ PONUDE / TERMIN PROIZVODNJE IZ RN (dodatak – samo nova polja) =================
+    // ================= ROK IZ PONUDE / TERMIN PROIZVODNJE (datum RN + rok) – dodatak, samo nova polja =================
     function ucitajPdfJs() {
       if (window.pdfjsLib) return Promise.resolve();
       return new Promise((res, rej) => {
@@ -3883,70 +3883,127 @@
         document.head.appendChild(sc);
       });
     }
-    async function pdfTekst(file) {
+    async function pdfTekst(izvor) {
       await ucitajPdfJs();
-      const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      let data;
+      if (typeof izvor === 'string') data = await (await fetch(izvor.replace('https://firebasestorage.googleapis.com/', '/fs/'))).arrayBuffer();
+      else data = await izvor.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data }).promise;
       let t = '';
       for (let n = 1; n <= Math.min(pdf.numPages, 6); n++) {
-        const pg = await pdf.getPage(n); const c = await pg.getTextContent();
-        let zadnjiY = null;
-        c.items.forEach(it => { const y = it.transform ? Math.round(it.transform[5]) : 0; if (zadnjiY !== null && Math.abs(y - zadnjiY) > 3) t += '\n'; else if (t && !t.endsWith(' ')) t += ' '; t += it.str; zadnjiY = y; });
+        const c = await (await pdf.getPage(n)).getTextContent(); let y0 = null;
+        c.items.forEach(it => { const y = it.transform ? Math.round(it.transform[5]) : 0; if (y0 !== null && Math.abs(y - y0) > 3) t += '\n'; else if (t && !t.endsWith(' ')) t += ' '; t += it.str; y0 = y; });
         t += '\n';
       }
       return t.replace(/[ \t]+/g, ' ');
     }
-    const RX_DATUM = /\b(\d{1,2})\s*[.\/-]\s*(\d{1,2})\s*[.\/-]\s*(\d{2,4})\b/;
-    const RX_TRAJANJE = /(\d{1,3}\s*(?:[-–do]+\s*\d{1,3})?\s*(?:radnih\s+|kalendarskih\s+)?(?:dana|dan|tjedana|tjedna|tjedan|mjeseca|mjeseci|mj\.?))/i;
-    const RX_KW = /(?:\bKW|\btjedan|\b\d{1,2}\.\s*tjedan)\s*\.?\s*(\d{1,2})(?:\s*[\/.]\s*(\d{2,4}))?/i;
-    function nadjiPoKljucu(tekst, kljucevi) {
-      const redovi = tekst.split('\n');
+    // "ROK ISPORUKE: 30 RADNIH DANA od uplate avansa." / "ROKOVI ISPORUKE:\n30-45 RADNIH DANA OD UZIMANJA MJERA" / "Isporuka 6 - 8 tjedana ..."
+    function izvuciRokPonude(t) {
+      const redovi = String(t || '').split('\n');
+      const kljucevi = ['rokovi isporuke', 'rok isporuke', 'rok izrade', 'rok proizvodnje', 'rok realizacije', 'isporuka', 'isporuke'];
       for (const kl of kljucevi) {
         for (let r = 0; r < redovi.length; r++) {
-          const red = redovi[r]; const ix = red.toLowerCase().indexOf(kl);
-          if (ix < 0) continue;
-          const okolo = (red.slice(ix + kl.length) + ' ' + (redovi[r + 1] || '')).slice(0, 120);
-          let mm = okolo.match(RX_DATUM); if (mm) return mm[0].replace(/\s+/g, '');
-          mm = okolo.match(RX_KW); if (mm) return 'KW ' + mm[1] + (mm[2] ? '/' + mm[2] : '');
-          mm = okolo.match(RX_TRAJANJE); if (mm) return mm[1].replace(/\s+/g, ' ').trim();
-          const ost = okolo.replace(/^[\s:.\-–]+/, '').split(/\s{2,}|\n/)[0].trim();
-          if (ost && ost.length <= 40 && /\d/.test(ost)) return ost;
+          const ix = redovi[r].toLowerCase().indexOf(kl); if (ix < 0) continue;
+          let ost = redovi[r].slice(ix + kl.length).replace(/^[\s:.\-–]+/, '');
+          if (!/\d/.test(ost)) ost = (redovi[r + 1] || '').trim();
+          if (!/\d+\s*(?:[-–]\s*\d+\s*)?(?:radnih|kalendarskih|dana|dan|tjed|mjesec)/i.test(ost)) continue;
+          ost = ost.replace(/\s*([-–])\s*/g, '$1').replace(/\s+/g, ' ').trim();
+          const kraj = ost.search(/\.\s|\.$/); if (kraj > 0) ost = ost.slice(0, kraj);
+          return ost.slice(0, 110);
         }
       }
       return '';
     }
-    function izvuciRokPonude(t) { return nadjiPoKljucu(t, ['rok isporuke', 'rok izrade', 'rok proizvodnje', 'rok realizacije', 'rok montaže', 'rok:', 'rok ', 'isporuka', 'termin isporuke']); }
-    function izvuciTerminRn(t) { return nadjiPoKljucu(t, ['termin proizvodnje', 'očekivani termin', 'ocekivani termin', 'datum proizvodnje', 'planirani termin', 'datum isporuke', 'termin isporuke', 'datum završetka', 'rok isporuke', 'isporuka', 'termin', 'rok']); }
-    // "6-8 tjedana" od datuma ponude → okvirni datum
-    function okvirniDatum(od, rok) {
-      const m = String(rok || '').match(/(\d{1,3})\s*(?:[-–]|do)?\s*(\d{1,3})?\s*(radnih\s+)?(dana|dan|tjed\w*|mjesec\w*|mj)/i);
-      const d0 = String(od || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-      if (!m || !d0) return '';
-      const baza = new Date(+d0[3], +d0[2] - 1, +d0[1]);
-      const plus = n => { const d = new Date(baza); if (/^tjed/i.test(m[4])) d.setDate(d.getDate() + n * 7); else if (/^mj|^mjesec/i.test(m[4])) d.setMonth(d.getMonth() + n); else d.setDate(d.getDate() + Math.round(n * (m[3] ? 1.4 : 1))); return d.toLocaleDateString('hr-HR'); };
+    // praznici RH (za radne dane)
+    function uskrs(g) { const a = g % 19, b = Math.floor(g / 100), c = g % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), h = Math.floor((b - f + 1) / 3), i = (19 * a + b - d - h + 15) % 30, k = Math.floor(c / 4), l = c % 4, m = (32 + 2 * e + 2 * k - i - l) % 7, n = Math.floor((a + 11 * i + 22 * m) / 451), mj = Math.floor((i + m - 7 * n + 114) / 31), dan = ((i + m - 7 * n + 114) % 31) + 1; return new Date(g, mj - 1, dan); }
+    function jePraznik(d) {
+      const md = (d.getMonth() + 1) + '.' + d.getDate();
+      if (['1.1', '1.6', '5.1', '5.30', '6.22', '8.5', '8.15', '11.1', '11.18', '12.25', '12.26'].includes(md)) return true;
+      const u = uskrs(d.getFullYear()), isti = (x, plus) => { const y = new Date(u); y.setDate(y.getDate() + plus); return y.toDateString() === x.toDateString(); };
+      return isti(d, 1) || isti(d, 60);
+    }
+    function dodajRadneDane(d0, n) { const d = new Date(d0); let k = 0; while (k < n) { d.setDate(d.getDate() + 1); const w = d.getDay(); if (w !== 0 && w !== 6 && !jePraznik(d)) k++; } return d; }
+    function parsDatum(s) { const m = String(s || '').match(/(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; }
+    const fmtD = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}.`;
+    // datum RN + rok → termin (datum ili raspon)
+    function terminIzRoka(odDatum, rok) {
+      const d0 = parsDatum(odDatum); if (!d0 || !rok) return '';
+      const m = String(rok).match(/(\d{1,3})\s*(?:[-–]|do)?\s*(\d{1,3})?\s*(radnih|kalendarskih)?\s*(?:\+\s*(\d{1,3})\s*\w*\s*)?(dana|dan|tjed\w*|mjesec\w*|mj)?/i);
+      if (!m || (!m[5] && !m[3])) return '';
+      m[5] = m[5] || 'dana';
+      const radni = /radnih/i.test(m[3] || '') || (/radnih/i.test(rok) && /^dan/i.test(m[5]));
+      const extra = parseInt(m[4] || (String(rok).match(/\+\s*(\d{1,3})/) || [])[1] || 0, 10);
+      const plus = n => {
+        let d;
+        if (/^tjed/i.test(m[5])) { d = new Date(d0); d.setDate(d.getDate() + n * 7); }
+        else if (/^mj|^mjesec/i.test(m[5])) { d = new Date(d0); d.setMonth(d.getMonth() + n); }
+        else if (radni) d = dodajRadneDane(d0, n + extra);
+        else { d = new Date(d0); d.setDate(d.getDate() + n + extra); }
+        return fmtD(d);
+      };
       return m[2] ? plus(+m[1]) + ' – ' + plus(+m[2]) : plus(+m[1]);
     }
-    async function pitajIspremiRok(polje, file, isPdf, naslov, izvuci) {
-      let nadjeno = '';
-      if (isPdf) { try { nadjeno = izvuci(await pdfTekst(file)); } catch (e) { console.warn('Čitanje PDF-a:', e); } }
-      const v = prompt(`${naslov}\n${nadjeno ? '(pronađeno u dokumentu – provjeri)' : '(nije pronađeno automatski – upiši, npr. 15.12.2026 ili 6-8 tjedana)'}`, nadjeno);
-      if (v === null) return;
-      try { await db.collection('nalozi').doc(selectedId).update({ [polje]: v.trim() }); } catch (e) { alert('Rok nije spremljen: ' + (e.message || e)); }
+    async function spremiPolja(obj) { try { await db.collection('nalozi').doc(selectedId).update(obj); } catch (e) { alert('Nije spremljeno: ' + (e.message || e)); } }
+    // nakon učitavanja ponude
+    async function nakonPonude(file, isPdf) {
+      let rok = '';
+      if (isPdf) { try { rok = izvuciRokPonude(await pdfTekst(file)); } catch (e) { console.warn(e); } }
+      const v = prompt(`✅ Ponuda učitana.\n\nRok iz ponude ${rok ? '(pronađeno – provjeri):' : '(nije pronađen – upiši, npr. 30 radnih dana):'}`, rok);
+      if (v === null || !v.trim()) return;
+      const upd = { rokPonude: v.trim() };
+      const p = projects.find(x => x.id === selectedId);
+      if (p && p.rnDoc && !p.terminProizvodnje) { const t = terminIzRoka(p.dateRn, v); if (t) { upd.terminProizvodnje = t; upd.terminIzracun = `RN ${p.dateRn} + ${v.trim()}`; } }
+      await spremiPolja(upd);
+    }
+    // nakon učitavanja RN
+    async function nakonRn() {
+      const p = projects.find(x => x.id === selectedId) || {};
+      const od = p.dateRn || formatToday();
+      const prijedlog = terminIzRoka(od, p.rokPonude);
+      const v = prompt(`✅ Radni nalog učitan.\n\nOčekivani termin proizvodnje${prijedlog ? `\n(datum RN ${od} + rok iz ponude: ${p.rokPonude})` : p.rokPonude ? '' : '\n(u ponudi nema roka – upiši datum, npr. 15.01.2027)'}:`, prijedlog);
+      if (v === null || !v.trim()) return;
+      await spremiPolja({ terminProizvodnje: v.trim(), terminIzracun: v.trim() === prijedlog ? `RN ${od} + ${p.rokPonude}` : 'upisano ručno' });
+    }
+    async function procitajRokIzPonude() {
+      const p = projects.find(x => x.id === selectedId); if (!p || !p.offerDoc) return;
+      let rok = ''; try { rok = izvuciRokPonude(await pdfTekst(p.offerDoc)); } catch (e) { console.warn(e); }
+      const v = prompt(`Rok iz ponude ${rok ? '(pronađeno – provjeri):' : '(nije pronađen – upiši ručno):'}`, rok);
+      if (v === null || !v.trim()) return;
+      const upd = { rokPonude: v.trim() };
+      if (p.rnDoc && !p.terminProizvodnje) { const t = terminIzRoka(p.dateRn, v); if (t) { upd.terminProizvodnje = t; upd.terminIzracun = `RN ${p.dateRn} + ${v.trim()}`; } }
+      await spremiPolja(upd);
+    }
+    async function izracunajTermin() {
+      const p = projects.find(x => x.id === selectedId); if (!p) return;
+      const t = terminIzRoka(p.dateRn, p.rokPonude);
+      const v = prompt(`Očekivani termin proizvodnje\n(datum RN ${p.dateRn || '?'} + ${p.rokPonude || '?'}):`, t);
+      if (v === null || !v.trim()) return;
+      await spremiPolja({ terminProizvodnje: v.trim(), terminIzracun: v.trim() === t ? `RN ${p.dateRn} + ${p.rokPonude}` : 'upisano ručno' });
     }
     async function urediRok(polje) {
       const p = projects.find(x => x.id === selectedId); if (!p) return;
-      const v = prompt(polje === 'rokPonude' ? 'Rok iz ponude (npr. 6-8 tjedana ili 15.01.2027):' : 'Očekivani termin proizvodnje (npr. 15.12.2026 ili KW 51):', p[polje] || '');
+      const v = prompt(polje === 'rokPonude' ? 'Rok iz ponude (npr. 30 radnih dana od uplate avansa):' : 'Očekivani termin proizvodnje (npr. 15.01.2027.):', p[polje] || '');
       if (v === null) return;
-      await db.collection('nalozi').doc(selectedId).update({ [polje]: v.trim() });
+      const upd = { [polje]: v.trim() }; if (polje === 'terminProizvodnje') upd.terminIzracun = 'upisano ručno';
+      await spremiPolja(upd);
     }
     function rokInfoHtml(p, polje) {
       const v = p[polje] || '';
       const smije = typeof canUploadOfferOrRn === 'function' && canUploadOfferOrRn();
       if (!v && !smije) return '';
-      const nas = polje === 'rokPonude' ? '⏱ Rok iz ponude' : '🏭 Očekivani termin proizvodnje';
-      const okv = polje === 'rokPonude' && v && !RX_DATUM.test(v) ? okvirniDatum(p.dateOffer, v) : '';
-      return `<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#0b1220;border:1px solid ${v ? '#0284c7' : '#334155'};display:flex;align-items:center;gap:8px;">
-        <div style="flex:1;"><div style="font-size:11px;color:#94a3b8;">${nas}</div><div style="font-size:16px;font-weight:bold;color:${v ? '#7dd3fc' : '#64748b'};">${v ? escAttr(v) : 'nije upisano'}</div>${okv ? `<div style="font-size:11px;color:#94a3b8;">≈ ${okv} (od datuma ponude)</div>` : ''}</div>
-        ${smije ? `<button type="button" onclick="urediRok('${polje}')" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;font-size:13px;">✏️</button>` : ''}
+      const btn = (fn, t) => `<button type="button" onclick="${fn}" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;font-size:13px;white-space:nowrap;">${t}</button>`;
+      let nas, pod = '', gumbi = '';
+      if (polje === 'rokPonude') {
+        nas = '⏱ Rok iz ponude';
+        if (smije) gumbi = (!v && /pdf/i.test(p.offerDoc || '') ? btn('procitajRokIzPonude()', '🔍 Pročitaj') : '') + btn(`urediRok('rokPonude')`, '✏️');
+      } else {
+        nas = '🏭 Očekivani termin proizvodnje';
+        if (p.terminIzracun) pod = p.terminIzracun;
+        if (smije) gumbi = (p.rokPonude && p.dateRn ? btn('izracunajTermin()', '🧮') : '') + btn(`urediRok('terminProizvodnje')`, '✏️');
+      }
+      return `<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#0b1220;border:1px solid ${v ? '#0284c7' : '#334155'};display:flex;align-items:center;gap:6px;">
+        <div style="flex:1;"><div style="font-size:11px;color:#94a3b8;">${nas}</div><div style="font-size:15px;font-weight:bold;color:${v ? '#7dd3fc' : '#64748b'};">${v ? escAttr(v) : 'nije upisano'}</div>${pod ? `<div style="font-size:11px;color:#94a3b8;">${escAttr(pod)}</div>` : ''}</div>
+        ${gumbi}
       </div>`;
     }
     function postaviRokInfo(boxId, infoId, html, vidljivo) {
@@ -3984,7 +4041,7 @@
         if (!p || !p.dateOffer) updates.dateOffer = formatToday();
         await db.collection("nalozi").doc(selectedId).update(updates);
         txt.innerText = '✅ Ponuda učitana – tražim rok...';
-        await pitajIspremiRok('rokPonude', file, isPdf, '✅ Ponuda učitana.\n\nRok iz ponude:', izvuciRokPonude);
+        await nakonPonude(file, isPdf);
       } catch (err) {
         console.error(err);
         alert('Greška pri učitavanju ponude: ' + (err.message || err));
@@ -4025,8 +4082,8 @@
         const p = projects.find(item => item.id === selectedId);
         if (!p || !p.dateRn) updates.dateRn = formatToday();
         await db.collection("nalozi").doc(selectedId).update(updates);
-        txt.innerText = '✅ RN učitan – tražim termin...';
-        await pitajIspremiRok('terminProizvodnje', file, isPdf, '✅ Radni nalog učitan.\n\nOčekivani termin proizvodnje:', izvuciTerminRn);
+        txt.innerText = '✅ RN učitan';
+        await new Promise(r => setTimeout(r, 400)); await nakonRn();
       } catch (err) {
         console.error(err);
         alert('Greška pri učitavanju RN: ' + (err.message || err));
