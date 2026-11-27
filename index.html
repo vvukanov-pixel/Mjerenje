@@ -257,7 +257,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.45</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.46</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -3244,6 +3244,7 @@
             <div style="margin-top: 5px; font-size: 11px; line-height: 1.4;">
               ${statusText}
             </div>
+            ${(p.terminProizvodnje && stage === 'proizvodnja') ? `<div style="font-size:11px;color:#7dd3fc;margin-top:2px;">🏭 Proizvodnja: <b>${escAttr(p.terminProizvodnje)}</b></div>` : (p.rokPonude && stage === 'ponuda') ? `<div style="font-size:11px;color:#7dd3fc;margin-top:2px;">⏱ Rok: <b>${escAttr(p.rokPonude)}</b></div>` : ''}
           </div>
         `;
       }).join('');
@@ -3463,6 +3464,7 @@
         btnDelOff.style.display = 'none';
         offBox.innerHTML = '';
       }
+      try { postaviRokInfo('offerPreviewBox', 'rokPonudeInfo', rokInfoHtml(p, 'rokPonude'), !!p.offerDoc); } catch (e) {}
 
       // 3. Radni Nalog
       const rnUpload = document.getElementById('rnUploadZone');
@@ -3508,6 +3510,7 @@
         btnDelRn.style.display = 'none';
         rnBox.innerHTML = '';
       }
+      try { postaviRokInfo('rnPreviewBox', 'terminRnInfo', rokInfoHtml(p, 'terminProizvodnje'), !!p.rnDoc); } catch (e) {}
 
       // 4. Skladište
       document.getElementById('mSkladisteNotes').value = p.skladisteNotes || '';
@@ -3763,6 +3766,90 @@
       if (e.key === 'Escape') closeLightbox();
     });
 
+    // ================= ROK IZ PONUDE / TERMIN PROIZVODNJE IZ RN (dodatak – samo nova polja) =================
+    function ucitajPdfJs() {
+      if (window.pdfjsLib) return Promise.resolve();
+      return new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        sc.onload = () => { try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch (e) {} res(); };
+        sc.onerror = () => rej(new Error('PDF čitač se nije učitao'));
+        document.head.appendChild(sc);
+      });
+    }
+    async function pdfTekst(file) {
+      await ucitajPdfJs();
+      const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      let t = '';
+      for (let n = 1; n <= Math.min(pdf.numPages, 6); n++) {
+        const pg = await pdf.getPage(n); const c = await pg.getTextContent();
+        let zadnjiY = null;
+        c.items.forEach(it => { const y = it.transform ? Math.round(it.transform[5]) : 0; if (zadnjiY !== null && Math.abs(y - zadnjiY) > 3) t += '\n'; else if (t && !t.endsWith(' ')) t += ' '; t += it.str; zadnjiY = y; });
+        t += '\n';
+      }
+      return t.replace(/[ \t]+/g, ' ');
+    }
+    const RX_DATUM = /\b(\d{1,2})\s*[.\/-]\s*(\d{1,2})\s*[.\/-]\s*(\d{2,4})\b/;
+    const RX_TRAJANJE = /(\d{1,3}\s*(?:[-–do]+\s*\d{1,3})?\s*(?:radnih\s+|kalendarskih\s+)?(?:dana|dan|tjedana|tjedna|tjedan|mjeseca|mjeseci|mj\.?))/i;
+    const RX_KW = /(?:\bKW|\btjedan|\b\d{1,2}\.\s*tjedan)\s*\.?\s*(\d{1,2})(?:\s*[\/.]\s*(\d{2,4}))?/i;
+    function nadjiPoKljucu(tekst, kljucevi) {
+      const redovi = tekst.split('\n');
+      for (const kl of kljucevi) {
+        for (let r = 0; r < redovi.length; r++) {
+          const red = redovi[r]; const ix = red.toLowerCase().indexOf(kl);
+          if (ix < 0) continue;
+          const okolo = (red.slice(ix + kl.length) + ' ' + (redovi[r + 1] || '')).slice(0, 120);
+          let mm = okolo.match(RX_DATUM); if (mm) return mm[0].replace(/\s+/g, '');
+          mm = okolo.match(RX_KW); if (mm) return 'KW ' + mm[1] + (mm[2] ? '/' + mm[2] : '');
+          mm = okolo.match(RX_TRAJANJE); if (mm) return mm[1].replace(/\s+/g, ' ').trim();
+          const ost = okolo.replace(/^[\s:.\-–]+/, '').split(/\s{2,}|\n/)[0].trim();
+          if (ost && ost.length <= 40 && /\d/.test(ost)) return ost;
+        }
+      }
+      return '';
+    }
+    function izvuciRokPonude(t) { return nadjiPoKljucu(t, ['rok isporuke', 'rok izrade', 'rok proizvodnje', 'rok realizacije', 'rok montaže', 'rok:', 'rok ', 'isporuka', 'termin isporuke']); }
+    function izvuciTerminRn(t) { return nadjiPoKljucu(t, ['termin proizvodnje', 'očekivani termin', 'ocekivani termin', 'datum proizvodnje', 'planirani termin', 'datum isporuke', 'termin isporuke', 'datum završetka', 'rok isporuke', 'isporuka', 'termin', 'rok']); }
+    // "6-8 tjedana" od datuma ponude → okvirni datum
+    function okvirniDatum(od, rok) {
+      const m = String(rok || '').match(/(\d{1,3})\s*(?:[-–]|do)?\s*(\d{1,3})?\s*(radnih\s+)?(dana|dan|tjed\w*|mjesec\w*|mj)/i);
+      const d0 = String(od || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if (!m || !d0) return '';
+      const baza = new Date(+d0[3], +d0[2] - 1, +d0[1]);
+      const plus = n => { const d = new Date(baza); if (/^tjed/i.test(m[4])) d.setDate(d.getDate() + n * 7); else if (/^mj|^mjesec/i.test(m[4])) d.setMonth(d.getMonth() + n); else d.setDate(d.getDate() + Math.round(n * (m[3] ? 1.4 : 1))); return d.toLocaleDateString('hr-HR'); };
+      return m[2] ? plus(+m[1]) + ' – ' + plus(+m[2]) : plus(+m[1]);
+    }
+    async function pitajIspremiRok(polje, file, isPdf, naslov, izvuci) {
+      let nadjeno = '';
+      if (isPdf) { try { nadjeno = izvuci(await pdfTekst(file)); } catch (e) { console.warn('Čitanje PDF-a:', e); } }
+      const v = prompt(`${naslov}\n${nadjeno ? '(pronađeno u dokumentu – provjeri)' : '(nije pronađeno automatski – upiši, npr. 15.12.2026 ili 6-8 tjedana)'}`, nadjeno);
+      if (v === null) return;
+      try { await db.collection('nalozi').doc(selectedId).update({ [polje]: v.trim() }); } catch (e) { alert('Rok nije spremljen: ' + (e.message || e)); }
+    }
+    async function urediRok(polje) {
+      const p = projects.find(x => x.id === selectedId); if (!p) return;
+      const v = prompt(polje === 'rokPonude' ? 'Rok iz ponude (npr. 6-8 tjedana ili 15.01.2027):' : 'Očekivani termin proizvodnje (npr. 15.12.2026 ili KW 51):', p[polje] || '');
+      if (v === null) return;
+      await db.collection('nalozi').doc(selectedId).update({ [polje]: v.trim() });
+    }
+    function rokInfoHtml(p, polje) {
+      const v = p[polje] || '';
+      const smije = typeof canUploadOfferOrRn === 'function' && canUploadOfferOrRn();
+      if (!v && !smije) return '';
+      const nas = polje === 'rokPonude' ? '⏱ Rok iz ponude' : '🏭 Očekivani termin proizvodnje';
+      const okv = polje === 'rokPonude' && v && !RX_DATUM.test(v) ? okvirniDatum(p.dateOffer, v) : '';
+      return `<div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:#0b1220;border:1px solid ${v ? '#0284c7' : '#334155'};display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;"><div style="font-size:11px;color:#94a3b8;">${nas}</div><div style="font-size:16px;font-weight:bold;color:${v ? '#7dd3fc' : '#64748b'};">${v ? escAttr(v) : 'nije upisano'}</div>${okv ? `<div style="font-size:11px;color:#94a3b8;">≈ ${okv} (od datuma ponude)</div>` : ''}</div>
+        ${smije ? `<button type="button" onclick="urediRok('${polje}')" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;font-size:13px;">✏️</button>` : ''}
+      </div>`;
+    }
+    function postaviRokInfo(boxId, infoId, html, vidljivo) {
+      const box = document.getElementById(boxId); if (!box) return;
+      let el = document.getElementById(infoId);
+      if (!el) { el = document.createElement('div'); el.id = infoId; box.insertAdjacentElement('afterend', el); }
+      el.innerHTML = vidljivo ? html : '';
+    }
+
     async function handleOfferUpload(e) {
       if (!canUploadOfferOrRn()) {
         alert('❌ Samo Vedran i Ankica mogu učitavati ponudu.');
@@ -3790,7 +3877,8 @@
         const p = projects.find(item => item.id === selectedId);
         if (!p || !p.dateOffer) updates.dateOffer = formatToday();
         await db.collection("nalozi").doc(selectedId).update(updates);
-        alert('✅ Ponuda uspješno učitana');
+        txt.innerText = '✅ Ponuda učitana – tražim rok...';
+        await pitajIspremiRok('rokPonude', file, isPdf, '✅ Ponuda učitana.\n\nRok iz ponude:', izvuciRokPonude);
       } catch (err) {
         console.error(err);
         alert('Greška pri učitavanju ponude: ' + (err.message || err));
@@ -3831,7 +3919,8 @@
         const p = projects.find(item => item.id === selectedId);
         if (!p || !p.dateRn) updates.dateRn = formatToday();
         await db.collection("nalozi").doc(selectedId).update(updates);
-        alert('✅ Radni nalog uspješno učitan');
+        txt.innerText = '✅ RN učitan – tražim termin...';
+        await pitajIspremiRok('terminProizvodnje', file, isPdf, '✅ Radni nalog učitan.\n\nOčekivani termin proizvodnje:', izvuciTerminRn);
       } catch (err) {
         console.error(err);
         alert('Greška pri učitavanju RN: ' + (err.message || err));
