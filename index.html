@@ -257,7 +257,7 @@
   </div>
 
   <header>
-    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.48</small></div>
+    <div class="logo">TEREN<span>RAD</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.49</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -3777,12 +3777,45 @@
         document.head.appendChild(sc);
       });
     }
-    async function pdfTekst(izvor) {
+    function ucitajOcr() {
+      if (window.Tesseract) return Promise.resolve();
+      return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('OCR se nije učitao')); document.head.appendChild(sc); });
+    }
+    function rokToast(t) {
+      let el = document.getElementById('rokToast');
+      if (!t) { if (el) el.remove(); return; }
+      if (!el) { el = document.createElement('div'); el.id = 'rokToast'; el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#0f172a;color:#7dd3fc;border:1px solid #0284c7;border-radius:10px;padding:10px 16px;font-weight:bold;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.5);'; document.body.appendChild(el); }
+      el.textContent = t;
+    }
+    // skenirani PDF (bez teksta): prepoznavanje teksta sa slike, od zadnje stranice prema prvoj, staje kad nađe rok
+    async function ocrPdf(pdf, stani) {
+      await ucitajOcr();
+      const worker = await window.Tesseract.createWorker('hrv');
+      let t = '';
+      try {
+        for (let n = pdf.numPages; n >= 1; n--) {
+          rokToast(`🔎 Čitam skeniranu ponudu – stranica ${pdf.numPages - n + 1}/${pdf.numPages}...`);
+          const pg = await pdf.getPage(n); const vp = pg.getViewport({ scale: 2 });
+          const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+          await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+          const r = await worker.recognize(c);
+          t = r.data.text + '\n' + t;
+          if (stani && stani(t)) break;
+        }
+      } finally { try { await worker.terminate(); } catch (e) {} rokToast(''); }
+      return t;
+    }
+    async function pdfTekst(izvor, stani) {
       await ucitajPdfJs();
       let data;
       if (typeof izvor === 'string') data = await (await fetch(izvor.replace('https://firebasestorage.googleapis.com/', '/fs/'))).arrayBuffer();
       else data = await izvor.arrayBuffer();
       const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+      const tekst = await pdfTekstIzPdf(pdf);
+      if (tekst.replace(/\s/g, '').length < 30 && stani) { try { return (await ocrPdf(pdf, stani)).replace(/[ \t]+/g, ' '); } catch (e) { console.warn('OCR:', e); } }
+      return tekst;
+    }
+    async function pdfTekstIzPdf(pdf) {
       let t = '';
       for (let n = 1; n <= Math.min(pdf.numPages, 6); n++) {
         const c = await (await pdf.getPage(n)).getTextContent(); let y0 = null;
@@ -3841,7 +3874,7 @@
     // nakon učitavanja ponude
     async function nakonPonude(file, isPdf) {
       let rok = '';
-      if (isPdf) { try { rok = izvuciRokPonude(await pdfTekst(file)); } catch (e) { console.warn(e); } }
+      if (isPdf) { try { rok = izvuciRokPonude(await pdfTekst(file, izvuciRokPonude)); } catch (e) { console.warn(e); } }
       const v = prompt(`✅ Ponuda učitana.\n\nRok iz ponude ${rok ? '(pronađeno – provjeri):' : '(nije pronađen – upiši, npr. 30 radnih dana):'}`, rok);
       if (v === null || !v.trim()) return;
       const upd = { rokPonude: v.trim() };
@@ -3860,7 +3893,7 @@
     }
     async function procitajRokIzPonude() {
       const p = projects.find(x => x.id === selectedId); if (!p || !p.offerDoc) return;
-      let rok = ''; try { rok = izvuciRokPonude(await pdfTekst(p.offerDoc)); } catch (e) { console.warn(e); }
+      let rok = ''; try { rok = izvuciRokPonude(await pdfTekst(p.offerDoc, izvuciRokPonude)); } catch (e) { console.warn(e); }
       const v = prompt(`Rok iz ponude ${rok ? '(pronađeno – provjeri):' : '(nije pronađen – upiši ručno):'}`, rok);
       if (v === null || !v.trim()) return;
       const upd = { rokPonude: v.trim() };
