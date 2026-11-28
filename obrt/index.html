@@ -363,7 +363,7 @@
   </div>
 
   <header>
-    <div class="logo">MJERE<span>NJE</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.49</small></div>
+    <div class="logo">MJERE<span>NJE</span> <small style="font-size:10px;color:#94a3b8;font-weight:normal;">v2.50</small></div>
     <div class="header-right">
       <button id="btnExport" onclick="exportNalozi()" style="background:#1e293b; color:#34d399; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📥 Export mjerenja</button>
       <button id="btnPinNav" class="btn-pin-nav" onclick="openPinModal()">⚙️ PIN-ovi</button>
@@ -2922,6 +2922,9 @@
     // --- Bosch GLM laser preko Web Bluetootha (Android Chrome; iPhone/iPad samo u Bluefy pregledniku) ---
     const BOSCH_SERVICE = '02a6c0d0-0451-4000-b000-fb3210111989';
     const BOSCH_CHAR    = '02a6c0d1-0451-4000-b000-fb3210111989';
+    // Leica DISTO (X3, X4, D2, D510, D810...) – Bluetooth Smart način (NE tipkovnica)
+    const LEICA_SERVICE = '3ab10100-f831-4395-b29d-570977d5bf94';
+    const LEICA_DIST    = '3ab10101-f831-4395-b29d-570977d5bf94';
     let laserDevice = null, laserLastMm = null, laserLastTime = 0;
 
     function setLaserStatus(txt, color) {
@@ -2939,29 +2942,48 @@
       try {
         setLaserStatus('Tražim laser...', '#fbbf24');
         laserDevice = await navigator.bluetooth.requestDevice(sviUredaji === true
-          ? { acceptAllDevices: true, optionalServices: [BOSCH_SERVICE] }
-          : { filters: [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { namePrefix: 'PLR' }, { namePrefix: 'Zamo' }, { services: [BOSCH_SERVICE] }], optionalServices: [BOSCH_SERVICE] });
+          ? { acceptAllDevices: true, optionalServices: [BOSCH_SERVICE, LEICA_SERVICE] }
+          : { filters: [{ namePrefix: 'GLM' }, { namePrefix: 'Bosch' }, { namePrefix: 'BOSCH' }, { namePrefix: 'PLR' }, { namePrefix: 'Zamo' }, { services: [BOSCH_SERVICE] }, { namePrefix: 'DISTO' }, { namePrefix: 'Disto' }, { services: [LEICA_SERVICE] }], optionalServices: [BOSCH_SERVICE, LEICA_SERVICE] });
         laserDevice.addEventListener('gattserverdisconnected', () => setLaserStatus('Laser se odspojio – dodirni "Spoji laser"', '#f87171'));
         setLaserStatus('Spajam ' + (laserDevice.name || 'laser') + '...', '#fbbf24');
         const server = await Promise.race([
           laserDevice.gatt.connect(),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('Spajanje traje predugo. Zatvori MeasureOn i probaj opet.')), 15000))
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Spajanje traje predugo. Zatvori MeasureOn / DISTO Plan i probaj opet.')), 15000))
         ]).catch(e => { try { laserDevice.gatt.disconnect(); } catch (x) {} throw e; });
-        const svc = await server.getPrimaryService(BOSCH_SERVICE);
-        const ch = await svc.getCharacteristic(BOSCH_CHAR);
-        await ch.startNotifications();
-        ch.addEventListener('characteristicvaluechanged', e => laserOnData(e.target.value));
-        await ch.writeValue(new Uint8Array([0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A]));
+        let leica = null;
+        try { leica = await server.getPrimaryService(LEICA_SERVICE); } catch (x) { leica = null; }
+        if (leica) {
+          const ch = await leica.getCharacteristic(LEICA_DIST);
+          await ch.startNotifications();
+          ch.addEventListener('characteristicvaluechanged', e => laserOnLeica(e.target.value));
+        } else {
+          const svc = await server.getPrimaryService(BOSCH_SERVICE);
+          const ch = await svc.getCharacteristic(BOSCH_CHAR);
+          await ch.startNotifications();
+          ch.addEventListener('characteristicvaluechanged', e => laserOnData(e.target.value));
+          await ch.writeValue(new Uint8Array([0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A]));
+        }
         setLaserStatus('Spojeno: ' + (laserDevice.name || 'laser') + ' – klikni u polje i mjeri', '#34d399');
         const firstEmpty = Array.from(document.querySelectorAll('#mjereList .mj-num')).find(x => !x.value);
         if (firstEmpty) firstEmpty.focus();
       } catch (e) {
         if (e && e.name === 'NotFoundError') {
           const el = document.getElementById('laserStatus');
-          if (el) { el.style.color = '#fbbf24'; el.innerHTML = 'Laser nije pronađen. Provjeri: laser nije spojen na drugi uređaj (iPad – isključi Bluetooth), na laseru uključen BT, na mobitelu uključena <b>Lokacija</b>. <button type="button" onclick="laserConnect(true)" style="margin-left:6px;background:#334155;color:#fff;border:1px solid #f59e0b;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:bold;">🔍 Prikaži sve Bluetooth uređaje</button>'; }
+          if (el) { el.style.color = '#fbbf24'; el.innerHTML = 'Laser nije pronađen. Provjeri: laser nije spojen na drugi uređaj (iPad, DISTO Plan – zatvori), na laseru uključen BT (Leica: Bluetooth način <b>App</b>, ne tipkovnica), na mobitelu uključena <b>Lokacija</b>. <button type="button" onclick="laserConnect(true)" style="margin-left:6px;background:#334155;color:#fff;border:1px solid #f59e0b;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:bold;">🔍 Prikaži sve Bluetooth uređaje</button>'; }
         }
         else setLaserStatus('Greška: ' + ((e && e.message) || e), '#f87171');
       }
+    }
+
+    function laserOnLeica(dv) {
+      if (!dv || dv.byteLength < 4) return;
+      const m = dv.getFloat32(0, true);
+      if (!(m > 0.01 && m < 250)) return;
+      const mm = Math.round(m * 1000);
+      const now = Date.now();
+      if (mm === laserLastMm && now - laserLastTime < 1500) return;
+      laserLastMm = mm; laserLastTime = now;
+      laserFill(mm);
     }
 
     function laserOnData(dv) {
